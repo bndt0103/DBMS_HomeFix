@@ -1,0 +1,182 @@
+{
+  "executedAt": "2026-10-05T10:59:28.713Z",
+  "base": "http://127.0.0.1:63739/api",
+  "orderId": 1,
+  "cases": [
+    {
+      "name": "TC01 Health và đăng nhập đủ 7 vai trò",
+      "status": "PASS",
+      "milliseconds": 1784
+    },
+    {
+      "name": "TC02 Tạo 2 KH bằng ADMIN; đăng ký công khai bắt buộc OTP và cấm tự cấp ADMIN",
+      "status": "PASS",
+      "milliseconds": 1049
+    },
+    {
+      "name": "TC03 Chuẩn bị KTV riêng, nạp ví có chứng từ và duyệt",
+      "status": "PASS",
+      "milliseconds": 720
+    },
+    {
+      "name": "TC04 Input không hợp lệ và mật khẩu dài quá 72 byte",
+      "status": "PASS",
+      "milliseconds": 61
+    },
+    {
+      "name": "TC05 Upload ảnh, đặt đơn cùng key đồng thời chỉ tạo một đơn",
+      "status": "PASS",
+      "milliseconds": 149
+    },
+    {
+      "name": "TC06 Chặn KH khác xem đơn/ảnh và thợ chưa được giao",
+      "status": "PASS",
+      "milliseconds": 74
+    },
+    {
+      "name": "TC07 Không điều phối khi KH chưa duyệt",
+      "status": "PASS",
+      "milliseconds": 15
+    },
+    {
+      "name": "TC08 Lập báo giá sơ bộ; đúng chủ đơn duyệt; bấm lại bị chặn",
+      "status": "PASS",
+      "milliseconds": 149
+    },
+    {
+      "name": "TC09 Hai điều phối cùng giao chỉ có một lệnh",
+      "status": "PASS",
+      "milliseconds": 55
+    },
+    {
+      "name": "TC10 Sai KTV không nhận; KTV đúng nhận được",
+      "status": "PASS",
+      "milliseconds": 75
+    },
+    {
+      "name": "TC11 Tiến độ đúng thứ tự, chặn nhảy bước và phiên bản cũ",
+      "status": "PASS",
+      "milliseconds": 93
+    },
+    {
+      "name": "TC12 Vật tư âm bị từ chối; phiếu hợp lệ tính tiền ở SQL",
+      "status": "PASS",
+      "milliseconds": 112
+    },
+    {
+      "name": "TC13 Không nghiệm thu khi vật tư chưa được khách duyệt",
+      "status": "PASS",
+      "milliseconds": 104
+    },
+    {
+      "name": "TC14 Thiếu ảnh không nghiệm thu; có ảnh đúng tạo phiếu 570.000",
+      "status": "PASS",
+      "milliseconds": 93
+    },
+    {
+      "name": "TC15 KTV không được nghiệm thu thay KH; KH duyệt đóng ca",
+      "status": "PASS",
+      "milliseconds": 82
+    },
+    {
+      "name": "TC16 Không đánh giá trước thanh toán",
+      "status": "PASS",
+      "milliseconds": 19
+    },
+    {
+      "name": "TC17 Chỉ KTV thực hiện thu COD; retry không nhân đôi",
+      "status": "PASS",
+      "milliseconds": 155
+    },
+    {
+      "name": "TC18 Đối soát một lần: 45.000 hoa hồng, ví còn 955.000",
+      "status": "PASS",
+      "milliseconds": 117
+    },
+    {
+      "name": "TC19 Một đánh giá/đơn, giới hạn 1–5 sao",
+      "status": "PASS",
+      "milliseconds": 64
+    },
+    {
+      "name": "TC20 CSKH nhận/xử lý phiếu và KH khác không xem được",
+      "status": "PASS",
+      "milliseconds": 91
+    },
+    {
+      "name": "TC21 Báo cáo dữ liệu thật và phân quyền giám đốc",
+      "status": "PASS",
+      "milliseconds": 74
+    },
+    {
+      "name": "TC22 Logout thu hồi token; không công khai hash/secret",
+      "status": "PASS",
+      "milliseconds": 32
+    },
+    {
+      "name": "TC23 Hủy trước xuất phát không phát sinh phí",
+      "status": "PASS",
+      "milliseconds": 75
+    },
+    {
+      "name": "TC24 Từ chối báo giá đóng đơn và không điều phối",
+      "status": "PASS",
+      "milliseconds": 115
+    },
+    {
+      "name": "TC25 KTV từ chối trả đơn; mất quyền xem thông tin khách",
+      "status": "PASS",
+      "milliseconds": 224
+    },
+    {
+      "name": "TC26 Lệnh hết hạn: đóng lệnh, trả đơn, không được nhận trễ",
+      "status": "PASS",
+      "milliseconds": 227
+    },
+    {
+      "name": "TC27 Phí hủy giữ mức lúc đặt dù quản trị đổi cấu hình",
+      "status": "PASS",
+      "milliseconds": 344
+    },
+    {
+      "name": "TC28 Vật tư bị từ chối được lập phiên bản mới; cấm hủy khi đã đến",
+      "status": "PASS",
+      "milliseconds": 340
+    },
+    {
+      "name": "TC29 Nghiệm thu lại có lịch sử; bật chữ ký bắt buộc được thực thi",
+      "status": "PASS",
+      "milliseconds": 274
+    },
+    {
+      "name": "TC30 Hai yêu cầu rút không thể làm ví âm",
+      "status": "PASS",
+      "milliseconds": 99
+    },
+    {
+      "name": "TC31 SQL từ chối sửa sổ ví và biên nhận COD",
+      "status": "PASS",
+      "milliseconds": 35
+    },
+    {
+      "name": "TC32 Trigger nhiều dòng tính đúng số dư và rollback nguyên giao dịch",
+      "status": "PASS",
+      "milliseconds": 30
+    },
+    {
+      "name": "TC33 Trigger chặn đánh giá trực tiếp cho đơn chưa hoàn thành",
+      "status": "PASS",
+      "milliseconds": 46
+    },
+    {
+      "name": "TC34 Ảnh giả và API thiếu xác thực bị chặn",
+      "status": "PASS",
+      "milliseconds": 41
+    },
+    {
+      "name": "TC35 Không khóa quản trị viên cuối cùng; không lộ mật khẩu trong danh sách",
+      "status": "PASS",
+      "milliseconds": 73
+    }
+  ]
+}

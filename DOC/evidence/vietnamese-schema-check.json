@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "tables": 30,
+  "columns": 315,
+  "foreignKeys": 64,
+  "constraints": 95,
+  "indexColumns": 88,
+  "checks": [
+    "Column types, lengths, nullability, identity and computed/default expressions unchanged",
+    "Foreign keys unchanged",
+    "CHECK, PRIMARY KEY and UNIQUE constraints unchanged",
+    "Indexes and filter predicates unchanged",
+    "All persisted column names use Vietnamese ASCII PascalCase"
+  ]
+}

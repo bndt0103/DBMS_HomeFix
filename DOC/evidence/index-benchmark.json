@@ -1,0 +1,30 @@
+{
+  "addedRows": 50000,
+  "query": "Loc KhachHangId, sap xep NgayTao giam dan",
+  "note": "Same transaction and result; INDEX(0) is a forced scan baseline, not an optimizer prediction. Times are one local run, not an SLA.",
+  "evidence": [
+    {
+      "label": "clustered_scan",
+      "rows": 50,
+      "milliseconds": 20.47,
+      "messages": [
+        "[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]SQL Server parse and compile time: \n   CPU time = 0 ms, elapsed time = 1 ms.",
+        "[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Table 'Worktable'. Scan count 0, logical reads 0, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.",
+        "[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Table 'DonHang'. Scan count 1, logical reads 16729, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.",
+        "[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]\n SQL Server Execution Times:\n   CPU time = 16 ms,  elapsed time = 15 ms.",
+        "[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]\n SQL Server Execution Times:\n   CPU time = 0 ms,  elapsed time = 0 ms."
+      ]
+    },
+    {
+      "label": "customer_index",
+      "rows": 50,
+      "milliseconds": 3.79,
+      "messages": [
+        "[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]SQL Server parse and compile time: \n   CPU time = 0 ms, elapsed time = 1 ms.",
+        "[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Table 'DonHang'. Scan count 1, logical reads 2, physical reads 0, page server reads 0, read-ahead reads 0, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0.",
+        "[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]\n SQL Server Execution Times:\n   CPU time = 0 ms,  elapsed time = 0 ms.",
+        "[Microsoft][ODBC Driver 17 for SQL Server][SQL Server]\n SQL Server Execution Times:\n   CPU time = 0 ms,  elapsed time = 0 ms."
+      ]
+    }
+  ]
+}

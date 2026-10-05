@@ -1,0 +1,162 @@
+{
+  "executedAt": "2026-10-05T11:00:11.369Z",
+  "cases": [
+    {
+      "role": "kh",
+      "path": "/",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "kh",
+      "path": "/services",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "kh",
+      "path": "/orders",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "kh",
+      "path": "/support",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "kh",
+      "path": "/profile",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "kh",
+      "path": "/applications",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "kh",
+      "path": "/notifications",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "ktv",
+      "path": "/",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "ktv",
+      "path": "/orders",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "ktv",
+      "path": "/wallet",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "dpv",
+      "path": "/",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "dpv",
+      "path": "/orders",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "dpv",
+      "path": "/reports",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "cskh",
+      "path": "/",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "cskh",
+      "path": "/support",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "kt",
+      "path": "/",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "kt",
+      "path": "/finance",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "kt",
+      "path": "/reports",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "admin",
+      "path": "/",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "admin",
+      "path": "/admin/users",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "admin",
+      "path": "/admin/services",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "admin",
+      "path": "/admin/settings",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "admin",
+      "path": "/admin/audit",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "admin",
+      "path": "/applications",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "gd",
+      "path": "/",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    },
+    {
+      "role": "gd",
+      "path": "/reports",
+      "viewport": "1440x1000",
+      "status": "PASS"
+    }
+  ],
+  "faults": []
+}

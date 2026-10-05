@@ -1,0 +1,32 @@
+{
+  "name": "homefix-dbms-nhom08",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n API,WEB \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "build": "npm run build -w frontend",
+    "start": "node backend/src/server.js",
+    "db:init": "node scripts/init-db.js",
+    "test": "node --test --test-concurrency=1 tests/*.test.js",
+    "test:e2e": "node tests/ui-smoke.mjs && node tests/ui-workflow.mjs",
+    "format": "prettier --write backend/src frontend/src frontend/index.html frontend/vite.config.js scripts tests *.json backend/package.json frontend/package.json",
+    "format:check": "prettier --check backend/src frontend/src frontend/index.html frontend/vite.config.js scripts tests *.json backend/package.json frontend/package.json",
+    "test:isolated": "node scripts/run-tests.js",
+    "test:all": "npm run build && node scripts/run-tests.js --ui",
+    "db:export": "node scripts/export-database.js",
+    "db:metadata": "node scripts/export-metadata.js"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "playwright": "^1.55.1",
+    "prettier": "3.6.2"
+  }
+}

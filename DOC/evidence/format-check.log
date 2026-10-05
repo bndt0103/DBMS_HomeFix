@@ -1,0 +1,6 @@
+
+> homefix-dbms-nhom08@1.0.0 format:check
+> prettier --check backend/src frontend/src frontend/index.html frontend/vite.config.js scripts tests *.json backend/package.json frontend/package.json
+
+Checking formatting...
+All matched files use Prettier code style!
