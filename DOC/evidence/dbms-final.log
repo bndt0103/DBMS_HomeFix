@@ -1,8 +1,0 @@
-▶ DBMS: SQL objects, transactions, concurrency and database permissions
-  ✔ Minimum object counts required by DBMS330284 (231.3139ms)
-  ✔ Functions and views calculate actual ledger and commission (23.2084ms)
-  ✔ SQL roles allow reports and deny credentials and foreign business operations (9.9004ms)
-  ✔ Standalone SQL transaction rolls back all writes after a history failure (24.5986ms)
-  ✔ Multirow ledger trigger accumulates all rows and rejects negative balance atomically (22.9222ms)
-  ✔ Two direct SQL sessions cannot approve the same wallet request twice (23.3557ms)
-✔ DBMS: SQL objects, transactions, concurrency and database permissions (339.2834ms)

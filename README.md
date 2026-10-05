@@ -1,4 +1,4 @@
-﻿# HomeFix — Quản lý dịch vụ sửa chữa và bảo trì thiết bị tại nhà
+# HomeFix — Quản lý dịch vụ sửa chữa và bảo trì thiết bị tại nhà
 
 Đồ án **Hệ quản trị cơ sở dữ liệu (DBMS330284)** của **Nhóm 08**, lớp **261DBMS330284_02**. HomeFix quản lý quy trình từ đặt dịch vụ, báo giá và phân công kỹ thuật viên đến nghiệm thu, thanh toán, đối soát và hỗ trợ sau dịch vụ. Ứng dụng web sử dụng React, API Express và Microsoft SQL Server; các ràng buộc và giao dịch nghiệp vụ được thực hiện trên CSDL thật.
 

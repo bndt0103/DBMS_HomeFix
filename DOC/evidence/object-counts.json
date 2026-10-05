@@ -1,9 +1,0 @@
-{
-  "tables": 30,
-  "triggers": 7,
-  "views": 6,
-  "procedures": 7,
-  "functions": 5,
-  "indexes": 33,
-  "roles": 7
-}
