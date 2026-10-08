@@ -18,6 +18,7 @@
     "format:check": "prettier --check backend/src frontend/src frontend/index.html frontend/vite.config.js scripts tests *.json backend/package.json frontend/package.json",
     "test:isolated": "node scripts/run-tests.js",
     "test:all": "npm run build && node scripts/run-tests.js --ui",
+    "test:sql-usage": "npm run build && node scripts/run-tests.js --ui --sql-usage",
     "db:export": "node scripts/export-database.js",
     "db:metadata": "node scripts/export-metadata.js"
   },

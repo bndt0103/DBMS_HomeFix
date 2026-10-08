@@ -6,38 +6,39 @@ if (config.database !== 'HomeFix_DBMS_Nhom08_TiengViet') {
   throw new Error('Chỉ xuất bộ dữ liệu mẫu từ HomeFix_DBMS_Nhom08_TiengViet.');
 }
 const files = [
-  '001_schema.sql',
-  '002_procedures_triggers.sql',
-  '003_cancellation_snapshot.sql',
-  '004_auth_otp.sql',
-  '005_bank_payments.sql',
-  '006_service_catalog.sql',
-  '007_user_avatar.sql',
-  '007_temporary_account_locks.sql',
-  '008_policy_proposals.sql',
-  '008_technician_application.sql',
-  '009_customer_location.sql',
-  '010_functions_views.sql',
-  '011_indexes_integrity.sql',
-  '012_transactions.sql',
-  '013_security.sql',
+  'CSDL_HomeFix_01_BangVaRangBuoc.sql',
+  'CSDL_HomeFix_02_ThuTucVaTrigger.sql',
+  'CSDL_HomeFix_03_PhiHuyDon.sql',
+  'CSDL_HomeFix_04_XacThucOTP.sql',
+  'CSDL_HomeFix_05_ThanhToanNganHang.sql',
+  'CSDL_HomeFix_06_DanhMucDichVu.sql',
+  'CSDL_HomeFix_07_AnhDaiDien.sql',
+  'CSDL_HomeFix_08_KhoaTaiKhoan.sql',
+  'CSDL_HomeFix_09_DeXuatChinhSach.sql',
+  'CSDL_HomeFix_10_HoSoKyThuatVien.sql',
+  'CSDL_HomeFix_11_ViTriKhachHang.sql',
+  'CSDL_HomeFix_12_HamVaView.sql',
+  'CSDL_HomeFix_13_ChiMucVaToanVen.sql',
+  'CSDL_HomeFix_14_GiaoDich.sql',
+  'CSDL_HomeFix_15_PhanQuyen.sql',
 ];
-let source = `-- Đồ án Hệ quản trị cơ sở dữ liệu DBMS330284, Nhóm 08.
--- Chạy bằng sqlcmd hoặc bật SQLCMD Mode trong SSMS.
--- Đổi TenCSDL nếu cần; script từ chối ghi vào CSDL đã tồn tại.
+let source = `-- Khởi tạo cơ sở dữ liệu HomeFix bằng SQLCMD.
 :on error exit
 :setvar TenCSDL "HomeFix_DBMS_Nhom08_Import"
+
+-- Tạo cơ sở dữ liệu mới.
 USE master;
 GO
+
 IF DB_ID(N'$(TenCSDL)') IS NOT NULL
     THROW 51009, 'DATABASE_ALREADY_EXISTS_CHOOSE_NEW_NAME', 1;
 CREATE DATABASE [$(TenCSDL)];
 GO
+
 USE [$(TenCSDL)];
 GO
 `;
-for (const file of files)
-  source += `\n-- ===== ${file} =====\n` + fs.readFileSync('database/' + file, 'utf8') + '\n';
+for (const file of files) source += '\n' + fs.readFileSync('database/' + file, 'utf8');
 const literal = (value) => {
   if (value === null) return 'NULL';
   if (value instanceof Date) return "'" + value.toISOString() + "'";
@@ -45,6 +46,7 @@ const literal = (value) => {
   if (typeof value === 'number') return String(value);
   return "N'" + String(value).replaceAll("'", "''") + "'";
 };
+source += '\n-- Dữ liệu mẫu phục vụ vận hành.\n';
 for (const name of ['NguoiDung', 'KyThuatVien', 'DichVu', 'CauHinh', 'GiaoDichVi']) {
   const columns = await q(
     `SELECT name,is_identity AS identityColumn FROM sys.columns
@@ -55,15 +57,15 @@ for (const name of ['NguoiDung', 'KyThuatVien', 'DichVu', 'CauHinh', 'GiaoDichVi
   const rows = await q(`SELECT ${columnList} FROM dbo.[${name}]`);
   if (columns.some((c) => c.identityColumn)) source += `SET IDENTITY_INSERT dbo.[${name}] ON;\n`;
   for (const row of rows) {
-    if (name === 'KyThuatVien') row.SoDu = 0; // Trigger ghi so se tinh lai so du.
+    if (name === 'KyThuatVien') row.SoDu = 0; // Trigger tính lại số dư từ sổ ví.
     source += `INSERT INTO dbo.[${name}] (${columns.map((c) => '[' + c.name + ']').join(', ')})\nVALUES (${columns.map((c) => literal(row[c.name])).join(', ')});\n`;
   }
   if (columns.some((c) => c.identityColumn)) source += `SET IDENTITY_INSERT dbo.[${name}] OFF;\n`;
   source += 'GO\n';
 }
 source +=
-  'IF NOT EXISTS(SELECT 1 FROM dbo.PhienBanCSDL WHERE PhienBan=6) INSERT dbo.PhienBanCSDL(PhienBan) VALUES(6);\nGO\nDBCC CHECKCONSTRAINTS WITH ALL_CONSTRAINTS;\nGO\n';
+  'IF NOT EXISTS (SELECT 1 FROM dbo.PhienBanCSDL WHERE PhienBan = 6)\n    INSERT dbo.PhienBanCSDL(PhienBan) VALUES(6);\nGO\n\n-- Kiểm tra toàn bộ ràng buộc dữ liệu.\nDBCC CHECKCONSTRAINTS WITH ALL_CONSTRAINTS;\nGO\n';
 fs.mkdirSync('../SQL', { recursive: true });
-fs.writeFileSync('../SQL/00_TaoLaiToanBoCSDL.sql', source);
+fs.writeFileSync('../SQL/CSDL_HomeFix.sql', source);
 await close();
 console.log('Đã xuất script khôi phục đầy đủ lược đồ, phân quyền và dữ liệu mẫu.');

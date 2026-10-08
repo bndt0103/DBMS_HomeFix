@@ -5,7 +5,7 @@ export async function applyServiceCatalog(t) {
   const hadColumn =
     (await one("SELECT COL_LENGTH('dbo.DichVu','PhoBien') AS length", {}, t)).length !== null;
   const source = await fs.readFile(
-    new URL('../database/006_service_catalog.sql', import.meta.url),
+    new URL('../database/CSDL_HomeFix_06_DanhMucDichVu.sql', import.meta.url),
     'utf8',
   );
   for (const batch of source.split(/^GO\s*$/m).filter((part) => part.trim())) {

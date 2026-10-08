@@ -36,10 +36,10 @@ test('OTP registration, recovery and password change against SQL Server', async 
     await master.close();
   });
   for (const file of [
-    '001_schema.sql',
-    '004_auth_otp.sql',
-    '007_user_avatar.sql',
-    '007_temporary_account_locks.sql',
+    'CSDL_HomeFix_01_BangVaRangBuoc.sql',
+    'CSDL_HomeFix_04_XacThucOTP.sql',
+    'CSDL_HomeFix_07_AnhDaiDien.sql',
+    'CSDL_HomeFix_08_KhoaTaiKhoan.sql',
   ]) {
     const source = await fs.readFile(new URL('../database/' + file, import.meta.url), 'utf8');
     for (const batch of source.split(/^GO\s*$/m).filter((s) => s.trim())) await q(batch);

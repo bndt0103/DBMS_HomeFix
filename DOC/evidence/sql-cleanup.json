@@ -1,0 +1,7 @@
+{
+  "componentScripts": 15,
+  "bundledSql": "SQL/CSDL_HomeFix.sql",
+  "executableSqlAndStringValuesUnchanged": true,
+  "sqlcmdImport": "PASS",
+  "demonstrationQueries": "PASS"
+}

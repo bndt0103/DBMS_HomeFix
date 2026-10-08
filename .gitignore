@@ -10,6 +10,6 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# Tai lieu noi bo: giu tren may, khong dua len GitHub.
-/DOC/
-/SLIDES/
+~$*
+*.tmp
+*.bak

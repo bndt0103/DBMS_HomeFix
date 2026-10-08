@@ -1,12 +1,15 @@
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Giao dịch nghiệp vụ và xử lý lỗi.
 SET ANSI_NULLS ON;
-
 SET QUOTED_IDENTIFIER ON;
-
 GO
+
+-- Chuyển trạng thái đơn và ghi lịch sử.
 CREATE OR ALTER PROCEDURE dbo.sp_ChuyenTrangThaiDon
-    @DonHangId INT, @NguoiThucHienId INT, @PhienBanDuKien BINARY(8), @TrangThaiTiepTheo VARCHAR(30), @LyDo NVARCHAR(1000)
+    @DonHangId INT,
+    @NguoiThucHienId INT,
+    @PhienBanDuKien BINARY(8),
+    @TrangThaiTiepTheo VARCHAR(30),
+    @LyDo NVARCHAR(1000)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -54,10 +57,13 @@ BEGIN
         THROW;
     END CATCH
 END
-
 GO
+
+-- Xác nhận đối soát và ghi sổ ví.
 CREATE OR ALTER PROCEDURE dbo.sp_DoiSoatCOD
-    @DoiSoatId INT, @NguoiThucHienId INT, @PhienBanDuKien BINARY(8)
+    @DoiSoatId INT,
+    @NguoiThucHienId INT,
+    @PhienBanDuKien BINARY(8)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -125,10 +131,15 @@ BEGIN
         THROW;
     END CATCH
 END
-
 GO
+
+-- Tạo đơn hàng và lịch sử ban đầu.
 CREATE OR ALTER PROCEDURE dbo.sp_TaoDonHang
-    @KhachHangId INT, @DichVuId INT, @DiaChi NVARCHAR(500), @MoTa NVARCHAR(2000), @NgayHen DATETIME2=NULL
+    @KhachHangId INT,
+    @DichVuId INT,
+    @DiaChi NVARCHAR(500),
+    @MoTa NVARCHAR(2000),
+    @NgayHen DATETIME2=NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -152,7 +163,7 @@ BEGIN
                        WHERE Id = @DichVuId AND DangHoatDong = 1)
             THROW 51004, 'SERVICE_UNAVAILABLE', 1;
         INSERT INTO dbo.DonHang (KhachHangId, DichVuId, TenDichVu, NhomDichVu, TenLienHe, SoDienThoaiLienHe, DiaChi, MoTa, NgayHen, PhiHuyTaiThoiDiemDat)
-        SELECT u.Id, s.Id, s.Ten, s.MaNhom, u.HoTen, u.SoDienThoai, @DiaChi, @MoTa, @NgayHen, COALESCE ((SELECT TRY_CONVERT (DECIMAL(18, 2), GiaTri)
+        SELECT u.Id, s.Id, s.Ten, s.MaNhom, u.HoTen, u.SoDienThoai, @DiaChi, @MoTa, @NgayHen, COALESCE((SELECT TRY_CONVERT (DECIMAL(18, 2), GiaTri)
                                                                                                          FROM dbo.CauHinh
                                                                                                          WHERE [KhoaCauHinh] = 'cancellationFee'), 50000)
         FROM dbo.NguoiDung AS u CROSS JOIN dbo.DichVu AS s
@@ -175,10 +186,15 @@ BEGIN
         THROW;
     END CATCH
 END
-
 GO
+
+-- Duyệt yêu cầu nạp hoặc rút ví.
 CREATE OR ALTER PROCEDURE dbo.sp_DuyetYeuCauVi
-    @YeuCauId INT, @NguoiThucHienId INT, @QuyetDinh VARCHAR(10), @PhienBanDuKien BINARY(8), @LyDo NVARCHAR(1000)=NULL
+    @YeuCauId INT,
+    @NguoiThucHienId INT,
+    @QuyetDinh VARCHAR(10),
+    @PhienBanDuKien BINARY(8),
+    @LyDo NVARCHAR(1000)=NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -246,10 +262,15 @@ BEGIN
         THROW;
     END CATCH
 END
-
 GO
+
+-- Cập nhật yêu cầu hỗ trợ và lịch sử xử lý.
 CREATE OR ALTER PROCEDURE dbo.sp_XuLyHoTro
-    @YeuCauHoTroId INT, @NguoiThucHienId INT, @TrangThai VARCHAR(15), @KetQuaXuLy NVARCHAR(2000), @PhienBanDuKien BINARY(8)
+    @YeuCauHoTroId INT,
+    @NguoiThucHienId INT,
+    @TrangThai VARCHAR(15),
+    @KetQuaXuLy NVARCHAR(2000),
+    @PhienBanDuKien BINARY(8)
 AS
 BEGIN
     SET NOCOUNT ON;

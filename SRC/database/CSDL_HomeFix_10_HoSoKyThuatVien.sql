@@ -1,5 +1,4 @@
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Thông tin hồ sơ kỹ thuật viên.
 IF COL_LENGTH('dbo.HoSoKTV', 'HoSoJSON') IS NULL
     ALTER TABLE dbo.HoSoKTV
         ADD HoSoJSON NVARCHAR(2000) NULL;

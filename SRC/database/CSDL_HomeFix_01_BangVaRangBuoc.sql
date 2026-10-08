@@ -1,15 +1,15 @@
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Bảng dữ liệu và ràng buộc toàn vẹn.
 SET ANSI_NULLS ON;
-
 SET QUOTED_IDENTIFIER ON;
-
 GO
+
+-- Phiên bản cơ sở dữ liệu.
 CREATE TABLE dbo.PhienBanCSDL (
     PhienBan INT NOT NULL PRIMARY KEY,
     NgayApDung DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Tài khoản người dùng.
 CREATE TABLE dbo.NguoiDung (
     Id INT IDENTITY PRIMARY KEY,
     HoTen NVARCHAR(120) NOT NULL,
@@ -25,12 +25,15 @@ CREATE TABLE dbo.NguoiDung (
     PhienBan ROWVERSION
 );
 
+-- Ngăn trùng địa chỉ email.
 CREATE UNIQUE INDEX UX_NguoiDung_Email
-    ON dbo.NguoiDung(Email) WHERE Email IS NOT NULL;
+    ON dbo.NguoiDung (Email) WHERE Email IS NOT NULL;
 
+-- Ngăn trùng căn cước công dân.
 CREATE UNIQUE INDEX UX_NguoiDung_CCCD
-    ON dbo.NguoiDung(CCCD) WHERE CCCD IS NOT NULL;
+    ON dbo.NguoiDung (CCCD) WHERE CCCD IS NOT NULL;
 
+-- Thông tin và số dư kỹ thuật viên.
 CREATE TABLE dbo.KyThuatVien (
     Id INT PRIMARY KEY FOREIGN KEY REFERENCES dbo.NguoiDung (Id),
     NhomTayNghe NVARCHAR(60) NOT NULL,
@@ -46,6 +49,7 @@ CREATE TABLE dbo.KyThuatVien (
     CHECK (KinhDo BETWEEN -180 AND 180)
 );
 
+-- Danh mục dịch vụ.
 CREATE TABLE dbo.DichVu (
     Id INT IDENTITY PRIMARY KEY,
     Ten NVARCHAR(150) NOT NULL,
@@ -59,6 +63,7 @@ CREATE TABLE dbo.DichVu (
     PhienBan ROWVERSION
 );
 
+-- Đơn đặt dịch vụ.
 CREATE TABLE dbo.DonHang (
     Id INT IDENTITY PRIMARY KEY,
     KhachHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.NguoiDung (Id),
@@ -83,12 +88,15 @@ CREATE TABLE dbo.DonHang (
     PhienBan ROWVERSION
 );
 
+-- Tăng tốc tra cứu đơn theo khách hàng.
 CREATE INDEX IX_DonHang_KhachHang
-    ON dbo.DonHang(KhachHangId, NgayTao DESC);
+    ON dbo.DonHang (KhachHangId, NgayTao DESC);
 
+-- Tăng tốc lọc đơn theo trạng thái.
 CREATE INDEX IX_DonHang_TrangThai
-    ON dbo.DonHang(TrangThai, NgayTao);
+    ON dbo.DonHang (TrangThai, NgayTao);
 
+-- Báo giá sơ bộ.
 CREATE TABLE dbo.BaoGiaSoBo (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL UNIQUE FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -106,6 +114,7 @@ CREATE TABLE dbo.BaoGiaSoBo (
     PhienBan ROWVERSION
 );
 
+-- Lệnh phân công kỹ thuật viên.
 CREATE TABLE dbo.LenhDieuPhoi (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -120,12 +129,15 @@ CREATE TABLE dbo.LenhDieuPhoi (
     PhienBan ROWVERSION
 );
 
+-- Mỗi đơn có tối đa một lệnh phân công đang hoạt động.
 CREATE UNIQUE INDEX UX_PhanCong_DonHang
-    ON dbo.LenhDieuPhoi(DonHangId) WHERE DangHoatDong = 1;
+    ON dbo.LenhDieuPhoi (DonHangId) WHERE DangHoatDong = 1;
 
+-- Mỗi kỹ thuật viên có tối đa một lệnh đang hoạt động.
 CREATE UNIQUE INDEX UX_PhanCong_KyThuatVien
-    ON dbo.LenhDieuPhoi(KyThuatVienId) WHERE DangHoatDong = 1;
+    ON dbo.LenhDieuPhoi (KyThuatVienId) WHERE DangHoatDong = 1;
 
+-- Đề xuất vật tư.
 CREATE TABLE dbo.DeXuatVatTu (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -143,9 +155,11 @@ CREATE TABLE dbo.DeXuatVatTu (
     UNIQUE (DonHangId, LanSuaDoi)
 );
 
+-- Mỗi đơn có tối đa một đề xuất vật tư đang áp dụng.
 CREATE UNIQUE INDEX UX_VatTu_DangApDung
-    ON dbo.DeXuatVatTu(DonHangId) WHERE DangApDung = 1;
+    ON dbo.DeXuatVatTu (DonHangId) WHERE DangApDung = 1;
 
+-- Chi tiết vật tư và bảo hành.
 CREATE TABLE dbo.ChiTietDeXuatVatTu (
     Id INT IDENTITY PRIMARY KEY,
     BaoGiaId INT NOT NULL FOREIGN KEY REFERENCES dbo.DeXuatVatTu (Id),
@@ -157,6 +171,7 @@ CREATE TABLE dbo.ChiTietDeXuatVatTu (
     SoThangBaoHanh INT DEFAULT 0 NOT NULL CHECK (SoThangBaoHanh BETWEEN 0 AND 60)
 );
 
+-- Phiếu nghiệm thu.
 CREATE TABLE dbo.PhieuNghiemThu (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -179,12 +194,15 @@ CREATE TABLE dbo.PhieuNghiemThu (
     UNIQUE (DonHangId, LanSuaDoi)
 );
 
+-- Mỗi đơn có tối đa một nghiệm thu chờ duyệt.
 CREATE UNIQUE INDEX UX_NghiemThu_ChoDuyet
-    ON dbo.PhieuNghiemThu(DonHangId) WHERE TrangThai = 'Pending';
+    ON dbo.PhieuNghiemThu (DonHangId) WHERE TrangThai = 'Pending';
 
+-- Mỗi đơn có tối đa một nghiệm thu đã duyệt.
 CREATE UNIQUE INDEX UX_NghiemThu_DaDuyet
-    ON dbo.PhieuNghiemThu(DonHangId) WHERE TrangThai = 'Approved';
+    ON dbo.PhieuNghiemThu (DonHangId) WHERE TrangThai = 'Approved';
 
+-- Tệp đính kèm.
 CREATE TABLE dbo.TepDinhKem (
     Id INT IDENTITY PRIMARY KEY,
     ChuSoHuuId INT NOT NULL FOREIGN KEY REFERENCES dbo.NguoiDung (Id),
@@ -201,6 +219,7 @@ CREATE TABLE dbo.TepDinhKem (
 ALTER TABLE dbo.PhieuNghiemThu
     ADD CONSTRAINT FK_NghiemThu_ChuKy FOREIGN KEY (ChuKyId) REFERENCES dbo.TepDinhKem (Id);
 
+-- Khoản thanh toán.
 CREATE TABLE dbo.ThanhToan (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL UNIQUE FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -212,6 +231,7 @@ CREATE TABLE dbo.ThanhToan (
     NgayThanhToan DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Đối soát thanh toán.
 CREATE TABLE dbo.DoiSoat (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL UNIQUE FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -226,6 +246,7 @@ CREATE TABLE dbo.DoiSoat (
     PhienBan ROWVERSION
 );
 
+-- Yêu cầu nạp và rút ví.
 CREATE TABLE dbo.YeuCauVi (
     Id INT IDENTITY PRIMARY KEY,
     KyThuatVienId INT NOT NULL FOREIGN KEY REFERENCES dbo.KyThuatVien (Id),
@@ -241,6 +262,7 @@ CREATE TABLE dbo.YeuCauVi (
     PhienBan ROWVERSION
 );
 
+-- Sổ giao dịch ví.
 CREATE TABLE dbo.GiaoDichVi (
     Id INT IDENTITY PRIMARY KEY,
     KyThuatVienId INT NOT NULL FOREIGN KEY REFERENCES dbo.KyThuatVien (Id),
@@ -254,6 +276,7 @@ CREATE TABLE dbo.GiaoDichVi (
     UNIQUE (LoaiThamChieu, ThamChieuId)
 );
 
+-- Đánh giá dịch vụ.
 CREATE TABLE dbo.DanhGia (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL UNIQUE FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -264,6 +287,7 @@ CREATE TABLE dbo.DanhGia (
     NgayTao DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Lịch sử trạng thái đơn hàng.
 CREATE TABLE dbo.LichSuDonHang (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -274,6 +298,7 @@ CREATE TABLE dbo.LichSuDonHang (
     NgayPhatSinh DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Nhật ký hệ thống.
 CREATE TABLE dbo.NhatKy (
     Id INT IDENTITY PRIMARY KEY,
     NguoiThucHienId INT NULL,
@@ -284,6 +309,7 @@ CREATE TABLE dbo.NhatKy (
     NgayTao DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Ghi chú đơn hàng.
 CREATE TABLE dbo.GhiChuDon (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -293,6 +319,7 @@ CREATE TABLE dbo.GhiChuDon (
     NgayTao DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Thông báo người dùng.
 CREATE TABLE dbo.ThongBao (
     Id INT IDENTITY PRIMARY KEY,
     NguoiDungId INT NOT NULL FOREIGN KEY REFERENCES dbo.NguoiDung (Id),
@@ -303,6 +330,7 @@ CREATE TABLE dbo.ThongBao (
     NgayTao DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Yêu cầu hỗ trợ.
 CREATE TABLE dbo.YeuCauHoTro (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -317,6 +345,7 @@ CREATE TABLE dbo.YeuCauHoTro (
     PhienBan ROWVERSION
 );
 
+-- Lịch sử xử lý hỗ trợ.
 CREATE TABLE dbo.LichSuHoTro (
     Id INT IDENTITY PRIMARY KEY,
     YeuCauHoTroId INT NOT NULL FOREIGN KEY REFERENCES dbo.YeuCauHoTro (Id),
@@ -326,6 +355,7 @@ CREATE TABLE dbo.LichSuHoTro (
     NgayTao DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Hồ sơ đăng ký kỹ thuật viên.
 CREATE TABLE dbo.HoSoKTV (
     Id INT IDENTITY PRIMARY KEY,
     NguoiDungId INT NOT NULL FOREIGN KEY REFERENCES dbo.NguoiDung (Id),
@@ -339,9 +369,11 @@ CREATE TABLE dbo.HoSoKTV (
     PhienBan ROWVERSION
 );
 
+-- Mỗi người dùng có tối đa một hồ sơ chờ duyệt.
 CREATE UNIQUE INDEX UX_HoSo_ChoDuyet
-    ON dbo.HoSoKTV(NguoiDungId) WHERE TrangThai = 'Pending';
+    ON dbo.HoSoKTV (NguoiDungId) WHERE TrangThai = 'Pending';
 
+-- Cấu hình nghiệp vụ.
 CREATE TABLE dbo.CauHinh (
     [KhoaCauHinh] VARCHAR(80) PRIMARY KEY,
     GiaTri NVARCHAR(1000) NOT NULL,
@@ -349,6 +381,7 @@ CREATE TABLE dbo.CauHinh (
     PhienBan ROWVERSION
 );
 
+-- Kết quả xử lý yêu cầu chống lặp.
 CREATE TABLE dbo.ChongLapYeuCau (
     NguoiThucHienId INT NOT NULL FOREIGN KEY REFERENCES dbo.NguoiDung (Id),
     DuongDan VARCHAR(160) NOT NULL,

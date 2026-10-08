@@ -1,10 +1,9 @@
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Thủ tục tra cứu và trigger nghiệp vụ.
 SET ANSI_NULLS ON;
-
 SET QUOTED_IDENTIFIER ON;
-
 GO
+
+-- Tra cứu đơn hàng của khách hàng.
 CREATE OR ALTER PROCEDURE dbo.sp_DonHangCuaKhach
     @KhachHangId INT
 AS
@@ -16,8 +15,9 @@ BEGIN
     WHERE KhachHangId = @KhachHangId
     ORDER BY d.Id DESC;
 END
-
 GO
+
+-- Cập nhật số dư sau khi ghi giao dịch ví.
 CREATE OR ALTER TRIGGER dbo.trg_Vi_GhiSo
     ON dbo.GiaoDichVi
     AFTER INSERT
@@ -34,6 +34,8 @@ BEGIN
          INNER JOIN ChenhLechVi AS d ON d.KyThuatVienId = k.Id;
 END
 GO
+
+-- Ngăn sửa và xóa giao dịch ví.
 CREATE OR ALTER TRIGGER dbo.trg_Vi_BatBien
     ON dbo.GiaoDichVi
     INSTEAD OF UPDATE, DELETE
@@ -43,6 +45,8 @@ BEGIN
     THROW 51009, 'LEDGER_IMMUTABLE', 1;
 END
 GO
+
+-- Ngăn sửa và xóa khoản thanh toán.
 CREATE OR ALTER TRIGGER dbo.trg_ThanhToan_BatBien
     ON dbo.ThanhToan
     INSTEAD OF UPDATE, DELETE
@@ -52,6 +56,8 @@ BEGIN
     THROW 51009, 'PAYMENT_IMMUTABLE', 1;
 END
 GO
+
+-- Ghi nhật ký khi trạng thái đơn thay đổi.
 CREATE OR ALTER TRIGGER dbo.trg_DonHang_GhiNhatKy
     ON dbo.DonHang
     AFTER UPDATE
@@ -65,6 +71,8 @@ BEGIN
     WHERE i.TrangThai <> d.TrangThai;
 END
 GO
+
+-- Kiểm tra điều kiện đánh giá dịch vụ.
 CREATE OR ALTER TRIGGER dbo.trg_DanhGia_DieuKien
     ON dbo.DanhGia
     AFTER INSERT, UPDATE

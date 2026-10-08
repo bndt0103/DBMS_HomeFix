@@ -1,5 +1,4 @@
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Thanh toán và xác nhận chuyển khoản.
 SET XACT_ABORT ON;
 
 IF COL_LENGTH('dbo.DonHang', 'PhuongThucThanhToan') IS NULL
@@ -7,6 +6,7 @@ IF COL_LENGTH('dbo.DonHang', 'PhuongThucThanhToan') IS NULL
         ADD PhuongThucThanhToan VARCHAR(10) CONSTRAINT DF_DonHang_PhuongThucThanhToan DEFAULT 'COD' NOT NULL CONSTRAINT CK_DonHang_PhuongThucThanhToan CHECK (PhuongThucThanhToan IN ('COD', 'BANK'));
 
 IF OBJECT_ID('dbo.TaiKhoanNhanTien') IS NULL
+    -- Tài khoản ngân hàng nhận tiền.
     CREATE TABLE dbo.TaiKhoanNhanTien (
         Id INT IDENTITY PRIMARY KEY,
         MaNganHang VARCHAR(20) NOT NULL,
@@ -19,8 +19,8 @@ IF OBJECT_ID('dbo.TaiKhoanNhanTien') IS NULL
         PhienBan ROWVERSION,
         CONSTRAINT UX_TaiKhoanNganHang UNIQUE (MaNganHang, SoTaiKhoan)
     );
-
 GO
+
 DECLARE @LenhSQL AS NVARCHAR(MAX) = '';
 
 SELECT @LenhSQL = @LenhSQL + 'ALTER TABLE dbo.ThanhToan DROP CONSTRAINT ' + QUOTENAME(name) + ';'
@@ -48,16 +48,18 @@ IF COL_LENGTH('dbo.ThanhToan', 'TaiKhoanNganHangId') IS NULL
     ALTER TABLE dbo.ThanhToan
         ADD TaiKhoanNganHangId INT NULL FOREIGN KEY REFERENCES dbo.TaiKhoanNhanTien (Id),
             MaThamChieuNganHang VARCHAR(100) NULL;
-
 GO
+
 IF NOT EXISTS (SELECT 1
                FROM sys.indexes
                WHERE name = 'UX_ThanhToan_MaThamChieuNganHang' AND object_id = OBJECT_ID('dbo.ThanhToan'))
+    -- Ngăn dùng lại mã tham chiếu ngân hàng.
     CREATE UNIQUE INDEX UX_ThanhToan_MaThamChieuNganHang
-        ON dbo.ThanhToan(TaiKhoanNganHangId, MaThamChieuNganHang) WHERE MaThamChieuNganHang IS NOT NULL;
+        ON dbo.ThanhToan (TaiKhoanNganHangId, MaThamChieuNganHang) WHERE MaThamChieuNganHang IS NOT NULL;
 
 IF OBJECT_ID('dbo.YeuCauThanhToan') IS NULL
     BEGIN
+        -- Yêu cầu xác nhận chuyển khoản.
         CREATE TABLE dbo.YeuCauThanhToan (
             Id INT IDENTITY PRIMARY KEY,
             DonHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -82,15 +84,18 @@ IF OBJECT_ID('dbo.YeuCauThanhToan') IS NULL
             NgayDuyet DATETIME2 NULL,
             PhienBan ROWVERSION
         );
+        -- Mỗi đơn có tối đa một yêu cầu chuyển khoản đang hoạt động.
         CREATE UNIQUE INDEX UX_ChuyenKhoan_DangHoatDong
-            ON dbo.YeuCauThanhToan(DonHangId) WHERE DangHoatDong = 1;
+            ON dbo.YeuCauThanhToan (DonHangId) WHERE DangHoatDong = 1;
+        -- Ngăn trùng nội dung chuyển khoản.
         CREATE UNIQUE INDEX UX_ChuyenKhoan_NoiDung
-            ON dbo.YeuCauThanhToan(NoiDungChuyenKhoan) WHERE NoiDungChuyenKhoan IS NOT NULL;
+            ON dbo.YeuCauThanhToan (NoiDungChuyenKhoan) WHERE NoiDungChuyenKhoan IS NOT NULL;
+        -- Ngăn dùng lại chứng từ chuyển khoản.
         CREATE UNIQUE INDEX UX_ChuyenKhoan_ChungTu
-            ON dbo.YeuCauThanhToan(ChungTuId) WHERE ChungTuId IS NOT NULL;
+            ON dbo.YeuCauThanhToan (ChungTuId) WHERE ChungTuId IS NOT NULL;
     END
-
 GO
+
 DECLARE @LenhSQL AS NVARCHAR(MAX) = '';
 
 SELECT @LenhSQL = @LenhSQL + 'ALTER TABLE dbo.TepDinhKem DROP CONSTRAINT ' + QUOTENAME(name) + ';'
@@ -112,8 +117,9 @@ EXECUTE sp_executesql @LenhSQL;
 
 ALTER TABLE dbo.GiaoDichVi
     ADD CONSTRAINT CK_Vi_Loai CHECK (Loai IN ('Opening', 'Deposit', 'Withdrawal', 'Commission', 'Reversal', 'SettlementCredit'));
-
 GO
+
+-- Kiểm tra điều kiện đánh giá dịch vụ.
 CREATE OR ALTER TRIGGER dbo.trg_DanhGia_DieuKien
     ON dbo.DanhGia
     AFTER INSERT, UPDATE
@@ -129,6 +135,7 @@ BEGIN
         THROW 51009, 'REVIEW_NOT_ELIGIBLE', 1;
 END
 GO
+
 IF NOT EXISTS (SELECT 1
                FROM dbo.PhienBanCSDL
                WHERE PhienBan = 5)

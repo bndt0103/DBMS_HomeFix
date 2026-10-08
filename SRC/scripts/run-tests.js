@@ -55,7 +55,22 @@ try {
     .readdirSync('tests')
     .filter((name) => name.endsWith('.test.js'))
     .map((name) => 'tests/' + name);
-  await run(['--test', '--test-concurrency=1', ...tests]);
+  if (process.argv.includes('--sql-usage')) {
+    await run(['scripts/verify-sql-usage.js', 'start']);
+    try {
+      await run(['--test', 'tests/api.test.js']);
+      await run(['scripts/verify-sql-usage.js', 'verify']);
+    } finally {
+      await run(['scripts/verify-sql-usage.js', 'stop']);
+    }
+    await run([
+      '--test',
+      '--test-concurrency=1',
+      ...tests.filter((f) => f !== 'tests/api.test.js'),
+    ]);
+  } else {
+    await run(['--test', '--test-concurrency=1', ...tests]);
+  }
   if (process.argv.includes('--ui')) {
     await run(['tests/ui-smoke.mjs']);
     await run(['tests/ui-workflow.mjs']);

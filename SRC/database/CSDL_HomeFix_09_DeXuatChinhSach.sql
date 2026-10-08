@@ -1,7 +1,7 @@
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Đề xuất chính sách và dữ liệu mẫu.
 IF OBJECT_ID('dbo.DeXuatChinhSach') IS NULL
     BEGIN
+        -- Đề xuất chính sách.
         CREATE TABLE dbo.DeXuatChinhSach (
             Id INT IDENTITY PRIMARY KEY,
             MaDeXuat VARCHAR(20) NOT NULL UNIQUE,
@@ -23,8 +23,8 @@ IF OBJECT_ID('dbo.DeXuatChinhSach') IS NULL
             PhienBan ROWVERSION
         );
     END
-
 GO
+
 IF NOT EXISTS (SELECT 1
                FROM dbo.DeXuatChinhSach)
     BEGIN
@@ -34,8 +34,8 @@ IF NOT EXISTS (SELECT 1
 
         ('CS-10224', N'Chương trình ưu đãi Khách hàng mới tháng 11', N'Người gửi: Nguyễn Thị Hằng', N'Marketing', 0, 10, N'—', N'—', N'Dự kiến tăng lượng khách hàng mới và tỷ lệ đặt dịch vụ lần đầu.', N'Áp dụng mã giảm giá cho khách hàng lần đầu sử dụng HomeFix.');
     END
-
 GO
+
 IF NOT EXISTS (SELECT 1
                FROM dbo.PhienBanCSDL
                WHERE PhienBan = 8)

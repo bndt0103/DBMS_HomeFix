@@ -1,0 +1,23 @@
+{
+  "executedAt": "2026-10-06T04:00:42.733Z",
+  "orderId": 13,
+  "steps": [
+    "KH đặt dịch vụ",
+    "Lập báo giá sơ bộ",
+    "Đồng ý báo giá",
+    "Phân công kỹ thuật viên",
+    "Chấp nhận đơn",
+    "KH cập nhật GPS hai lần; bản đồ KTV tự đổi điểm đến; từ chối quyền giữ vị trí cũ",
+    "Bắt đầu di chuyển",
+    "Xác nhận đã đến nơi",
+    "Bắt đầu xử lý",
+    "Đề xuất vật tư",
+    "Đồng ý thay vật tư",
+    "Hoàn thành · Lập phiếu nghiệm thu",
+    "Xác nhận nghiệm thu",
+    "Xác nhận đã thu COD",
+    "KT đối soát hoa hồng",
+    "Đánh giá dịch vụ"
+  ],
+  "faults": []
+}

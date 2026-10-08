@@ -1,145 +1,96 @@
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Vai trò và quyền truy cập dữ liệu.
+-- Phân quyền khách hàng.
 IF DATABASE_PRINCIPAL_ID(N'HomeFix_KH') IS NULL
     CREATE ROLE HomeFix_KH;
-
 IF DATABASE_PRINCIPAL_ID(N'hf_KH') IS NULL
     CREATE USER hf_KH WITHOUT LOGIN;
-
 ALTER ROLE HomeFix_KH ADD MEMBER hf_KH;
-
 GRANT SELECT ON OBJECT::dbo.vw_DichVuCongKhai TO HomeFix_KH;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_TaoDonHang TO HomeFix_KH;
-
 DENY SELECT ON OBJECT::dbo.NguoiDung (MatKhauBam) TO HomeFix_KH;
-
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_KH;
 
+-- Phân quyền kỹ thuật viên.
 IF DATABASE_PRINCIPAL_ID(N'HomeFix_KTV') IS NULL
     CREATE ROLE HomeFix_KTV;
-
 IF DATABASE_PRINCIPAL_ID(N'hf_KTV') IS NULL
     CREATE USER hf_KTV WITHOUT LOGIN;
-
 ALTER ROLE HomeFix_KTV ADD MEMBER hf_KTV;
-
 GRANT SELECT ON OBJECT::dbo.vw_DichVuCongKhai TO HomeFix_KTV;
-
 DENY SELECT ON OBJECT::dbo.NguoiDung (MatKhauBam) TO HomeFix_KTV;
-
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_KTV;
 
+-- Phân quyền điều phối viên.
 IF DATABASE_PRINCIPAL_ID(N'HomeFix_DPV') IS NULL
     CREATE ROLE HomeFix_DPV;
-
 IF DATABASE_PRINCIPAL_ID(N'hf_DPV') IS NULL
     CREATE USER hf_DPV WITHOUT LOGIN;
-
 ALTER ROLE HomeFix_DPV ADD MEMBER hf_DPV;
-
 GRANT SELECT ON OBJECT::dbo.vw_DonHangTongHop TO HomeFix_DPV;
-
 GRANT SELECT ON OBJECT::dbo.vw_HieuSuatKyThuatVien TO HomeFix_DPV;
-
 DENY SELECT ON OBJECT::dbo.NguoiDung (MatKhauBam) TO HomeFix_DPV;
-
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_DPV;
 
+-- Phân quyền chăm sóc khách hàng.
 IF DATABASE_PRINCIPAL_ID(N'HomeFix_CSKH') IS NULL
     CREATE ROLE HomeFix_CSKH;
-
 IF DATABASE_PRINCIPAL_ID(N'hf_CSKH') IS NULL
     CREATE USER hf_CSKH WITHOUT LOGIN;
-
 ALTER ROLE HomeFix_CSKH ADD MEMBER hf_CSKH;
-
 GRANT SELECT ON OBJECT::dbo.vw_HoTroCanXuLy TO HomeFix_CSKH;
-
 GRANT SELECT ON OBJECT::dbo.vw_DonHangTongHop TO HomeFix_CSKH;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_XuLyHoTro TO HomeFix_CSKH;
-
 DENY SELECT ON OBJECT::dbo.NguoiDung (MatKhauBam) TO HomeFix_CSKH;
-
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_CSKH;
 
+-- Phân quyền kế toán.
 IF DATABASE_PRINCIPAL_ID(N'HomeFix_KT') IS NULL
     CREATE ROLE HomeFix_KT;
-
 IF DATABASE_PRINCIPAL_ID(N'hf_KT') IS NULL
     CREATE USER hf_KT WITHOUT LOGIN;
-
 ALTER ROLE HomeFix_KT ADD MEMBER hf_KT;
-
 GRANT SELECT ON OBJECT::dbo.vw_ViKyThuatVien TO HomeFix_KT;
-
 GRANT SELECT ON OBJECT::dbo.vw_DoanhThuNgay TO HomeFix_KT;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_DuyetYeuCauVi TO HomeFix_KT;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_DoiSoatCOD TO HomeFix_KT;
-
 DENY SELECT ON OBJECT::dbo.NguoiDung (MatKhauBam) TO HomeFix_KT;
-
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_KT;
 
+-- Phân quyền giám đốc.
 IF DATABASE_PRINCIPAL_ID(N'HomeFix_GD') IS NULL
     CREATE ROLE HomeFix_GD;
-
 IF DATABASE_PRINCIPAL_ID(N'hf_GD') IS NULL
     CREATE USER hf_GD WITHOUT LOGIN;
-
 ALTER ROLE HomeFix_GD ADD MEMBER hf_GD;
-
 GRANT SELECT ON OBJECT::dbo.vw_DoanhThuNgay TO HomeFix_GD;
-
 GRANT SELECT ON OBJECT::dbo.vw_HieuSuatKyThuatVien TO HomeFix_GD;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_BaoCaoTongHop TO HomeFix_GD;
-
 DENY SELECT ON OBJECT::dbo.NguoiDung (MatKhauBam) TO HomeFix_GD;
-
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_GD;
 
+-- Phân quyền quản trị viên.
 IF DATABASE_PRINCIPAL_ID(N'HomeFix_ADMIN') IS NULL
     CREATE ROLE HomeFix_ADMIN;
-
 IF DATABASE_PRINCIPAL_ID(N'hf_ADMIN') IS NULL
     CREATE USER hf_ADMIN WITHOUT LOGIN;
-
 ALTER ROLE HomeFix_ADMIN ADD MEMBER hf_ADMIN;
-
 GRANT SELECT ON OBJECT::dbo.vw_DonHangTongHop TO HomeFix_ADMIN;
-
 GRANT SELECT ON OBJECT::dbo.vw_HieuSuatKyThuatVien TO HomeFix_ADMIN;
-
 GRANT SELECT ON OBJECT::dbo.vw_DoanhThuNgay TO HomeFix_ADMIN;
-
 GRANT SELECT ON OBJECT::dbo.vw_ViKyThuatVien TO HomeFix_ADMIN;
-
 GRANT SELECT ON OBJECT::dbo.vw_HoTroCanXuLy TO HomeFix_ADMIN;
-
 GRANT SELECT ON OBJECT::dbo.vw_DichVuCongKhai TO HomeFix_ADMIN;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_BaoCaoTongHop TO HomeFix_ADMIN;
-
 DENY SELECT ON OBJECT::dbo.NguoiDung (MatKhauBam) TO HomeFix_ADMIN;
-
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_ADMIN;
-
+-- Cấp và thu hồi quyền xem nhật ký của giám đốc.
 GRANT SELECT ON OBJECT::dbo.NhatKy TO HomeFix_GD;
-
 REVOKE SELECT ON OBJECT::dbo.NhatKy TO HomeFix_GD;
-
 GRANT SELECT ON OBJECT::dbo.NhatKy TO HomeFix_ADMIN;
-
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.DichVu TO HomeFix_ADMIN;
-
 GO
+
 GRANT EXECUTE ON OBJECT::dbo.sp_BaoCaoTongHop TO HomeFix_KT;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_BaoCaoTongHop TO HomeFix_CSKH;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_BaoCaoTongHop TO HomeFix_DPV;
 GO

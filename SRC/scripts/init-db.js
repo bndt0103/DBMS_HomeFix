@@ -32,23 +32,26 @@ const v = await one("SELECT OBJECT_ID('dbo.PhienBanCSDL') AS Id");
 if (!v.id) {
   const existing = await one('SELECT COUNT(*) n FROM sys.tables');
   if (existing.n) throw new Error('DB đã có bảng khác. Chọn DB_NAME trống để bảo vệ dữ liệu.');
-  const text = fs.readFileSync(path.join(root, 'database/001_schema.sql'), 'utf8');
+  const text = fs.readFileSync(
+    path.join(root, 'database/CSDL_HomeFix_01_BangVaRangBuoc.sql'),
+    'utf8',
+  );
   for (const batch of text.split(/^GO\s*$/m).filter((x) => x.trim())) await q(batch);
 }
 for (const filename of [
-  '002_procedures_triggers.sql',
-  '003_cancellation_snapshot.sql',
-  '004_auth_otp.sql',
-  '005_bank_payments.sql',
-  '007_user_avatar.sql',
-  '007_temporary_account_locks.sql',
-  '008_policy_proposals.sql',
-  '008_technician_application.sql',
-  '009_customer_location.sql',
-  '010_functions_views.sql',
-  '011_indexes_integrity.sql',
-  '012_transactions.sql',
-  '013_security.sql',
+  'CSDL_HomeFix_02_ThuTucVaTrigger.sql',
+  'CSDL_HomeFix_03_PhiHuyDon.sql',
+  'CSDL_HomeFix_04_XacThucOTP.sql',
+  'CSDL_HomeFix_05_ThanhToanNganHang.sql',
+  'CSDL_HomeFix_07_AnhDaiDien.sql',
+  'CSDL_HomeFix_08_KhoaTaiKhoan.sql',
+  'CSDL_HomeFix_09_DeXuatChinhSach.sql',
+  'CSDL_HomeFix_10_HoSoKyThuatVien.sql',
+  'CSDL_HomeFix_11_ViTriKhachHang.sql',
+  'CSDL_HomeFix_12_HamVaView.sql',
+  'CSDL_HomeFix_13_ChiMucVaToanVen.sql',
+  'CSDL_HomeFix_14_GiaoDich.sql',
+  'CSDL_HomeFix_15_PhanQuyen.sql',
 ])
   for (const batch of fs
     .readFileSync(path.join(root, 'database', filename), 'utf8')

@@ -1,30 +1,31 @@
--- Đồ án Hệ quản trị cơ sở dữ liệu DBMS330284, Nhóm 08.
--- Chạy bằng sqlcmd hoặc bật SQLCMD Mode trong SSMS.
--- Đổi TenCSDL nếu cần; script từ chối ghi vào CSDL đã tồn tại.
+-- Khởi tạo cơ sở dữ liệu HomeFix bằng SQLCMD.
 :on error exit
 :setvar TenCSDL "HomeFix_DBMS_Nhom08_Import"
+
+-- Tạo cơ sở dữ liệu mới.
 USE master;
 GO
+
 IF DB_ID(N'$(TenCSDL)') IS NOT NULL
     THROW 51009, 'DATABASE_ALREADY_EXISTS_CHOOSE_NEW_NAME', 1;
 CREATE DATABASE [$(TenCSDL)];
 GO
+
 USE [$(TenCSDL)];
 GO
 
--- ===== 001_schema.sql =====
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Bảng dữ liệu và ràng buộc toàn vẹn.
 SET ANSI_NULLS ON;
-
 SET QUOTED_IDENTIFIER ON;
-
 GO
+
+-- Phiên bản cơ sở dữ liệu.
 CREATE TABLE dbo.PhienBanCSDL (
     PhienBan INT NOT NULL PRIMARY KEY,
     NgayApDung DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Tài khoản người dùng.
 CREATE TABLE dbo.NguoiDung (
     Id INT IDENTITY PRIMARY KEY,
     HoTen NVARCHAR(120) NOT NULL,
@@ -40,12 +41,15 @@ CREATE TABLE dbo.NguoiDung (
     PhienBan ROWVERSION
 );
 
+-- Ngăn trùng địa chỉ email.
 CREATE UNIQUE INDEX UX_NguoiDung_Email
-    ON dbo.NguoiDung(Email) WHERE Email IS NOT NULL;
+    ON dbo.NguoiDung (Email) WHERE Email IS NOT NULL;
 
+-- Ngăn trùng căn cước công dân.
 CREATE UNIQUE INDEX UX_NguoiDung_CCCD
-    ON dbo.NguoiDung(CCCD) WHERE CCCD IS NOT NULL;
+    ON dbo.NguoiDung (CCCD) WHERE CCCD IS NOT NULL;
 
+-- Thông tin và số dư kỹ thuật viên.
 CREATE TABLE dbo.KyThuatVien (
     Id INT PRIMARY KEY FOREIGN KEY REFERENCES dbo.NguoiDung (Id),
     NhomTayNghe NVARCHAR(60) NOT NULL,
@@ -61,6 +65,7 @@ CREATE TABLE dbo.KyThuatVien (
     CHECK (KinhDo BETWEEN -180 AND 180)
 );
 
+-- Danh mục dịch vụ.
 CREATE TABLE dbo.DichVu (
     Id INT IDENTITY PRIMARY KEY,
     Ten NVARCHAR(150) NOT NULL,
@@ -74,6 +79,7 @@ CREATE TABLE dbo.DichVu (
     PhienBan ROWVERSION
 );
 
+-- Đơn đặt dịch vụ.
 CREATE TABLE dbo.DonHang (
     Id INT IDENTITY PRIMARY KEY,
     KhachHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.NguoiDung (Id),
@@ -98,12 +104,15 @@ CREATE TABLE dbo.DonHang (
     PhienBan ROWVERSION
 );
 
+-- Tăng tốc tra cứu đơn theo khách hàng.
 CREATE INDEX IX_DonHang_KhachHang
-    ON dbo.DonHang(KhachHangId, NgayTao DESC);
+    ON dbo.DonHang (KhachHangId, NgayTao DESC);
 
+-- Tăng tốc lọc đơn theo trạng thái.
 CREATE INDEX IX_DonHang_TrangThai
-    ON dbo.DonHang(TrangThai, NgayTao);
+    ON dbo.DonHang (TrangThai, NgayTao);
 
+-- Báo giá sơ bộ.
 CREATE TABLE dbo.BaoGiaSoBo (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL UNIQUE FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -121,6 +130,7 @@ CREATE TABLE dbo.BaoGiaSoBo (
     PhienBan ROWVERSION
 );
 
+-- Lệnh phân công kỹ thuật viên.
 CREATE TABLE dbo.LenhDieuPhoi (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -135,12 +145,15 @@ CREATE TABLE dbo.LenhDieuPhoi (
     PhienBan ROWVERSION
 );
 
+-- Mỗi đơn có tối đa một lệnh phân công đang hoạt động.
 CREATE UNIQUE INDEX UX_PhanCong_DonHang
-    ON dbo.LenhDieuPhoi(DonHangId) WHERE DangHoatDong = 1;
+    ON dbo.LenhDieuPhoi (DonHangId) WHERE DangHoatDong = 1;
 
+-- Mỗi kỹ thuật viên có tối đa một lệnh đang hoạt động.
 CREATE UNIQUE INDEX UX_PhanCong_KyThuatVien
-    ON dbo.LenhDieuPhoi(KyThuatVienId) WHERE DangHoatDong = 1;
+    ON dbo.LenhDieuPhoi (KyThuatVienId) WHERE DangHoatDong = 1;
 
+-- Đề xuất vật tư.
 CREATE TABLE dbo.DeXuatVatTu (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -158,9 +171,11 @@ CREATE TABLE dbo.DeXuatVatTu (
     UNIQUE (DonHangId, LanSuaDoi)
 );
 
+-- Mỗi đơn có tối đa một đề xuất vật tư đang áp dụng.
 CREATE UNIQUE INDEX UX_VatTu_DangApDung
-    ON dbo.DeXuatVatTu(DonHangId) WHERE DangApDung = 1;
+    ON dbo.DeXuatVatTu (DonHangId) WHERE DangApDung = 1;
 
+-- Chi tiết vật tư và bảo hành.
 CREATE TABLE dbo.ChiTietDeXuatVatTu (
     Id INT IDENTITY PRIMARY KEY,
     BaoGiaId INT NOT NULL FOREIGN KEY REFERENCES dbo.DeXuatVatTu (Id),
@@ -172,6 +187,7 @@ CREATE TABLE dbo.ChiTietDeXuatVatTu (
     SoThangBaoHanh INT DEFAULT 0 NOT NULL CHECK (SoThangBaoHanh BETWEEN 0 AND 60)
 );
 
+-- Phiếu nghiệm thu.
 CREATE TABLE dbo.PhieuNghiemThu (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -194,12 +210,15 @@ CREATE TABLE dbo.PhieuNghiemThu (
     UNIQUE (DonHangId, LanSuaDoi)
 );
 
+-- Mỗi đơn có tối đa một nghiệm thu chờ duyệt.
 CREATE UNIQUE INDEX UX_NghiemThu_ChoDuyet
-    ON dbo.PhieuNghiemThu(DonHangId) WHERE TrangThai = 'Pending';
+    ON dbo.PhieuNghiemThu (DonHangId) WHERE TrangThai = 'Pending';
 
+-- Mỗi đơn có tối đa một nghiệm thu đã duyệt.
 CREATE UNIQUE INDEX UX_NghiemThu_DaDuyet
-    ON dbo.PhieuNghiemThu(DonHangId) WHERE TrangThai = 'Approved';
+    ON dbo.PhieuNghiemThu (DonHangId) WHERE TrangThai = 'Approved';
 
+-- Tệp đính kèm.
 CREATE TABLE dbo.TepDinhKem (
     Id INT IDENTITY PRIMARY KEY,
     ChuSoHuuId INT NOT NULL FOREIGN KEY REFERENCES dbo.NguoiDung (Id),
@@ -216,6 +235,7 @@ CREATE TABLE dbo.TepDinhKem (
 ALTER TABLE dbo.PhieuNghiemThu
     ADD CONSTRAINT FK_NghiemThu_ChuKy FOREIGN KEY (ChuKyId) REFERENCES dbo.TepDinhKem (Id);
 
+-- Khoản thanh toán.
 CREATE TABLE dbo.ThanhToan (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL UNIQUE FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -227,6 +247,7 @@ CREATE TABLE dbo.ThanhToan (
     NgayThanhToan DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Đối soát thanh toán.
 CREATE TABLE dbo.DoiSoat (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL UNIQUE FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -241,6 +262,7 @@ CREATE TABLE dbo.DoiSoat (
     PhienBan ROWVERSION
 );
 
+-- Yêu cầu nạp và rút ví.
 CREATE TABLE dbo.YeuCauVi (
     Id INT IDENTITY PRIMARY KEY,
     KyThuatVienId INT NOT NULL FOREIGN KEY REFERENCES dbo.KyThuatVien (Id),
@@ -256,6 +278,7 @@ CREATE TABLE dbo.YeuCauVi (
     PhienBan ROWVERSION
 );
 
+-- Sổ giao dịch ví.
 CREATE TABLE dbo.GiaoDichVi (
     Id INT IDENTITY PRIMARY KEY,
     KyThuatVienId INT NOT NULL FOREIGN KEY REFERENCES dbo.KyThuatVien (Id),
@@ -269,6 +292,7 @@ CREATE TABLE dbo.GiaoDichVi (
     UNIQUE (LoaiThamChieu, ThamChieuId)
 );
 
+-- Đánh giá dịch vụ.
 CREATE TABLE dbo.DanhGia (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL UNIQUE FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -279,6 +303,7 @@ CREATE TABLE dbo.DanhGia (
     NgayTao DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Lịch sử trạng thái đơn hàng.
 CREATE TABLE dbo.LichSuDonHang (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -289,6 +314,7 @@ CREATE TABLE dbo.LichSuDonHang (
     NgayPhatSinh DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Nhật ký hệ thống.
 CREATE TABLE dbo.NhatKy (
     Id INT IDENTITY PRIMARY KEY,
     NguoiThucHienId INT NULL,
@@ -299,6 +325,7 @@ CREATE TABLE dbo.NhatKy (
     NgayTao DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Ghi chú đơn hàng.
 CREATE TABLE dbo.GhiChuDon (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -308,6 +335,7 @@ CREATE TABLE dbo.GhiChuDon (
     NgayTao DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Thông báo người dùng.
 CREATE TABLE dbo.ThongBao (
     Id INT IDENTITY PRIMARY KEY,
     NguoiDungId INT NOT NULL FOREIGN KEY REFERENCES dbo.NguoiDung (Id),
@@ -318,6 +346,7 @@ CREATE TABLE dbo.ThongBao (
     NgayTao DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Yêu cầu hỗ trợ.
 CREATE TABLE dbo.YeuCauHoTro (
     Id INT IDENTITY PRIMARY KEY,
     DonHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -332,6 +361,7 @@ CREATE TABLE dbo.YeuCauHoTro (
     PhienBan ROWVERSION
 );
 
+-- Lịch sử xử lý hỗ trợ.
 CREATE TABLE dbo.LichSuHoTro (
     Id INT IDENTITY PRIMARY KEY,
     YeuCauHoTroId INT NOT NULL FOREIGN KEY REFERENCES dbo.YeuCauHoTro (Id),
@@ -341,6 +371,7 @@ CREATE TABLE dbo.LichSuHoTro (
     NgayTao DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL
 );
 
+-- Hồ sơ đăng ký kỹ thuật viên.
 CREATE TABLE dbo.HoSoKTV (
     Id INT IDENTITY PRIMARY KEY,
     NguoiDungId INT NOT NULL FOREIGN KEY REFERENCES dbo.NguoiDung (Id),
@@ -354,9 +385,11 @@ CREATE TABLE dbo.HoSoKTV (
     PhienBan ROWVERSION
 );
 
+-- Mỗi người dùng có tối đa một hồ sơ chờ duyệt.
 CREATE UNIQUE INDEX UX_HoSo_ChoDuyet
-    ON dbo.HoSoKTV(NguoiDungId) WHERE TrangThai = 'Pending';
+    ON dbo.HoSoKTV (NguoiDungId) WHERE TrangThai = 'Pending';
 
+-- Cấu hình nghiệp vụ.
 CREATE TABLE dbo.CauHinh (
     [KhoaCauHinh] VARCHAR(80) PRIMARY KEY,
     GiaTri NVARCHAR(1000) NOT NULL,
@@ -364,6 +397,7 @@ CREATE TABLE dbo.CauHinh (
     PhienBan ROWVERSION
 );
 
+-- Kết quả xử lý yêu cầu chống lặp.
 CREATE TABLE dbo.ChongLapYeuCau (
     NguoiThucHienId INT NOT NULL FOREIGN KEY REFERENCES dbo.NguoiDung (Id),
     DuongDan VARCHAR(160) NOT NULL,
@@ -378,15 +412,12 @@ INSERT INTO dbo.PhienBanCSDL (PhienBan)
 VALUES (1);
 GO
 
-
--- ===== 002_procedures_triggers.sql =====
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Thủ tục tra cứu và trigger nghiệp vụ.
 SET ANSI_NULLS ON;
-
 SET QUOTED_IDENTIFIER ON;
-
 GO
+
+-- Tra cứu đơn hàng của khách hàng.
 CREATE OR ALTER PROCEDURE dbo.sp_DonHangCuaKhach
     @KhachHangId INT
 AS
@@ -398,8 +429,9 @@ BEGIN
     WHERE KhachHangId = @KhachHangId
     ORDER BY d.Id DESC;
 END
-
 GO
+
+-- Cập nhật số dư sau khi ghi giao dịch ví.
 CREATE OR ALTER TRIGGER dbo.trg_Vi_GhiSo
     ON dbo.GiaoDichVi
     AFTER INSERT
@@ -416,6 +448,8 @@ BEGIN
          INNER JOIN ChenhLechVi AS d ON d.KyThuatVienId = k.Id;
 END
 GO
+
+-- Ngăn sửa và xóa giao dịch ví.
 CREATE OR ALTER TRIGGER dbo.trg_Vi_BatBien
     ON dbo.GiaoDichVi
     INSTEAD OF UPDATE, DELETE
@@ -425,6 +459,8 @@ BEGIN
     THROW 51009, 'LEDGER_IMMUTABLE', 1;
 END
 GO
+
+-- Ngăn sửa và xóa khoản thanh toán.
 CREATE OR ALTER TRIGGER dbo.trg_ThanhToan_BatBien
     ON dbo.ThanhToan
     INSTEAD OF UPDATE, DELETE
@@ -434,6 +470,8 @@ BEGIN
     THROW 51009, 'PAYMENT_IMMUTABLE', 1;
 END
 GO
+
+-- Ghi nhật ký khi trạng thái đơn thay đổi.
 CREATE OR ALTER TRIGGER dbo.trg_DonHang_GhiNhatKy
     ON dbo.DonHang
     AFTER UPDATE
@@ -447,6 +485,8 @@ BEGIN
     WHERE i.TrangThai <> d.TrangThai;
 END
 GO
+
+-- Kiểm tra điều kiện đánh giá dịch vụ.
 CREATE OR ALTER TRIGGER dbo.trg_DanhGia_DieuKien
     ON dbo.DanhGia
     AFTER INSERT, UPDATE
@@ -462,15 +502,12 @@ BEGIN
 END
 GO
 
-
--- ===== 003_cancellation_snapshot.sql =====
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Phí hủy tại thời điểm đặt đơn.
 IF COL_LENGTH('dbo.DonHang', 'PhiHuyTaiThoiDiemDat') IS NULL
     ALTER TABLE dbo.DonHang
         ADD PhiHuyTaiThoiDiemDat DECIMAL(18, 2) CONSTRAINT DF_DonHang_PhiHuyTaiThoiDiemDat DEFAULT 50000 WITH VALUES NOT NULL CONSTRAINT CK_DonHang_PhiHuyTaiThoiDiemDat CHECK (PhiHuyTaiThoiDiemDat >= 0);
-
 GO
+
 IF NOT EXISTS (SELECT 1
                FROM dbo.PhienBanCSDL
                WHERE PhienBan = 2)
@@ -478,12 +515,10 @@ IF NOT EXISTS (SELECT 1
     VALUES (2);
 GO
 
-
--- ===== 004_auth_otp.sql =====
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Mã xác thực tài khoản.
 IF OBJECT_ID('dbo.XacThucOTP') IS NULL
     BEGIN
+        -- Mã xác thực OTP.
         CREATE TABLE dbo.XacThucOTP (
             Id UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
             MucDich NVARCHAR(20) NOT NULL,
@@ -497,15 +532,13 @@ IF OBJECT_ID('dbo.XacThucOTP') IS NULL
             NgayTao DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL,
             NgayHetHan DATETIME2 NOT NULL
         );
+        -- Tăng tốc tra cứu OTP theo người nhận và thời gian.
         CREATE INDEX IX_XacThucOTP_DiaChiNhan
-            ON dbo.XacThucOTP(DiaChiNhan, NgayTao);
+            ON dbo.XacThucOTP (DiaChiNhan, NgayTao);
     END
 GO
 
-
--- ===== 005_bank_payments.sql =====
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Thanh toán và xác nhận chuyển khoản.
 SET XACT_ABORT ON;
 
 IF COL_LENGTH('dbo.DonHang', 'PhuongThucThanhToan') IS NULL
@@ -513,6 +546,7 @@ IF COL_LENGTH('dbo.DonHang', 'PhuongThucThanhToan') IS NULL
         ADD PhuongThucThanhToan VARCHAR(10) CONSTRAINT DF_DonHang_PhuongThucThanhToan DEFAULT 'COD' NOT NULL CONSTRAINT CK_DonHang_PhuongThucThanhToan CHECK (PhuongThucThanhToan IN ('COD', 'BANK'));
 
 IF OBJECT_ID('dbo.TaiKhoanNhanTien') IS NULL
+    -- Tài khoản ngân hàng nhận tiền.
     CREATE TABLE dbo.TaiKhoanNhanTien (
         Id INT IDENTITY PRIMARY KEY,
         MaNganHang VARCHAR(20) NOT NULL,
@@ -525,8 +559,8 @@ IF OBJECT_ID('dbo.TaiKhoanNhanTien') IS NULL
         PhienBan ROWVERSION,
         CONSTRAINT UX_TaiKhoanNganHang UNIQUE (MaNganHang, SoTaiKhoan)
     );
-
 GO
+
 DECLARE @LenhSQL AS NVARCHAR(MAX) = '';
 
 SELECT @LenhSQL = @LenhSQL + 'ALTER TABLE dbo.ThanhToan DROP CONSTRAINT ' + QUOTENAME(name) + ';'
@@ -554,16 +588,18 @@ IF COL_LENGTH('dbo.ThanhToan', 'TaiKhoanNganHangId') IS NULL
     ALTER TABLE dbo.ThanhToan
         ADD TaiKhoanNganHangId INT NULL FOREIGN KEY REFERENCES dbo.TaiKhoanNhanTien (Id),
             MaThamChieuNganHang VARCHAR(100) NULL;
-
 GO
+
 IF NOT EXISTS (SELECT 1
                FROM sys.indexes
                WHERE name = 'UX_ThanhToan_MaThamChieuNganHang' AND object_id = OBJECT_ID('dbo.ThanhToan'))
+    -- Ngăn dùng lại mã tham chiếu ngân hàng.
     CREATE UNIQUE INDEX UX_ThanhToan_MaThamChieuNganHang
-        ON dbo.ThanhToan(TaiKhoanNganHangId, MaThamChieuNganHang) WHERE MaThamChieuNganHang IS NOT NULL;
+        ON dbo.ThanhToan (TaiKhoanNganHangId, MaThamChieuNganHang) WHERE MaThamChieuNganHang IS NOT NULL;
 
 IF OBJECT_ID('dbo.YeuCauThanhToan') IS NULL
     BEGIN
+        -- Yêu cầu xác nhận chuyển khoản.
         CREATE TABLE dbo.YeuCauThanhToan (
             Id INT IDENTITY PRIMARY KEY,
             DonHangId INT NOT NULL FOREIGN KEY REFERENCES dbo.DonHang (Id),
@@ -588,15 +624,18 @@ IF OBJECT_ID('dbo.YeuCauThanhToan') IS NULL
             NgayDuyet DATETIME2 NULL,
             PhienBan ROWVERSION
         );
+        -- Mỗi đơn có tối đa một yêu cầu chuyển khoản đang hoạt động.
         CREATE UNIQUE INDEX UX_ChuyenKhoan_DangHoatDong
-            ON dbo.YeuCauThanhToan(DonHangId) WHERE DangHoatDong = 1;
+            ON dbo.YeuCauThanhToan (DonHangId) WHERE DangHoatDong = 1;
+        -- Ngăn trùng nội dung chuyển khoản.
         CREATE UNIQUE INDEX UX_ChuyenKhoan_NoiDung
-            ON dbo.YeuCauThanhToan(NoiDungChuyenKhoan) WHERE NoiDungChuyenKhoan IS NOT NULL;
+            ON dbo.YeuCauThanhToan (NoiDungChuyenKhoan) WHERE NoiDungChuyenKhoan IS NOT NULL;
+        -- Ngăn dùng lại chứng từ chuyển khoản.
         CREATE UNIQUE INDEX UX_ChuyenKhoan_ChungTu
-            ON dbo.YeuCauThanhToan(ChungTuId) WHERE ChungTuId IS NOT NULL;
+            ON dbo.YeuCauThanhToan (ChungTuId) WHERE ChungTuId IS NOT NULL;
     END
-
 GO
+
 DECLARE @LenhSQL AS NVARCHAR(MAX) = '';
 
 SELECT @LenhSQL = @LenhSQL + 'ALTER TABLE dbo.TepDinhKem DROP CONSTRAINT ' + QUOTENAME(name) + ';'
@@ -618,8 +657,9 @@ EXECUTE sp_executesql @LenhSQL;
 
 ALTER TABLE dbo.GiaoDichVi
     ADD CONSTRAINT CK_Vi_Loai CHECK (Loai IN ('Opening', 'Deposit', 'Withdrawal', 'Commission', 'Reversal', 'SettlementCredit'));
-
 GO
+
+-- Kiểm tra điều kiện đánh giá dịch vụ.
 CREATE OR ALTER TRIGGER dbo.trg_DanhGia_DieuKien
     ON dbo.DanhGia
     AFTER INSERT, UPDATE
@@ -635,6 +675,7 @@ BEGIN
         THROW 51009, 'REVIEW_NOT_ELIGIBLE', 1;
 END
 GO
+
 IF NOT EXISTS (SELECT 1
                FROM dbo.PhienBanCSDL
                WHERE PhienBan = 5)
@@ -642,24 +683,18 @@ IF NOT EXISTS (SELECT 1
     VALUES (5);
 GO
 
-
--- ===== 006_service_catalog.sql =====
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Phân loại dịch vụ phổ biến.
 IF COL_LENGTH('dbo.DichVu', 'PhoBien') IS NULL
     ALTER TABLE dbo.DichVu
         ADD PhoBien BIT CONSTRAINT DF_DichVu_PhoBien DEFAULT 0 NOT NULL;
 GO
 
-
--- ===== 007_user_avatar.sql =====
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Ảnh đại diện và mục đích tệp đính kèm.
 IF COL_LENGTH('dbo.NguoiDung', 'DuongDanAnhDaiDien') IS NULL
     ALTER TABLE dbo.NguoiDung
         ADD DuongDanAnhDaiDien NVARCHAR(500) NULL;
-
 GO
+
 DECLARE @LenhSQL AS NVARCHAR(MAX) = '';
 
 SELECT @LenhSQL = @LenhSQL + 'ALTER TABLE dbo.TepDinhKem DROP CONSTRAINT ' + QUOTENAME(name) + ';'
@@ -667,21 +702,18 @@ FROM sys.check_constraints
 WHERE parent_object_id = OBJECT_ID('dbo.TepDinhKem') AND (parent_column_id = COLUMNPROPERTY(OBJECT_ID('dbo.TepDinhKem'), 'MucDich', 'ColumnId') OR name = 'CK_TepDinhKem_MucDich');
 
 EXECUTE sp_executesql @LenhSQL;
-
 GO
+
 ALTER TABLE dbo.TepDinhKem
     ADD CONSTRAINT CK_TepDinhKem_MucDich CHECK (MucDich IN ('OrderFault', 'MaterialEvidence', 'AcceptancePhoto', 'CustomerSignature', 'WalletProof', 'TechnicianDocument', 'PaymentProof', 'Avatar'));
 GO
 
-
--- ===== 007_temporary_account_locks.sql =====
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Thời hạn khóa tài khoản.
 IF COL_LENGTH('dbo.NguoiDung', 'KhoaDenNgay') IS NULL
     ALTER TABLE dbo.NguoiDung
         ADD KhoaDenNgay DATETIME2 NULL;
-
 GO
+
 IF NOT EXISTS (SELECT 1
                FROM dbo.PhienBanCSDL
                WHERE PhienBan = 7)
@@ -689,12 +721,10 @@ IF NOT EXISTS (SELECT 1
     VALUES (7);
 GO
 
-
--- ===== 008_policy_proposals.sql =====
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Đề xuất chính sách và dữ liệu mẫu.
 IF OBJECT_ID('dbo.DeXuatChinhSach') IS NULL
     BEGIN
+        -- Đề xuất chính sách.
         CREATE TABLE dbo.DeXuatChinhSach (
             Id INT IDENTITY PRIMARY KEY,
             MaDeXuat VARCHAR(20) NOT NULL UNIQUE,
@@ -716,8 +746,8 @@ IF OBJECT_ID('dbo.DeXuatChinhSach') IS NULL
             PhienBan ROWVERSION
         );
     END
-
 GO
+
 IF NOT EXISTS (SELECT 1
                FROM dbo.DeXuatChinhSach)
     BEGIN
@@ -727,8 +757,8 @@ IF NOT EXISTS (SELECT 1
 
         ('CS-10224', N'Chương trình ưu đãi Khách hàng mới tháng 11', N'Người gửi: Nguyễn Thị Hằng', N'Marketing', 0, 10, N'—', N'—', N'Dự kiến tăng lượng khách hàng mới và tỷ lệ đặt dịch vụ lần đầu.', N'Áp dụng mã giảm giá cho khách hàng lần đầu sử dụng HomeFix.');
     END
-
 GO
+
 IF NOT EXISTS (SELECT 1
                FROM dbo.PhienBanCSDL
                WHERE PhienBan = 8)
@@ -736,10 +766,7 @@ IF NOT EXISTS (SELECT 1
     VALUES (8);
 GO
 
-
--- ===== 008_technician_application.sql =====
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Thông tin hồ sơ kỹ thuật viên.
 IF COL_LENGTH('dbo.HoSoKTV', 'HoSoJSON') IS NULL
     ALTER TABLE dbo.HoSoKTV
         ADD HoSoJSON NVARCHAR(2000) NULL;
@@ -761,12 +788,10 @@ IF COL_LENGTH('dbo.PhieuNghiemThu', 'PhuongThucThanhToanDeXuat') IS NULL
         ADD PhuongThucThanhToanDeXuat VARCHAR(10) NULL CHECK (PhuongThucThanhToanDeXuat IN ('COD', 'BANK'));
 GO
 
-
--- ===== 009_customer_location.sql =====
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Vị trí khách hàng theo đơn hàng.
 IF OBJECT_ID('dbo.ViTriKhachHang', 'U') IS NULL
     BEGIN
+        -- Vị trí khách hàng.
         CREATE TABLE dbo.ViTriKhachHang (
             DonHangId INT NOT NULL PRIMARY KEY FOREIGN KEY REFERENCES dbo.DonHang (Id),
             ViDo DECIMAL(10, 7) NOT NULL CHECK (ViDo BETWEEN -90 AND 90),
@@ -777,121 +802,179 @@ IF OBJECT_ID('dbo.ViTriKhachHang', 'U') IS NULL
     END
 GO
 
-
--- ===== 010_functions_views.sql =====
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Hàm nghiệp vụ, khung nhìn và báo cáo tổng hợp.
 SET ANSI_NULLS ON;
-
 SET QUOTED_IDENTIFIER ON;
-
 GO
+
+-- Tính hoa hồng từ tiền công và tỷ lệ.
 CREATE OR ALTER FUNCTION dbo.fn_HoaHong
-(@TienCongTinh DECIMAL(18, 2), @TyLe DECIMAL(5, 2))
+(
+    @TienCongTinh DECIMAL(18, 2),
+    @TyLe DECIMAL(5, 2)
+)
 RETURNS DECIMAL(18, 2)
 AS
 BEGIN
-    RETURN CASE WHEN @TienCongTinh >= 0 AND @TyLe BETWEEN 0 AND 100 THEN CONVERT (DECIMAL(18, 2), ROUND(@TienCongTinh * @TyLe / 100, 2)) ELSE NULL END;
+    RETURN CASE
+        WHEN @TienCongTinh >= 0 AND @TyLe BETWEEN 0 AND 100
+            THEN CONVERT(DECIMAL(18, 2), ROUND(@TienCongTinh * @TyLe / 100, 2))
+        ELSE NULL
+    END;
 END
-
 GO
+
+-- Tính số dư từ sổ giao dịch ví.
 CREATE OR ALTER FUNCTION dbo.fn_SoDuVi
 (@KyThuatVienId INT)
 RETURNS TABLE
 AS
 RETURN
-    (SELECT COALESCE (SUM(SoTien), CONVERT (DECIMAL(38, 2), 0)) AS SoDu
+    (SELECT COALESCE(SUM(SoTien), CONVERT(DECIMAL(38, 2), 0)) AS SoDu
      FROM dbo.GiaoDichVi
      WHERE KyThuatVienId = @KyThuatVienId)
-
 GO
+
+-- Tính số lượt và điểm đánh giá trung bình.
 CREATE OR ALTER FUNCTION dbo.fn_DiemDanhGia
 (@KyThuatVienId INT)
 RETURNS TABLE
 AS
 RETURN
-    (SELECT COUNT(*) AS SoDanhGia, AVG(CONVERT (DECIMAL(5, 2), DiemDanhGia)) AS DiemTrungBinh
+    (SELECT COUNT(*) AS SoDanhGia,
+            AVG(CONVERT(DECIMAL(5, 2), DiemDanhGia)) AS DiemTrungBinh
      FROM dbo.DanhGia
      WHERE KyThuatVienId = @KyThuatVienId)
-
 GO
+
+-- Tra cứu thời hạn bảo hành vật tư.
 CREATE OR ALTER FUNCTION dbo.fn_HanBaoHanh
 (@NghiemThuId INT)
 RETURNS TABLE
 AS
 RETURN
-    (SELECT i.Id AS VatTuId, i.Ten, i.SoThangBaoHanh, DATEADD(month, i.SoThangBaoHanh, a.NgayDuyet) AS NgayHetHan
+    (SELECT i.Id AS VatTuId,
+            i.Ten,
+            i.SoThangBaoHanh,
+            DATEADD(month, i.SoThangBaoHanh, a.NgayDuyet) AS NgayHetHan
      FROM dbo.PhieuNghiemThu AS a
           INNER JOIN dbo.ChiTietDeXuatVatTu AS i ON i.BaoGiaId = a.DeXuatVatTuId
-     WHERE a.Id = @NghiemThuId AND a.TrangThai = 'Approved' AND i.SoThangBaoHanh > 0)
-
+     WHERE a.Id = @NghiemThuId
+       AND a.TrangThai = 'Approved'
+       AND i.SoThangBaoHanh > 0)
 GO
+
+-- Thống kê đơn hàng theo nhóm dịch vụ.
 CREATE OR ALTER FUNCTION dbo.fn_ThongKeDon
 (@TuNgay DATETIME2, @DenNgay DATETIME2)
 RETURNS TABLE
 AS
 RETURN
-    (SELECT NhomDichVu, COUNT(*) AS TongSoDon, SUM(CASE WHEN TrangThai = 'HoanThanh' THEN 1 ELSE 0 END) AS SoDonHoanThanh, SUM(CASE WHEN TrangThai = 'Huy' THEN 1 ELSE 0 END) AS SoDonHuy
+    (SELECT NhomDichVu,
+            COUNT(*) AS TongSoDon,
+            SUM(CASE WHEN TrangThai = 'HoanThanh' THEN 1 ELSE 0 END) AS SoDonHoanThanh,
+            SUM(CASE WHEN TrangThai = 'Huy' THEN 1 ELSE 0 END) AS SoDonHuy
      FROM dbo.DonHang
      WHERE NgayTao >= @TuNgay AND NgayTao < @DenNgay
      GROUP BY NhomDichVu)
-
 GO
+
+-- Tổng hợp đơn hàng, khách hàng và thanh toán.
 CREATE OR ALTER VIEW dbo.vw_DonHangTongHop
 AS
-SELECT d.*, u.HoTen AS TenKhachHang, k.HoTen AS TenKyThuatVien, CASE WHEN p.Id IS NULL THEN 'Unpaid' ELSE 'Paid' END AS TrangThaiThanhToan
+SELECT d.*,
+       u.HoTen AS TenKhachHang,
+       k.HoTen AS TenKyThuatVien,
+       CASE WHEN p.Id IS NULL THEN 'Unpaid' ELSE 'Paid' END AS TrangThaiThanhToan
 FROM dbo.DonHang AS d
      INNER JOIN dbo.NguoiDung AS u ON u.Id = d.KhachHangId
      LEFT OUTER JOIN dbo.NguoiDung AS k ON k.Id = d.KyThuatVienDuocGiaoId
      LEFT OUTER JOIN dbo.ThanhToan AS p ON p.DonHangId = d.Id;
-
 GO
+
+-- Tổng hợp doanh thu theo ngày Việt Nam.
 CREATE OR ALTER VIEW dbo.vw_DoanhThuNgay
 AS
-SELECT CONVERT (DATE, DATEADD(hour, 7, p.NgayThanhToan)) AS NgayNghiepVu,
-    COUNT_BIG(*) AS SoDonDaThanhToan,
-    SUM(p.SoTien) AS TongGiaTriGiaoDich,
-    SUM(dbo.fn_HoaHong(s.TienCong, s.TyLeHoaHong)) AS DoanhThuHoaHong
+SELECT CONVERT(DATE, DATEADD(hour, 7, p.NgayThanhToan)) AS NgayNghiepVu,
+       COUNT_BIG(*) AS SoDonDaThanhToan,
+       SUM(p.SoTien) AS TongGiaTriGiaoDich,
+       SUM(dbo.fn_HoaHong(s.TienCong, s.TyLeHoaHong)) AS DoanhThuHoaHong
 FROM dbo.ThanhToan AS p
      INNER JOIN dbo.DoiSoat AS s ON s.ThanhToanId = p.Id
-GROUP BY CONVERT (DATE, DATEADD(hour, 7, p.NgayThanhToan));
-
+GROUP BY CONVERT(DATE, DATEADD(hour, 7, p.NgayThanhToan));
 GO
+
+-- Đối chiếu số dư ví với sổ giao dịch.
 CREATE OR ALTER VIEW dbo.vw_ViKyThuatVien
 AS
-SELECT k.Id, u.HoTen, k.TrangThaiSanSang, k.SoDu AS SoDuLuuSan, v.SoDu, k.SoDu - v.SoDu AS ChenhLech
+SELECT k.Id,
+       u.HoTen,
+       k.TrangThaiSanSang,
+       k.SoDu AS SoDuLuuSan,
+       v.SoDu,
+       k.SoDu - v.SoDu AS ChenhLech
 FROM dbo.KyThuatVien AS k
-     INNER JOIN dbo.NguoiDung AS u ON u.Id = k.Id CROSS APPLY dbo.fn_SoDuVi(k.Id) AS v;
-
+     INNER JOIN dbo.NguoiDung AS u ON u.Id = k.Id
+     CROSS APPLY dbo.fn_SoDuVi(k.Id) AS v;
 GO
+
+-- Tổng hợp hiệu suất và đánh giá kỹ thuật viên.
 CREATE OR ALTER VIEW dbo.vw_HieuSuatKyThuatVien
 AS
-SELECT k.Id, u.HoTen, k.NhomTayNghe, r.SoDanhGia, r.DiemTrungBinh, (SELECT COUNT(*)
-                                                                    FROM dbo.DonHang AS d
-                                                                    WHERE d.KyThuatVienDuocGiaoId = k.Id) AS TongSoDon, (SELECT COUNT(*)
-                                                                                                                         FROM dbo.DonHang AS d
-                                                                                                                         WHERE d.KyThuatVienDuocGiaoId = k.Id AND d.TrangThai = 'HoanThanh') AS SoDonHoanThanh
+SELECT k.Id,
+       u.HoTen,
+       k.NhomTayNghe,
+       r.SoDanhGia,
+       r.DiemTrungBinh,
+       (SELECT COUNT(*)
+        FROM dbo.DonHang AS d
+        WHERE d.KyThuatVienDuocGiaoId = k.Id) AS TongSoDon,
+       (SELECT COUNT(*)
+        FROM dbo.DonHang AS d
+        WHERE d.KyThuatVienDuocGiaoId = k.Id
+          AND d.TrangThai = 'HoanThanh') AS SoDonHoanThanh
 FROM dbo.KyThuatVien AS k
-     INNER JOIN dbo.NguoiDung AS u ON u.Id = k.Id CROSS APPLY dbo.fn_DiemDanhGia(k.Id) AS r;
-
+     INNER JOIN dbo.NguoiDung AS u ON u.Id = k.Id
+     CROSS APPLY dbo.fn_DiemDanhGia(k.Id) AS r;
 GO
+
+-- Danh sách yêu cầu hỗ trợ chưa hoàn tất.
 CREATE OR ALTER VIEW dbo.vw_HoTroCanXuLy
 AS
-SELECT t.Id, t.DonHangId, t.KhachHangId, u.HoTen AS TenKhachHang, t.Loai, t.MoTa, t.TrangThai, t.NguoiDuocGiaoId, t.NgayTao, DATEADD(hour, 24, t.NgayTao) AS HanPhanHoi
+SELECT t.Id,
+       t.DonHangId,
+       t.KhachHangId,
+       u.HoTen AS TenKhachHang,
+       t.Loai,
+       t.MoTa,
+       t.TrangThai,
+       t.NguoiDuocGiaoId,
+       t.NgayTao,
+       DATEADD(hour, 24, t.NgayTao) AS HanPhanHoi
 FROM dbo.YeuCauHoTro AS t
      INNER JOIN dbo.NguoiDung AS u ON u.Id = t.KhachHangId
 WHERE t.TrangThai IN ('Open', 'InProgress');
-
 GO
+
+-- Danh sách dịch vụ đang cung cấp.
 CREATE OR ALTER VIEW dbo.vw_DichVuCongKhai
 AS
-SELECT Id, Ten, MaNhom, MoTa, PhiKiemTra, TienCong, PhoBien, PhiKiemTra + TienCong AS TongTienDuKien
+SELECT Id,
+       Ten,
+       MaNhom,
+       MoTa,
+       PhiKiemTra,
+       TienCong,
+       PhoBien,
+       PhiKiemTra + TienCong AS TongTienDuKien
 FROM dbo.DichVu
 WHERE DangHoatDong = 1;
-
 GO
+
+-- Báo cáo đơn hàng theo khoảng thời gian.
 CREATE OR ALTER PROCEDURE dbo.sp_BaoCaoTongHop
-    @TuNgay DATETIME2, @DenNgay DATETIME2
+    @TuNgay DATETIME2,
+    @DenNgay DATETIME2
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -908,46 +991,49 @@ BEGIN
 END
 GO
 
-
--- ===== 011_indexes_integrity.sql =====
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Chỉ mục tra cứu và trigger kiểm tra toàn vẹn.
 IF NOT EXISTS (SELECT 1
                FROM sys.indexes
                WHERE object_id = OBJECT_ID('dbo.GiaoDichVi') AND name = 'IX_Vi_KyThuatVien_Ngay')
+    -- Tăng tốc tra cứu giao dịch ví theo kỹ thuật viên và ngày.
     CREATE INDEX IX_Vi_KyThuatVien_Ngay
-        ON dbo.GiaoDichVi(KyThuatVienId, NgayTao DESC)
-        INCLUDE(SoTien, Loai, ThamChieuId);
+        ON dbo.GiaoDichVi (KyThuatVienId, NgayTao DESC)
+        INCLUDE (SoTien, Loai, ThamChieuId);
 
 IF NOT EXISTS (SELECT 1
                FROM sys.indexes
                WHERE object_id = OBJECT_ID('dbo.DoiSoat') AND name = 'IX_DoiSoat_TrangThai')
+    -- Tăng tốc lọc đối soát theo trạng thái.
     CREATE INDEX IX_DoiSoat_TrangThai
-        ON dbo.DoiSoat(TrangThai, KyThuatVienId)
-        INCLUDE(TienHoaHong, ThanhToanId);
+        ON dbo.DoiSoat (TrangThai, KyThuatVienId)
+        INCLUDE (TienHoaHong, ThanhToanId);
 
 IF NOT EXISTS (SELECT 1
                FROM sys.indexes
                WHERE object_id = OBJECT_ID('dbo.YeuCauHoTro') AND name = 'IX_HoTro_TrangThai_Ngay')
+    -- Tăng tốc tra cứu hỗ trợ theo trạng thái và ngày.
     CREATE INDEX IX_HoTro_TrangThai_Ngay
-        ON dbo.YeuCauHoTro(TrangThai, NgayTao)
-        INCLUDE(DonHangId, KhachHangId, Loai);
+        ON dbo.YeuCauHoTro (TrangThai, NgayTao)
+        INCLUDE (DonHangId, KhachHangId, Loai);
 
 IF NOT EXISTS (SELECT 1
                FROM sys.indexes
                WHERE object_id = OBJECT_ID('dbo.ThanhToan') AND name = 'IX_ThanhToan_Ngay')
+    -- Tăng tốc tổng hợp thanh toán theo ngày.
     CREATE INDEX IX_ThanhToan_Ngay
-        ON dbo.ThanhToan(NgayThanhToan)
-        INCLUDE(SoTien, PhuongThuc, DonHangId);
+        ON dbo.ThanhToan (NgayThanhToan)
+        INCLUDE (SoTien, PhuongThuc, DonHangId);
 
 IF NOT EXISTS (SELECT 1
                FROM sys.indexes
                WHERE object_id = OBJECT_ID('dbo.DanhGia') AND name = 'IX_DanhGia_KyThuatVien')
+    -- Tăng tốc tổng hợp đánh giá kỹ thuật viên.
     CREATE INDEX IX_DanhGia_KyThuatVien
-        ON dbo.DanhGia(KyThuatVienId)
-        INCLUDE(DiemDanhGia);
-
+        ON dbo.DanhGia (KyThuatVienId)
+        INCLUDE (DiemDanhGia);
 GO
+
+-- Kiểm tra vai trò khách hàng của đơn.
 CREATE OR ALTER TRIGGER dbo.trg_DonHang_KhachHang
     ON dbo.DonHang
     AFTER INSERT, UPDATE
@@ -961,6 +1047,8 @@ BEGIN
         THROW 51009, 'CUSTOMER_ROLE_REQUIRED', 1;
 END
 GO
+
+-- Kiểm tra thanh toán khớp nghiệm thu.
 CREATE OR ALTER TRIGGER dbo.trg_ThanhToan_NghiemThu
     ON dbo.ThanhToan
     AFTER INSERT
@@ -975,17 +1063,18 @@ BEGIN
 END
 GO
 
-
--- ===== 012_transactions.sql =====
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Giao dịch nghiệp vụ và xử lý lỗi.
 SET ANSI_NULLS ON;
-
 SET QUOTED_IDENTIFIER ON;
-
 GO
+
+-- Chuyển trạng thái đơn và ghi lịch sử.
 CREATE OR ALTER PROCEDURE dbo.sp_ChuyenTrangThaiDon
-    @DonHangId INT, @NguoiThucHienId INT, @PhienBanDuKien BINARY(8), @TrangThaiTiepTheo VARCHAR(30), @LyDo NVARCHAR(1000)
+    @DonHangId INT,
+    @NguoiThucHienId INT,
+    @PhienBanDuKien BINARY(8),
+    @TrangThaiTiepTheo VARCHAR(30),
+    @LyDo NVARCHAR(1000)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1033,10 +1122,13 @@ BEGIN
         THROW;
     END CATCH
 END
-
 GO
+
+-- Xác nhận đối soát và ghi sổ ví.
 CREATE OR ALTER PROCEDURE dbo.sp_DoiSoatCOD
-    @DoiSoatId INT, @NguoiThucHienId INT, @PhienBanDuKien BINARY(8)
+    @DoiSoatId INT,
+    @NguoiThucHienId INT,
+    @PhienBanDuKien BINARY(8)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1104,10 +1196,15 @@ BEGIN
         THROW;
     END CATCH
 END
-
 GO
+
+-- Tạo đơn hàng và lịch sử ban đầu.
 CREATE OR ALTER PROCEDURE dbo.sp_TaoDonHang
-    @KhachHangId INT, @DichVuId INT, @DiaChi NVARCHAR(500), @MoTa NVARCHAR(2000), @NgayHen DATETIME2=NULL
+    @KhachHangId INT,
+    @DichVuId INT,
+    @DiaChi NVARCHAR(500),
+    @MoTa NVARCHAR(2000),
+    @NgayHen DATETIME2=NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1131,7 +1228,7 @@ BEGIN
                        WHERE Id = @DichVuId AND DangHoatDong = 1)
             THROW 51004, 'SERVICE_UNAVAILABLE', 1;
         INSERT INTO dbo.DonHang (KhachHangId, DichVuId, TenDichVu, NhomDichVu, TenLienHe, SoDienThoaiLienHe, DiaChi, MoTa, NgayHen, PhiHuyTaiThoiDiemDat)
-        SELECT u.Id, s.Id, s.Ten, s.MaNhom, u.HoTen, u.SoDienThoai, @DiaChi, @MoTa, @NgayHen, COALESCE ((SELECT TRY_CONVERT (DECIMAL(18, 2), GiaTri)
+        SELECT u.Id, s.Id, s.Ten, s.MaNhom, u.HoTen, u.SoDienThoai, @DiaChi, @MoTa, @NgayHen, COALESCE((SELECT TRY_CONVERT (DECIMAL(18, 2), GiaTri)
                                                                                                          FROM dbo.CauHinh
                                                                                                          WHERE [KhoaCauHinh] = 'cancellationFee'), 50000)
         FROM dbo.NguoiDung AS u CROSS JOIN dbo.DichVu AS s
@@ -1154,10 +1251,15 @@ BEGIN
         THROW;
     END CATCH
 END
-
 GO
+
+-- Duyệt yêu cầu nạp hoặc rút ví.
 CREATE OR ALTER PROCEDURE dbo.sp_DuyetYeuCauVi
-    @YeuCauId INT, @NguoiThucHienId INT, @QuyetDinh VARCHAR(10), @PhienBanDuKien BINARY(8), @LyDo NVARCHAR(1000)=NULL
+    @YeuCauId INT,
+    @NguoiThucHienId INT,
+    @QuyetDinh VARCHAR(10),
+    @PhienBanDuKien BINARY(8),
+    @LyDo NVARCHAR(1000)=NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1225,10 +1327,15 @@ BEGIN
         THROW;
     END CATCH
 END
-
 GO
+
+-- Cập nhật yêu cầu hỗ trợ và lịch sử xử lý.
 CREATE OR ALTER PROCEDURE dbo.sp_XuLyHoTro
-    @YeuCauHoTroId INT, @NguoiThucHienId INT, @TrangThai VARCHAR(15), @KetQuaXuLy NVARCHAR(2000), @PhienBanDuKien BINARY(8)
+    @YeuCauHoTroId INT,
+    @NguoiThucHienId INT,
+    @TrangThai VARCHAR(15),
+    @KetQuaXuLy NVARCHAR(2000),
+    @PhienBanDuKien BINARY(8)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1280,154 +1387,104 @@ BEGIN
 END
 GO
 
-
--- ===== 013_security.sql =====
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Vai trò và quyền truy cập dữ liệu.
+-- Phân quyền khách hàng.
 IF DATABASE_PRINCIPAL_ID(N'HomeFix_KH') IS NULL
     CREATE ROLE HomeFix_KH;
-
 IF DATABASE_PRINCIPAL_ID(N'hf_KH') IS NULL
     CREATE USER hf_KH WITHOUT LOGIN;
-
 ALTER ROLE HomeFix_KH ADD MEMBER hf_KH;
-
 GRANT SELECT ON OBJECT::dbo.vw_DichVuCongKhai TO HomeFix_KH;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_TaoDonHang TO HomeFix_KH;
-
 DENY SELECT ON OBJECT::dbo.NguoiDung (MatKhauBam) TO HomeFix_KH;
-
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_KH;
 
+-- Phân quyền kỹ thuật viên.
 IF DATABASE_PRINCIPAL_ID(N'HomeFix_KTV') IS NULL
     CREATE ROLE HomeFix_KTV;
-
 IF DATABASE_PRINCIPAL_ID(N'hf_KTV') IS NULL
     CREATE USER hf_KTV WITHOUT LOGIN;
-
 ALTER ROLE HomeFix_KTV ADD MEMBER hf_KTV;
-
 GRANT SELECT ON OBJECT::dbo.vw_DichVuCongKhai TO HomeFix_KTV;
-
 DENY SELECT ON OBJECT::dbo.NguoiDung (MatKhauBam) TO HomeFix_KTV;
-
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_KTV;
 
+-- Phân quyền điều phối viên.
 IF DATABASE_PRINCIPAL_ID(N'HomeFix_DPV') IS NULL
     CREATE ROLE HomeFix_DPV;
-
 IF DATABASE_PRINCIPAL_ID(N'hf_DPV') IS NULL
     CREATE USER hf_DPV WITHOUT LOGIN;
-
 ALTER ROLE HomeFix_DPV ADD MEMBER hf_DPV;
-
 GRANT SELECT ON OBJECT::dbo.vw_DonHangTongHop TO HomeFix_DPV;
-
 GRANT SELECT ON OBJECT::dbo.vw_HieuSuatKyThuatVien TO HomeFix_DPV;
-
 DENY SELECT ON OBJECT::dbo.NguoiDung (MatKhauBam) TO HomeFix_DPV;
-
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_DPV;
 
+-- Phân quyền chăm sóc khách hàng.
 IF DATABASE_PRINCIPAL_ID(N'HomeFix_CSKH') IS NULL
     CREATE ROLE HomeFix_CSKH;
-
 IF DATABASE_PRINCIPAL_ID(N'hf_CSKH') IS NULL
     CREATE USER hf_CSKH WITHOUT LOGIN;
-
 ALTER ROLE HomeFix_CSKH ADD MEMBER hf_CSKH;
-
 GRANT SELECT ON OBJECT::dbo.vw_HoTroCanXuLy TO HomeFix_CSKH;
-
 GRANT SELECT ON OBJECT::dbo.vw_DonHangTongHop TO HomeFix_CSKH;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_XuLyHoTro TO HomeFix_CSKH;
-
 DENY SELECT ON OBJECT::dbo.NguoiDung (MatKhauBam) TO HomeFix_CSKH;
-
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_CSKH;
 
+-- Phân quyền kế toán.
 IF DATABASE_PRINCIPAL_ID(N'HomeFix_KT') IS NULL
     CREATE ROLE HomeFix_KT;
-
 IF DATABASE_PRINCIPAL_ID(N'hf_KT') IS NULL
     CREATE USER hf_KT WITHOUT LOGIN;
-
 ALTER ROLE HomeFix_KT ADD MEMBER hf_KT;
-
 GRANT SELECT ON OBJECT::dbo.vw_ViKyThuatVien TO HomeFix_KT;
-
 GRANT SELECT ON OBJECT::dbo.vw_DoanhThuNgay TO HomeFix_KT;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_DuyetYeuCauVi TO HomeFix_KT;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_DoiSoatCOD TO HomeFix_KT;
-
 DENY SELECT ON OBJECT::dbo.NguoiDung (MatKhauBam) TO HomeFix_KT;
-
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_KT;
 
+-- Phân quyền giám đốc.
 IF DATABASE_PRINCIPAL_ID(N'HomeFix_GD') IS NULL
     CREATE ROLE HomeFix_GD;
-
 IF DATABASE_PRINCIPAL_ID(N'hf_GD') IS NULL
     CREATE USER hf_GD WITHOUT LOGIN;
-
 ALTER ROLE HomeFix_GD ADD MEMBER hf_GD;
-
 GRANT SELECT ON OBJECT::dbo.vw_DoanhThuNgay TO HomeFix_GD;
-
 GRANT SELECT ON OBJECT::dbo.vw_HieuSuatKyThuatVien TO HomeFix_GD;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_BaoCaoTongHop TO HomeFix_GD;
-
 DENY SELECT ON OBJECT::dbo.NguoiDung (MatKhauBam) TO HomeFix_GD;
-
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_GD;
 
+-- Phân quyền quản trị viên.
 IF DATABASE_PRINCIPAL_ID(N'HomeFix_ADMIN') IS NULL
     CREATE ROLE HomeFix_ADMIN;
-
 IF DATABASE_PRINCIPAL_ID(N'hf_ADMIN') IS NULL
     CREATE USER hf_ADMIN WITHOUT LOGIN;
-
 ALTER ROLE HomeFix_ADMIN ADD MEMBER hf_ADMIN;
-
 GRANT SELECT ON OBJECT::dbo.vw_DonHangTongHop TO HomeFix_ADMIN;
-
 GRANT SELECT ON OBJECT::dbo.vw_HieuSuatKyThuatVien TO HomeFix_ADMIN;
-
 GRANT SELECT ON OBJECT::dbo.vw_DoanhThuNgay TO HomeFix_ADMIN;
-
 GRANT SELECT ON OBJECT::dbo.vw_ViKyThuatVien TO HomeFix_ADMIN;
-
 GRANT SELECT ON OBJECT::dbo.vw_HoTroCanXuLy TO HomeFix_ADMIN;
-
 GRANT SELECT ON OBJECT::dbo.vw_DichVuCongKhai TO HomeFix_ADMIN;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_BaoCaoTongHop TO HomeFix_ADMIN;
-
 DENY SELECT ON OBJECT::dbo.NguoiDung (MatKhauBam) TO HomeFix_ADMIN;
-
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_ADMIN;
-
+-- Cấp và thu hồi quyền xem nhật ký của giám đốc.
 GRANT SELECT ON OBJECT::dbo.NhatKy TO HomeFix_GD;
-
 REVOKE SELECT ON OBJECT::dbo.NhatKy TO HomeFix_GD;
-
 GRANT SELECT ON OBJECT::dbo.NhatKy TO HomeFix_ADMIN;
-
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.DichVu TO HomeFix_ADMIN;
-
 GO
+
 GRANT EXECUTE ON OBJECT::dbo.sp_BaoCaoTongHop TO HomeFix_KT;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_BaoCaoTongHop TO HomeFix_CSKH;
-
 GRANT EXECUTE ON OBJECT::dbo.sp_BaoCaoTongHop TO HomeFix_DPV;
 GO
 
+-- Dữ liệu mẫu phục vụ vận hành.
 SET IDENTITY_INSERT dbo.[NguoiDung] ON;
 INSERT INTO dbo.[NguoiDung] ([Id], [HoTen], [SoDienThoai], [Email], [CCCD], [MatKhauBam], [VaiTro], [DiaChiMacDinh], [DangHoatDong], [PhienBanXacThuc], [NgayTao], [DuongDanAnhDaiDien], [KhoaDenNgay])
 VALUES (N'1', N'Khách hàng An', N'0900000001', N'kh@homefix.local', NULL, N'$2b$12$uPMS1zDBe3ZavepirKiyAOqqzkLjurD9slClKim0dTu9c2hzjoaB2', N'KH', N'1 Võ Văn Ngân, TP. Thủ Đức, TP.HCM', 1, 0, '2026-10-05T10:46:48.746Z', NULL, NULL);
@@ -1535,7 +1592,9 @@ INSERT INTO dbo.[GiaoDichVi] ([Id], [KyThuatVienId], [Loai], [SoTien], [LoaiTham
 VALUES (N'2', 9, N'Opening', 1000000, N'Opening', 9, NULL, N'Số dư mở đầu bộ dữ liệu demo', '2026-10-05T10:46:48.855Z');
 SET IDENTITY_INSERT dbo.[GiaoDichVi] OFF;
 GO
-IF NOT EXISTS(SELECT 1 FROM dbo.PhienBanCSDL WHERE PhienBan=6) INSERT dbo.PhienBanCSDL(PhienBan) VALUES(6);
+IF NOT EXISTS (SELECT 1 FROM dbo.PhienBanCSDL WHERE PhienBan = 6)
+    INSERT dbo.PhienBanCSDL(PhienBan) VALUES(6);
 GO
+-- Kiểm tra toàn bộ ràng buộc dữ liệu.
 DBCC CHECKCONSTRAINTS WITH ALL_CONSTRAINTS;
 GO

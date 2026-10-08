@@ -1,7 +1,7 @@
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Mã xác thực tài khoản.
 IF OBJECT_ID('dbo.XacThucOTP') IS NULL
     BEGIN
+        -- Mã xác thực OTP.
         CREATE TABLE dbo.XacThucOTP (
             Id UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
             MucDich NVARCHAR(20) NOT NULL,
@@ -15,7 +15,8 @@ IF OBJECT_ID('dbo.XacThucOTP') IS NULL
             NgayTao DATETIME2 DEFAULT SYSUTCDATETIME() NOT NULL,
             NgayHetHan DATETIME2 NOT NULL
         );
+        -- Tăng tốc tra cứu OTP theo người nhận và thời gian.
         CREATE INDEX IX_XacThucOTP_DiaChiNhan
-            ON dbo.XacThucOTP(DiaChiNhan, NgayTao);
+            ON dbo.XacThucOTP (DiaChiNhan, NgayTao);
     END
 GO

@@ -1,41 +1,46 @@
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Chỉ mục tra cứu và trigger kiểm tra toàn vẹn.
 IF NOT EXISTS (SELECT 1
                FROM sys.indexes
                WHERE object_id = OBJECT_ID('dbo.GiaoDichVi') AND name = 'IX_Vi_KyThuatVien_Ngay')
+    -- Tăng tốc tra cứu giao dịch ví theo kỹ thuật viên và ngày.
     CREATE INDEX IX_Vi_KyThuatVien_Ngay
-        ON dbo.GiaoDichVi(KyThuatVienId, NgayTao DESC)
-        INCLUDE(SoTien, Loai, ThamChieuId);
+        ON dbo.GiaoDichVi (KyThuatVienId, NgayTao DESC)
+        INCLUDE (SoTien, Loai, ThamChieuId);
 
 IF NOT EXISTS (SELECT 1
                FROM sys.indexes
                WHERE object_id = OBJECT_ID('dbo.DoiSoat') AND name = 'IX_DoiSoat_TrangThai')
+    -- Tăng tốc lọc đối soát theo trạng thái.
     CREATE INDEX IX_DoiSoat_TrangThai
-        ON dbo.DoiSoat(TrangThai, KyThuatVienId)
-        INCLUDE(TienHoaHong, ThanhToanId);
+        ON dbo.DoiSoat (TrangThai, KyThuatVienId)
+        INCLUDE (TienHoaHong, ThanhToanId);
 
 IF NOT EXISTS (SELECT 1
                FROM sys.indexes
                WHERE object_id = OBJECT_ID('dbo.YeuCauHoTro') AND name = 'IX_HoTro_TrangThai_Ngay')
+    -- Tăng tốc tra cứu hỗ trợ theo trạng thái và ngày.
     CREATE INDEX IX_HoTro_TrangThai_Ngay
-        ON dbo.YeuCauHoTro(TrangThai, NgayTao)
-        INCLUDE(DonHangId, KhachHangId, Loai);
+        ON dbo.YeuCauHoTro (TrangThai, NgayTao)
+        INCLUDE (DonHangId, KhachHangId, Loai);
 
 IF NOT EXISTS (SELECT 1
                FROM sys.indexes
                WHERE object_id = OBJECT_ID('dbo.ThanhToan') AND name = 'IX_ThanhToan_Ngay')
+    -- Tăng tốc tổng hợp thanh toán theo ngày.
     CREATE INDEX IX_ThanhToan_Ngay
-        ON dbo.ThanhToan(NgayThanhToan)
-        INCLUDE(SoTien, PhuongThuc, DonHangId);
+        ON dbo.ThanhToan (NgayThanhToan)
+        INCLUDE (SoTien, PhuongThuc, DonHangId);
 
 IF NOT EXISTS (SELECT 1
                FROM sys.indexes
                WHERE object_id = OBJECT_ID('dbo.DanhGia') AND name = 'IX_DanhGia_KyThuatVien')
+    -- Tăng tốc tổng hợp đánh giá kỹ thuật viên.
     CREATE INDEX IX_DanhGia_KyThuatVien
-        ON dbo.DanhGia(KyThuatVienId)
-        INCLUDE(DiemDanhGia);
-
+        ON dbo.DanhGia (KyThuatVienId)
+        INCLUDE (DiemDanhGia);
 GO
+
+-- Kiểm tra vai trò khách hàng của đơn.
 CREATE OR ALTER TRIGGER dbo.trg_DonHang_KhachHang
     ON dbo.DonHang
     AFTER INSERT, UPDATE
@@ -49,6 +54,8 @@ BEGIN
         THROW 51009, 'CUSTOMER_ROLE_REQUIRED', 1;
 END
 GO
+
+-- Kiểm tra thanh toán khớp nghiệm thu.
 CREATE OR ALTER TRIGGER dbo.trg_ThanhToan_NghiemThu
     ON dbo.ThanhToan
     AFTER INSERT

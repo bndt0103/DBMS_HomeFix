@@ -1,7 +1,7 @@
--- Do an He quan tri co so du lieu - Nhom 08.
--- Ten bang, cot va tham so: tieng Viet khong dau, PascalCase.
+-- Vị trí khách hàng theo đơn hàng.
 IF OBJECT_ID('dbo.ViTriKhachHang', 'U') IS NULL
     BEGIN
+        -- Vị trí khách hàng.
         CREATE TABLE dbo.ViTriKhachHang (
             DonHangId INT NOT NULL PRIMARY KEY FOREIGN KEY REFERENCES dbo.DonHang (Id),
             ViDo DECIMAL(10, 7) NOT NULL CHECK (ViDo BETWEEN -90 AND 90),
