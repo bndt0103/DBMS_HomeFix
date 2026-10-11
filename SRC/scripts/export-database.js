@@ -2,8 +2,13 @@ import fs from 'node:fs';
 import { qRaw as q, close } from '../backend/src/db.js';
 import { config } from '../backend/src/config.js';
 
-if (config.database !== 'HomeFix_DBMS_Nhom08_TiengViet') {
-  throw new Error('Chỉ xuất bộ dữ liệu mẫu từ HomeFix_DBMS_Nhom08_TiengViet.');
+if (
+  config.database !== 'HomeFix_DBMS_Nhom08' &&
+  config.database !== 'HomeFix_DBMS_Nhom08_TiengViet'
+) {
+  throw new Error(
+    'Chỉ xuất bộ dữ liệu mẫu từ HomeFix_DBMS_Nhom08 hoặc HomeFix_DBMS_Nhom08_TiengViet.',
+  );
 }
 const files = [
   'CSDL_HomeFix_01_BangVaRangBuoc.sql',

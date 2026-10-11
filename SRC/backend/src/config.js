@@ -6,7 +6,7 @@ dotenv.config({ path: path.join(backendDir, '.env'), quiet: true });
 export const config = {
   port: Number(process.env.PORT || 3000),
   server: process.env.DB_SERVER || 'localhost',
-  database: process.env.DB_NAME || 'HomeFix_DBMS_Nhom08_TiengViet',
+  database: process.env.DB_NAME || 'HomeFix_DBMS_Nhom08',
   windows: process.env.DB_AUTH !== 'sql',
   secret: process.env.JWT_SECRET,
   uploads: path.join(backendDir, 'uploads'),
