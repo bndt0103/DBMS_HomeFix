@@ -61,7 +61,7 @@ Với `localhost\SQLEXPRESS` và Windows Authentication:
 3. Khi cài đặt thành công, chạy **`CHAY_HOMEFIX_DBMS.bat`**.
 4. Mở **http://localhost:3000**. Đăng nhập bằng tài khoản tại mục 7.
 
-Lần đầu, script tạo `SRC/backend/.env`, sinh JWT ngẫu nhiên và tạo CSDL `HomeFix_DBMS_Nhom08_TiengViet` nếu chưa có. Dữ liệu và mật khẩu tài khoản đã tồn tại được giữ khi chạy lại khởi tạo.
+Lần đầu, script tạo `SRC/backend/.env`, sinh JWT ngẫu nhiên và tạo CSDL `HomeFix_DBMS_Nhom08` nếu chưa có. Dữ liệu và mật khẩu tài khoản đã tồn tại được giữ khi chạy lại khởi tạo.
 
 **Những lần sau chỉ cần chạy `CHAY_HOMEFIX_DBMS.bat`.** Giữ cửa sổ server mở khi sử dụng. Nhấn `Ctrl+C` để dừng.
 
@@ -92,7 +92,7 @@ Mở `SRC/backend/.env`, dán chuỗi vừa sinh vào `JWT_SECRET` và sửa k�
 ```dotenv
 PORT=3000
 DB_SERVER=localhost\SQLEXPRESS
-DB_NAME=HomeFix_DBMS_Nhom08_TiengViet
+DB_NAME=HomeFix_DBMS_Nhom08
 DB_AUTH=windows
 DB_ODBC_DRIVER=ODBC Driver 17 for SQL Server
 DB_ENCRYPT=false

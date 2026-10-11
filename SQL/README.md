@@ -45,6 +45,18 @@ Năm thủ tục `sp_TaoDonHang`, `sp_ChuyenTrangThaiDon`, `sp_DoiSoatCOD`, `sp_
 
 Trong SSMS, chọn CSDL HomeFix rồi chạy [CSDL_HomeFix_MinhHoa.sql](CSDL_HomeFix_MinhHoa.sql). Script chỉ đọc dữ liệu, liệt kê đối tượng và chạy các hàm/view/thủ tục tra cứu; kết quả đơn hàng, doanh thu hoặc bảo hành có thể rỗng nếu chưa có nghiệp vụ tương ứng.
 
+## Sao lưu và Phục hồi (Backup & Recovery)
+
+Kịch bản sao lưu và phục hồi dữ liệu được xây dựng chi tiết trong [CSDL_HomeFix_SaoLuuPhucHoi.sql](CSDL_HomeFix_SaoLuuPhucHoi.sql):
+- **Cấu hình**: Chuyển CSDL sang `RECOVERY FULL` hỗ trợ khôi phục đến từng thời điểm (Point-in-Time).
+- **Chiến lược sao lưu**:
+  - Full Backup (`.bak`): Sao lưu toàn phần định kỳ với nén (`COMPRESSION`).
+  - Differential Backup (`.bak`): Sao lưu vi sai các thay đổi sau bản Full.
+  - Transaction Log Backup (`.trn`): Sao lưu nhật ký giao dịch định kỳ.
+- **Kiểm tra tính toàn vẹn**: Câu lệnh `RESTORE VERIFYONLY` và `RESTORE HEADERONLY`.
+- **Kịch bản phục hồi sự cố (Disaster Recovery)**: Trình tự khôi phục kết hợp `NORECOVERY` và `RECOVERY`, cùng cú pháp khôi phục theo mốc thời gian `STOPAT`.
+- **Thủ tục tự động**: `sp_SaoLuuHeThong` hỗ trợ sao lưu qua tham số `@LoaiSaoLuu ('FULL', 'DIFF', 'LOG')`.
+
 Chạy từ `SRC` để kiểm tra ứng dụng và ghi nhận thực thi thủ tục:
 
 ```powershell

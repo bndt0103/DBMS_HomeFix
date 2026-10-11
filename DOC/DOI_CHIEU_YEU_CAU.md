@@ -20,7 +20,7 @@
 | Gọi SP/function từ ứng dụng | 5 nghiệp vụ ghi gọi thủ tục; báo cáo SP/TVF; điểm KTV qua hàm | backend/src/orders.js, finance.js, support.js, admin.js |
 | Báo cáo theo định dạng | Word, Times New Roman 13, giãn dòng 1,5; đủ 6 chương, danh mục, tham khảo và phụ lục | DOC/*.docx, *.pdf |
 | Trình chiếu ≤15 trang | 12 slide | SLIDES/*.pptx |
-| Backup hoặc SQL tái tạo | SQL gồm cấu trúc/quyền/dữ liệu mẫu, đã chạy trên CSDL mới | SQL/CSDL_HomeFix.sql; evidence/sql-cleanup.json |
+| Backup hoặc SQL tái tạo | SQL tái tạo đầy đủ và script sao lưu vật lý (Full, Diff, Log, Point-in-time recovery, SP tự động) | SQL/CSDL_HomeFix.sql, SQL/CSDL_HomeFix_SaoLuuPhucHoi.sql |
 | Source và hướng dẫn | Bản web sạch, README, script cài/chạy | SRC; README.md |
 
 ## Phân công thực hiện

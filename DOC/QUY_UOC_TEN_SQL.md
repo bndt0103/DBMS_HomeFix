@@ -16,4 +16,4 @@ Từ khóa SQL viết hoa. Khối `BEGIN…END`, `TRY…CATCH` và giao dịch t
 
 Script theo mô-đun nằm trong `SRC/database/CSDL_HomeFix_*.sql`. Bản tái tạo đầy đủ nằm tại `SQL/CSDL_HomeFix.sql`; cách chạy được mô tả trong [hướng dẫn SQL](../SQL/README.md).
 
-Ứng dụng dùng CSDL mặc định `HomeFix_DBMS_Nhom08_TiengViet`. Tên cột SQL được ánh xạ với thuộc tính JSON tại `SRC/backend/src/sql-names.js`. Metadata của cấu trúc, khóa và đối tượng được lưu trong `DOC/evidence/schema.json`.
+Ứng dụng dùng CSDL mặc định `HomeFix_DBMS_Nhom08`. Tên cột SQL được ánh xạ với thuộc tính JSON tại `SRC/backend/src/sql-names.js`. Metadata của cấu trúc, khóa và đối tượng được lưu trong `DOC/evidence/schema.json`.
