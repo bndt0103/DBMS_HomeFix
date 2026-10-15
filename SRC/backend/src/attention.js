@@ -6,6 +6,10 @@ export async function attentionSummary(user) {
     'SELECT COUNT(*) n FROM dbo.ThongBao WHERE NguoiDungId=@uid AND NgayDoc IS NULL',
     { uid: user.id },
   );
+  const unreadNotifications = await q(
+    'SELECT TieuDe title,DonHangId orderId FROM dbo.ThongBao WHERE NguoiDungId=@uid AND NgayDoc IS NULL',
+    { uid: user.id },
+  );
   let condition = '';
   if (user.role === 'KH')
     condition = `d.KhachHangId=@uid AND (
@@ -57,12 +61,18 @@ WHERE
     user.role === 'ADMIN'
       ? await one("SELECT COUNT(*) n FROM dbo.HoSoKTV WHERE TrangThai='Pending'")
       : { n: 0 };
+  const policies =
+    user.role === 'GD'
+      ? await one("SELECT COUNT(*) n FROM dbo.DeXuatChinhSach WHERE TrangThai='Pending'")
+      : { n: 0 };
   return {
     unread: Number(unread.n),
+    unreadNotifications,
     orderIds: orders.map((o) => o.id),
     orders,
     finance,
     support: Number(support.n),
     applications: Number(applications.n),
+    policies: Number(policies.n),
   };
 }

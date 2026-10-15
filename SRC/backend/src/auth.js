@@ -228,6 +228,12 @@ authRouter.post(
         'EMAIL_REQUIRED',
         'Tài khoản quản trị chưa có email. Vui lòng cập nhật email trước khi yêu cầu mã OTP.',
       );
+    if (!otpEmailDeliverable(destination))
+      fail(
+        422,
+        'OTP_EMAIL_UNDELIVERABLE',
+        'Email quản trị hiện tại là địa chỉ demo hoặc không nhận được thư. Hãy vào Hồ sơ, đổi sang email thật rồi yêu cầu OTP lại.',
+      );
     ok(
       res,
       await issueOtp({ purpose: 'admin-security', destination, binding: accountBinding(req.user) }),
@@ -332,6 +338,89 @@ authRouter.post(
           t,
         );
         await audit(t, req.user, 'UnlockUser', 'NguoiDung', uid);
+        return one(`SELECT ${userColumns} FROM dbo.NguoiDung WHERE Id=@Id`, { id: uid }, t);
+      },
+    );
+    ok(res, profile(unlocked));
+  }),
+);
+authRouter.post(
+  '/users/:id/permanent-lock',
+  roles('ADMIN'),
+  wrap(async (req, res) => {
+    const uid = id(req.params.id),
+      b = z.strictObject({ reason: str(5, 1000), ...otpFields }).parse(req.body);
+    const locked = await withOtp(
+      b,
+      'admin-security',
+      accountBinding(req.user),
+      req.user,
+      async (t) => {
+        const current = await one('SELECT * FROM dbo.NguoiDung WHERE Id=@Id', { id: uid }, t);
+        if (!current) fail(404, 'NOT_FOUND', 'Không tìm thấy tài khoản.');
+        if (current.id === req.user.id)
+          fail(409, 'CANNOT_LOCK_SELF', 'Không thể tự khóa vĩnh viễn tài khoản quản trị.');
+        if (!current.isActive) fail(409, 'ALREADY_DISABLED', 'Tài khoản đã bị khóa vĩnh viễn.');
+        if (
+          current.role === 'ADMIN' &&
+          (
+            await one(
+              `SELECT COUNT(*) n FROM dbo.NguoiDung
+WHERE VaiTro='ADMIN' AND DangHoatDong=1 AND Id<>@Id
+  AND (KhoaDenNgay IS NULL OR KhoaDenNgay<=SYSUTCDATETIME())`,
+              { id: uid },
+              t,
+            )
+          ).n < 1
+        )
+          fail(409, 'LAST_ADMIN', 'Không thể khóa quản trị viên hoạt động cuối cùng.');
+        if (
+          current.role === 'KTV' &&
+          (await one(
+            'SELECT Id FROM dbo.LenhDieuPhoi WHERE KyThuatVienId=@Id AND DangHoatDong=1',
+            { id: uid },
+            t,
+          ))
+        )
+          fail(
+            409,
+            'ACTIVE_ASSIGNMENT',
+            'Kỹ thuật viên đang có ca, cần hoàn tất hoặc điều phối lại trước khi khóa.',
+          );
+        await q(
+          'UPDATE dbo.NguoiDung SET DangHoatDong=0,KhoaDenNgay=NULL,PhienBanXacThuc=PhienBanXacThuc+1 WHERE Id=@Id',
+          { id: uid },
+          t,
+        );
+        await audit(t, req.user, 'PermanentLockUser', 'NguoiDung', uid, b.reason);
+        return one(`SELECT ${userColumns} FROM dbo.NguoiDung WHERE Id=@Id`, { id: uid }, t);
+      },
+    );
+    ok(res, profile(locked));
+  }),
+);
+authRouter.post(
+  '/users/:id/permanent-unlock',
+  roles('ADMIN'),
+  wrap(async (req, res) => {
+    const uid = id(req.params.id),
+      b = z.strictObject({ ...otpFields }).parse(req.body);
+    const unlocked = await withOtp(
+      b,
+      'admin-security',
+      accountBinding(req.user),
+      req.user,
+      async (t) => {
+        const current = await one('SELECT * FROM dbo.NguoiDung WHERE Id=@Id', { id: uid }, t);
+        if (!current) fail(404, 'NOT_FOUND', 'Không tìm thấy tài khoản.');
+        if (current.isActive)
+          fail(409, 'ACCOUNT_NOT_PERMANENTLY_LOCKED', 'Tài khoản không bị khóa vĩnh viễn.');
+        await q(
+          'UPDATE dbo.NguoiDung SET DangHoatDong=1,KhoaDenNgay=NULL,PhienBanXacThuc=PhienBanXacThuc+1 WHERE Id=@Id',
+          { id: uid },
+          t,
+        );
+        await audit(t, req.user, 'PermanentUnlockUser', 'NguoiDung', uid);
         return one(`SELECT ${userColumns} FROM dbo.NguoiDung WHERE Id=@Id`, { id: uid }, t);
       },
     );
@@ -479,6 +568,32 @@ authRouter.get(
       page: Number(page),
       pageSize: Number(pageSize),
     });
+  }),
+);
+authRouter.get(
+  '/users/:id/security-info',
+  roles('ADMIN'),
+  wrap(async (req, res) => {
+    const uid = id(req.params.id);
+    const account = await one(
+      `SELECT ${userColumns},
+  (SELECT TOP 1 NhomTayNghe FROM dbo.KyThuatVien WHERE Id=dbo.NguoiDung.Id) NhomTayNghe,
+  (SELECT COUNT(*) FROM dbo.LenhDieuPhoi WHERE KyThuatVienId=dbo.NguoiDung.Id AND DangHoatDong=1) ActiveAssignmentCount
+FROM dbo.NguoiDung
+WHERE Id=@Id`,
+      { id: uid },
+    );
+    if (!account) fail(404, 'NOT_FOUND', 'Không tìm thấy tài khoản.');
+    const latestSecurityAction = await one(
+      `SELECT TOP 1 a.ThaoTac, a.ChiTiet, a.NgayTao, n.HoTen actorName
+FROM dbo.NhatKy a
+LEFT JOIN dbo.NguoiDung n ON n.Id=a.NguoiThucHienId
+WHERE a.DoiTuong='NguoiDung' AND a.DoiTuongId=@Id
+  AND a.ThaoTac IN ('TemporaryLockUser', 'UnlockUser', 'PermanentLockUser', 'PermanentUnlockUser')
+ORDER BY a.Id DESC`,
+      { id: uid },
+    );
+    ok(res, { ...profile(account), latestSecurityAction });
   }),
 );
 authRouter.post(

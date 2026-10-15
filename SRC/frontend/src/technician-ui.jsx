@@ -99,7 +99,7 @@ export function PhotoPicker({ label, files, onChange, required = false, multiple
     </div>
   );
 }
-export function SignaturePad({ onChange }) {
+export function SignaturePad({ onChange, label = 'Chữ ký khách hàng' }) {
   const canvas = useRef(null),
     drawing = useRef(false),
     dirty = useRef(false);
@@ -126,13 +126,13 @@ export function SignaturePad({ onChange }) {
   }
   return (
     <div className="signature-field">
-      <b>Chữ ký khách hàng</b>
+      <b>{label}</b>
       <p>Ký trực tiếp trong khung bên dưới.</p>
       <canvas
         ref={canvas}
         width={800}
         height={280}
-        aria-label="Khung ký xác nhận nghiệm thu"
+        aria-label={'Khung ' + label.toLowerCase() + ' trên phiếu nghiệm thu'}
         onPointerDown={(e) => {
           e.preventDefault();
           canvas.current.setPointerCapture(e.pointerId);

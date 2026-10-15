@@ -832,31 +832,35 @@ await test('HomeFix SQL Server integration', async (t) => {
         await setSetting('signatureRequired', old);
       }
     });
-    await step('TC30 Hai yêu cầu rút không thể làm ví âm', async () => {
-      const requests = [];
-      for (let i = 0; i < 2; i++)
-        requests.push(
-          await checked(
-            'POST',
-            '/wallet-requests',
-            { type: 'Withdrawal', amount: '600000', note: 'Rút tiền kiểm thử giới hạn số dư.' },
-            'TECH',
-            201,
-            key(),
-          ),
-        );
-      const outcomes = await Promise.all(
-        requests.map((r) =>
-          call(
-            'POST',
-            `/wallet-requests/${r.id}/decision`,
-            { decision: 'Approved', expectedVersion: r.version },
-            'KT',
-            key(),
-          ),
-        ),
+    await step('TC30 Giữ chỗ số dư khi gửi yêu cầu rút', async () => {
+      const request = await checked(
+        'POST',
+        '/wallet-requests',
+        { type: 'Withdrawal', amount: '600000', note: 'Rút tiền kiểm thử giới hạn số dư.' },
+        'TECH',
+        201,
+        key(),
       );
-      assert.deepEqual(outcomes.map((r) => r.status).sort(), [200, 409]);
+      const overdraw = await call(
+        'POST',
+        '/wallet-requests',
+        { type: 'Withdrawal', amount: '600000', note: 'Yêu cầu vượt số dư khả dụng.' },
+        'TECH',
+        key(),
+      );
+      assert.equal(overdraw.status, 409, JSON.stringify(overdraw));
+      assert.equal(overdraw.error.code, 'INSUFFICIENT_AVAILABLE_BALANCE');
+      await checked(
+        'POST',
+        `/wallet-requests/${request.id}/decision`,
+        {
+          decision: 'Approved',
+          expectedVersion: request.version,
+        },
+        'KT',
+        200,
+        key(),
+      );
       assert.equal(
         Number((await checked('GET', '/technicians/me/wallet', null, 'TECH')).balance),
         355000,

@@ -1221,7 +1221,7 @@ BEGIN
             THROW 51003, 'FORBIDDEN', 1;
         IF LEN(LTRIM(RTRIM(@DiaChi))) < 10 OR LEN(LTRIM(RTRIM(@MoTa))) < 5
             THROW 51009, 'INVALID_ORDER_INPUT', 1;
-        IF @NgayHen IS NOT NULL AND (@NgayHen < DATEADD(minute, 30, SYSUTCDATETIME()) OR @NgayHen > DATEADD(day, 30, SYSUTCDATETIME()) OR DATEPART(hour, DATEADD(hour, 7, @NgayHen)) NOT BETWEEN 8 AND 17 OR DATEPART(minute, @NgayHen) % 30 <> 0 OR DATEPART(second, @NgayHen) <> 0)
+        IF @NgayHen IS NOT NULL AND (@NgayHen < DATEADD(minute, 30, SYSUTCDATETIME()) OR @NgayHen > DATEADD(day, 30, SYSUTCDATETIME()) OR DATEPART(hour, DATEADD(hour, 7, @NgayHen)) NOT BETWEEN 8 AND 17 OR DATEPART(second, @NgayHen) <> 0)
             THROW 51009, 'INVALID_SCHEDULE', 1;
         IF NOT EXISTS (SELECT 1
                        FROM dbo.DichVu WITH (UPDLOCK, HOLDLOCK)
@@ -1597,4 +1597,31 @@ IF NOT EXISTS (SELECT 1 FROM dbo.PhienBanCSDL WHERE PhienBan = 6)
 GO
 -- Kiểm tra toàn bộ ràng buộc dữ liệu.
 DBCC CHECKCONSTRAINTS WITH ALL_CONSTRAINTS;
+GO
+-- Tach chu ky cua KTV khoi chu ky khach hang tren phieu nghiem thu.
+IF COL_LENGTH('dbo.PhieuNghiemThu', 'ChuKyKTVId') IS NULL
+    ALTER TABLE dbo.PhieuNghiemThu ADD ChuKyKTVId INT NULL;
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_NghiemThu_ChuKyKTV'
+)
+    ALTER TABLE dbo.PhieuNghiemThu
+        ADD CONSTRAINT FK_NghiemThu_ChuKyKTV FOREIGN KEY (ChuKyKTVId) REFERENCES dbo.TepDinhKem (Id);
+GO
+
+DECLARE @LenhSQL AS NVARCHAR(MAX) = '';
+
+SELECT @LenhSQL = @LenhSQL + 'ALTER TABLE dbo.TepDinhKem DROP CONSTRAINT ' + QUOTENAME(name) + ';'
+FROM sys.check_constraints
+WHERE parent_object_id = OBJECT_ID('dbo.TepDinhKem')
+  AND parent_column_id = COLUMNPROPERTY(OBJECT_ID('dbo.TepDinhKem'), 'MucDich', 'ColumnId');
+
+EXECUTE sp_executesql @LenhSQL;
+GO
+
+ALTER TABLE dbo.TepDinhKem
+    ADD CONSTRAINT CK_TepDinhKem_MucDich CHECK (
+        MucDich IN ('OrderFault', 'MaterialEvidence', 'AcceptancePhoto', 'CustomerSignature', 'TechnicianSignature', 'WalletProof', 'TechnicianDocument', 'PaymentProof', 'Avatar')
+    );
 GO

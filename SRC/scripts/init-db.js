@@ -52,6 +52,7 @@ for (const filename of [
   'CSDL_HomeFix_13_ChiMucVaToanVen.sql',
   'CSDL_HomeFix_14_GiaoDich.sql',
   'CSDL_HomeFix_15_PhanQuyen.sql',
+  'CSDL_HomeFix_16_ChuKyKyThuatVien.sql',
 ])
   for (const batch of fs
     .readFileSync(path.join(root, 'database', filename), 'utf8')

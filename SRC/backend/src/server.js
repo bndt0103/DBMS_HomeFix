@@ -8,7 +8,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { ZodError } from 'zod';
 import { config, backendDir } from './config.js';
-import { pool, close, one } from './db.js';
+import { pool, close, one, q } from './db.js';
 import { ok, wrap } from './common.js';
 import { authRouter } from './auth.js';
 import { ordersRouter, expireAssignments } from './orders.js';
@@ -17,6 +17,7 @@ import { uploadsRouter, publicUploadsRouter } from './uploads.js';
 import { financeRouter } from './finance.js';
 import { adminRouter, publicServices } from './admin.js';
 import { supportRouter } from './support.js';
+import { aiRouter } from './ai.js';
 if (!config.secret || config.secret.length < 32 || config.secret.startsWith('replace-'))
   throw new Error(
     'Chạy npm run db:init hoặc đặt JWT_SECRET ngẫu nhiên tối thiểu 32 ký tự trong backend/.env.',
@@ -85,6 +86,7 @@ app.use(
   supportRouter,
   paymentsRouter,
   reportsRouter,
+  aiRouter,
 );
 app.use('/api', (req, res) =>
   res.status(404).json({
@@ -146,7 +148,9 @@ app.use((err, req, res, next) => {
     message =
       code === 'INSUFFICIENT_BALANCE'
         ? 'Ví không đủ số dư để đối soát.'
-        : 'Không thể xử lý với trạng thái hoặc phiên bản hiện tại. Hãy tải lại dữ liệu.';
+        : code === 'INSUFFICIENT_RESERVED_BALANCE'
+          ? 'Số dư hiện tại không còn đủ để bảo đảm các yêu cầu rút đang chờ.'
+          : 'Không thể xử lý với trạng thái hoặc phiên bản hiện tại. Hãy tải lại dữ liệu.';
   }
   if (['ESOCKET', 'ECONNCLOSED', 'ENOTOPEN', 'ETIMEOUT', 'ELOGIN'].includes(err.code)) {
     status = 503;
@@ -177,6 +181,26 @@ app.use((err, req, res, next) => {
     .json({ error: { code, message, ...(details ? { details } : {}) }, requestId: req.requestId });
 });
 await pool();
+const acceptanceSignatureMigration = await one(`SELECT CAST(CASE
+  WHEN COL_LENGTH('dbo.PhieuNghiemThu', 'ChuKyKTVId') IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_NghiemThu_ChuKyKTV'
+    )
+    AND EXISTS (
+      SELECT 1 FROM sys.check_constraints
+      WHERE parent_object_id = OBJECT_ID('dbo.TepDinhKem')
+        AND definition LIKE '%TechnicianSignature%'
+    )
+  THEN 1 ELSE 0 END AS bit) ready`);
+if (!acceptanceSignatureMigration.ready) {
+  const migrationPath = path.resolve(
+    backendDir,
+    '../database/CSDL_HomeFix_16_ChuKyKyThuatVien.sql',
+  );
+  const migration = fs.readFileSync(migrationPath, 'utf8');
+  for (const batch of migration.split(/^GO\s*$/m).filter((part) => part.trim())) await q(batch);
+  console.log('Applied database migration: technician acceptance signature.');
+}
 await expireAssignments();
 const server = app.listen(config.port, process.env.HOST || '0.0.0.0', () =>
   console.log(`HomeFix running at http://localhost:${config.port}`),

@@ -30,6 +30,7 @@ const purposes = z.enum([
   'MaterialEvidence',
   'AcceptancePhoto',
   'CustomerSignature',
+  'TechnicianSignature',
   'WalletProof',
   'TechnicianDocument',
   'PaymentProof',
@@ -63,9 +64,13 @@ uploadsRouter.post(
     try {
       const record = await transaction(req.user, async (t) => {
         if (
-          ['MaterialEvidence', 'AcceptancePhoto', 'CustomerSignature', 'PaymentProof'].includes(
-            purpose,
-          ) &&
+          [
+            'MaterialEvidence',
+            'AcceptancePhoto',
+            'CustomerSignature',
+            'TechnicianSignature',
+            'PaymentProof',
+          ].includes(purpose) &&
           !oid
         )
           fail(422, 'ORDER_REQUIRED', 'Loại ảnh này phải gắn với đơn.');
@@ -80,6 +85,8 @@ uploadsRouter.post(
           fail(403, 'FORBIDDEN', 'Chỉ khách dùng loại ảnh này.');
         if (purpose === 'CustomerSignature' && !['KH', 'KTV'].includes(req.user.role))
           fail(403, 'FORBIDDEN', 'Chỉ khách hoặc kỹ thuật viên thực hiện đơn được tải chữ ký.');
+        if (purpose === 'TechnicianSignature' && req.user.role !== 'KTV')
+          fail(403, 'FORBIDDEN', 'Chỉ kỹ thuật viên thực hiện đơn được tải chữ ký KTV.');
         if (oid) {
           const o = await getOrder(oid, req.user, t);
           if (['MaterialEvidence', 'AcceptancePhoto'].includes(purpose)) {
@@ -108,6 +115,10 @@ uploadsRouter.post(
               await activeTech(t, o, req.user);
               state(o, 'DangXuLy');
             } else state(o, 'ChoNghiemThu');
+          }
+          if (purpose === 'TechnicianSignature') {
+            await activeTech(t, o, req.user);
+            state(o, 'DangXuLy');
           }
           if (purpose === 'OrderFault') state(o, 'ChoTiepNhan');
         }

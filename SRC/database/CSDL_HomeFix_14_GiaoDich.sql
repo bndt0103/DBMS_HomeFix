@@ -156,7 +156,7 @@ BEGIN
             THROW 51003, 'FORBIDDEN', 1;
         IF LEN(LTRIM(RTRIM(@DiaChi))) < 10 OR LEN(LTRIM(RTRIM(@MoTa))) < 5
             THROW 51009, 'INVALID_ORDER_INPUT', 1;
-        IF @NgayHen IS NOT NULL AND (@NgayHen < DATEADD(minute, 30, SYSUTCDATETIME()) OR @NgayHen > DATEADD(day, 30, SYSUTCDATETIME()) OR DATEPART(hour, DATEADD(hour, 7, @NgayHen)) NOT BETWEEN 8 AND 17 OR DATEPART(minute, @NgayHen) % 30 <> 0 OR DATEPART(second, @NgayHen) <> 0)
+        IF @NgayHen IS NOT NULL AND (@NgayHen < DATEADD(minute, 30, SYSUTCDATETIME()) OR @NgayHen > DATEADD(day, 30, SYSUTCDATETIME()) OR DATEPART(hour, DATEADD(hour, 7, @NgayHen)) NOT BETWEEN 8 AND 17 OR DATEPART(second, @NgayHen) <> 0)
             THROW 51009, 'INVALID_SCHEDULE', 1;
         IF NOT EXISTS (SELECT 1
                        FROM dbo.DichVu WITH (UPDLOCK, HOLDLOCK)
@@ -213,22 +213,31 @@ BEGIN
             THROW 51009, 'INVALID_DECISION', 1;
         IF @QuyetDinh = 'Rejected' AND NULLIF (LTRIM(RTRIM(@LyDo)), '') IS NULL
             THROW 51009, 'REASON_REQUIRED', 1;
-        DECLARE @KyThuatVienId AS INT, @SoTien AS DECIMAL(18, 2), @Loai AS VARCHAR(15), @TrangThai AS VARCHAR(10), @PhienBan AS BINARY(8);
-        SELECT @KyThuatVienId = KyThuatVienId, @SoTien = SoTien, @Loai = Loai, @TrangThai = TrangThai, @PhienBan = PhienBan
-        FROM dbo.YeuCauVi WITH (UPDLOCK, HOLDLOCK)
+        DECLARE @KyThuatVienId AS INT, @SoTien AS DECIMAL(18, 2), @Loai AS VARCHAR(15), @TrangThai AS VARCHAR(10), @PhienBan AS BINARY(8), @SoDu AS DECIMAL(18, 2);
+        SELECT @KyThuatVienId = KyThuatVienId
+        FROM dbo.YeuCauVi
         WHERE Id = @YeuCauId;
         IF @KyThuatVienId IS NULL
             THROW 51004, 'REQUEST_NOT_FOUND', 1;
+        -- Luôn khóa ví trước yêu cầu để đồng bộ thứ tự khóa với luồng tạo yêu cầu rút.
+        SELECT @SoDu = SoDu
+        FROM dbo.KyThuatVien WITH (UPDLOCK, HOLDLOCK)
+        WHERE Id = @KyThuatVienId;
+        SELECT @KyThuatVienId = KyThuatVienId, @SoTien = SoTien, @Loai = Loai, @TrangThai = TrangThai, @PhienBan = PhienBan
+        FROM dbo.YeuCauVi WITH (UPDLOCK, HOLDLOCK)
+        WHERE Id = @YeuCauId;
         IF @PhienBanDuKien IS NULL OR @PhienBan <> @PhienBanDuKien OR @TrangThai <> 'Pending'
             THROW 51009, 'VERSION_CONFLICT', 1;
         IF @QuyetDinh = 'Approved'
             BEGIN
                 IF @Loai = 'Withdrawal'
                     BEGIN
-                        IF (SELECT SoDu
-                            FROM dbo.KyThuatVien WITH (UPDLOCK, HOLDLOCK)
-                            WHERE Id = @KyThuatVienId) < @SoTien
-                            THROW 51009, 'INSUFFICIENT_BALANCE', 1;
+                        IF @SoDu < (SELECT COALESCE(SUM(SoTien), 0)
+                                    FROM dbo.YeuCauVi WITH (UPDLOCK, HOLDLOCK)
+                                    WHERE KyThuatVienId = @KyThuatVienId
+                                      AND Loai = 'Withdrawal'
+                                      AND TrangThai = 'Pending')
+                            THROW 51009, 'INSUFFICIENT_RESERVED_BALANCE', 1;
                         IF EXISTS (SELECT 1
                                    FROM dbo.LenhDieuPhoi WITH (UPDLOCK, HOLDLOCK)
                                    WHERE KyThuatVienId = @KyThuatVienId AND DangHoatDong = 1)

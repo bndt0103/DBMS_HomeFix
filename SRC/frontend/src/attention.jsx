@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { api } from './api';
 const empty = {
   unread: 0,
+  unreadNotifications: [],
   orderIds: [],
   orders: [],
   support: 0,
   applications: 0,
+  policies: 0,
   error: null,
   finance: { settlements: 0, bank: 0, wallet: 0 },
 };
@@ -65,16 +67,37 @@ export function AttentionProvider({ user, children }) {
 }
 export function needsAttention(summary, path) {
   const [pathname, query = ''] = path.split('?');
-  if (pathname === '/orders' || pathname === '/admin/orders') return summary.orderIds.length > 0;
-  if (pathname === '/support') return Number(summary.support) > 0;
-  if (pathname === '/applications') return Number(summary.applications) > 0;
+  const params = new URLSearchParams(query);
+  const titles = (summary.unreadNotifications || []).map((item) => item.title.toLowerCase());
+  const hasTitle = (...terms) => titles.some((title) => terms.some((term) => title.includes(term)));
+  if (pathname === '/' && params.get('tab') === 'policies')
+    return Number(summary.policies) > 0 || hasTitle('chính sách', 'đề xuất');
+  if (pathname === '/orders' || pathname === '/admin/orders')
+    return (
+      summary.orderIds.length > 0 ||
+      (summary.unreadNotifications || []).some((item) => item.orderId)
+    );
+  if (pathname === '/support')
+    return Number(summary.support) > 0 || hasTitle('hỗ trợ', 'khiếu nại', 'bảo hành');
+  if (pathname === '/applications')
+    return Number(summary.applications) > 0 || hasTitle('hồ sơ kỹ thuật viên');
+  if (pathname === '/wallet') return hasTitle('ví');
   if (pathname === '/finance') {
-    const tab = new URLSearchParams(query).get('tab');
-    if (tab === 'bank') return Number(summary.finance.bank) > 0;
-    if (tab === 'wallet')
-      return Number(summary.finance.wallet) > 0 || Number(summary.finance.settlements) > 0;
-    if (tab === 'revenue' || tab === 'settlements') return Number(summary.finance.settlements) > 0;
-    return Object.values(summary.finance).some((n) => Number(n) > 0);
+    const tab = params.get('tab');
+    if (tab === 'bank') return Number(summary.finance.bank) > 0 || hasTitle('chuyển khoản');
+    if (tab === 'wallet') return Number(summary.finance.wallet) > 0 || hasTitle('ví');
+    if (tab === 'revenue' || tab === 'settlements')
+      return Number(summary.finance.settlements) > 0 || hasTitle('đối soát', 'doanh thu');
+    return (
+      Object.values(summary.finance).some((n) => Number(n) > 0) ||
+      hasTitle('ví', 'chuyển khoản', 'đối soát')
+    );
+  }
+  if (pathname === '/reports') {
+    const tab = params.get('tab');
+    if (tab === 'quality') return hasTitle('chất lượng', 'khiếu nại');
+    if (tab === 'technicians') return hasTitle('kỹ thuật viên', 'hiệu suất');
+    return hasTitle('báo cáo', 'tài chính', 'doanh thu');
   }
   return false;
 }
@@ -125,7 +148,7 @@ export function AttentionPanel({ role }) {
         ))}
         {summary.orderIds.length > 3 && <Link to="/orders">Mở danh sách đơn</Link>}
         {Number(summary.finance.settlements) > 0 && (
-          <Link to="/finance?tab=wallet">{summary.finance.settlements} đơn chờ đối soát</Link>
+          <Link to="/finance?tab=settlements">{summary.finance.settlements} đơn chờ đối soát</Link>
         )}
         {Number(summary.finance.wallet) > 0 && (
           <Link to="/finance?tab=wallet">{summary.finance.wallet} yêu cầu ví chờ duyệt</Link>

@@ -795,64 +795,37 @@ function ExecutiveChart({ rows, maximum }) {
   );
 }
 export function PolicyApproval() {
-  const { toast } = useApp(),
-    [proposals, setProposals] = useState([
-      {
-        id: 'CS-10222',
-        title: 'Điều chỉnh chiết khấu dịch vụ Điện nước từ 18% → 15%',
-        department: 'Đề xuất: Lê Anh Tuấn',
-        submittedAt: 'Hôm nay, 10:42',
-        group: 'Điện nước',
-        currentDiscount: '18.0%',
-        proposedDiscount: '15.0%',
-        currentBonus: '2.0% / đơn',
-        proposedBonus: '3.5% / đơn',
-        impact:
-          'Dự báo tăng trưởng biên lợi nhuận ròng +2.4% cho nhóm dịch vụ kỹ thuật điện nước. Chính sách mới kỳ vọng tăng 12% lượng đơn hoàn thành do thu hút được đội ngũ kỹ thuật viên chất lượng cao.',
-        reason:
-          'Các hệ số chiết khấu hiện tại đang làm giảm động lực đăng ký mới của đội ngũ KTV, đề xuất giảm mức chiết khấu để tăng thưởng trực tiếp trên mỗi ca hoàn thành xuất sắc.',
-      },
-      {
-        id: 'CS-10223',
-        title: 'Cập nhật bảng giá sản phẩm Vệ sinh thiết bị',
-        department: 'Người gửi: Đỗ Văn An',
-        submittedAt: 'Hôm qua, 15:30',
-        group: 'Vệ sinh & bảo trì',
-        currentDiscount: '12.0%',
-        proposedDiscount: '10.0%',
-        currentBonus: '1.5% / đơn',
-        proposedBonus: '2.0% / đơn',
-        impact: 'Điều chỉnh phù hợp với biến động giá vật tư vệ sinh và duy trì mức cạnh tranh.',
-        reason: 'Bảng giá vật tư đã được rà soát theo nhà cung cấp mới.',
-      },
-      {
-        id: 'CS-10224',
-        title: 'Chương trình ưu đãi Khách hàng mới tháng 11',
-        department: 'Người gửi: Nguyễn Thị Hằng',
-        submittedAt: '22/10/2026',
-        group: 'Marketing',
-        currentDiscount: '0%',
-        proposedDiscount: '10%',
-        currentBonus: '—',
-        proposedBonus: '—',
-        impact: 'Dự kiến tăng lượng khách hàng mới và tỷ lệ đặt dịch vụ lần đầu.',
-        reason: 'Áp dụng mã giảm giá cho khách hàng lần đầu sử dụng HomeFix.',
-      },
-    ]),
-    [selectedId, setSelectedId] = useState('CS-10222'),
-    [note, setNote] = useState(''),
-    [effectiveAt, setEffectiveAt] = useState('tomorrow');
-  const selected = proposals.find((proposal) => proposal.id === selectedId) || proposals[0];
-  const decide = (status) => {
-    setProposals((items) => items.filter((item) => item.id !== selected.id));
-    toast(
-      status === 'approved'
-        ? `Đã phê duyệt ${selected.id}.`
-        : status === 'revision'
-          ? `Đã gửi yêu cầu chỉnh sửa ${selected.id}.`
-          : `Đã từ chối ${selected.id}.`,
-    );
-    setNote('');
+  const { toast } = useApp();
+  const proposalData = useData('/director/policy-proposals', 15000);
+  const action = useAction();
+  const [selectedId, setSelectedId] = useState(null);
+  const [note, setNote] = useState('');
+  const [effectiveAt, setEffectiveAt] = useState('tomorrow');
+  const proposals = proposalData.data || [];
+  const selected = proposals.find((proposal) => proposal.id === selectedId) || proposals[0] || null;
+  const decide = async (decision) => {
+    if (!selected) return;
+    await action.run(async () => {
+      await api(`/director/policy-proposals/${selected.id}/decision`, {
+        method: 'POST',
+        body: {
+          decision,
+          expectedVersion: selected.version,
+          ...(note.trim() ? { note: note.trim() } : {}),
+          ...(decision === 'Approved' ? { effectiveAt } : {}),
+        },
+      });
+      setNote('');
+      setSelectedId(null);
+      proposalData.reload();
+      toast(
+        decision === 'Approved'
+          ? `Đã phê duyệt ${selected.proposalCode}.`
+          : decision === 'RevisionRequested'
+            ? `Đã yêu cầu chỉnh sửa ${selected.proposalCode}.`
+            : `Đã từ chối ${selected.proposalCode}.`,
+      );
+    });
   };
   return (
     <div className="policy-approval">
@@ -871,19 +844,23 @@ export function PolicyApproval() {
       <div className="policy-layout">
         <section className="policy-list">
           <h2>Danh sách đề xuất chờ duyệt</h2>
-          {proposals.length ? (
+          {proposalData.loading && !proposalData.data ? (
+            <Loading />
+          ) : proposalData.error ? (
+            <ErrorBox error={proposalData.error} />
+          ) : proposals.length ? (
             proposals.map((proposal) => (
               <button
                 type="button"
                 key={proposal.id}
-                className={proposal.id === selected.id ? 'selected' : ''}
+                className={proposal.id === selected?.id ? 'selected' : ''}
                 onClick={() => setSelectedId(proposal.id)}
               >
-                <span>Chờ duyệt</span>
+                <span>{proposal.status === 'Pending' ? 'Chờ duyệt' : proposal.status}</span>
                 <b>{proposal.title}</b>
                 <small>
                   {proposal.department}
-                  <em>{proposal.submittedAt}</em>
+                  <em>{date(proposal.submittedAt)}</em>
                 </small>
                 <i>
                   Đang chọn <ArrowRight size={13} />
@@ -892,8 +869,8 @@ export function PolicyApproval() {
             ))
           ) : (
             <Empty
-              title="Không còn đề xuất chờ duyệt"
-              text="Các đề xuất mới sẽ xuất hiện tại đây."
+              title="Chưa có đề xuất chờ duyệt"
+              text="Danh sách này hiển thị các đề xuất đang chờ trong cơ sở dữ liệu."
             />
           )}
         </section>
@@ -901,10 +878,10 @@ export function PolicyApproval() {
           <section className="policy-detail">
             <div className="policy-detail-head">
               <div>
-                <h2>Chi tiết đề xuất {selected.id}</h2>
+                <h2>Chi tiết đề xuất {selected.proposalCode}</h2>
                 <small>Bảng so sánh giá & chiết khấu</small>
               </div>
-              <small>Ngày gửi: {selected.submittedAt}</small>
+              <small>Ngày gửi: {date(selected.submittedAt)}</small>
             </div>
             <div className="policy-compare">
               <div className="policy-compare-head">
@@ -914,17 +891,23 @@ export function PolicyApproval() {
               </div>
               <div>
                 <b>Chiết khấu dịch vụ</b>
-                <span>{selected.currentDiscount}</span>
-                <strong>{selected.proposedDiscount}</strong>
+                <span>
+                  {selected.currentDiscount == null ? '—' : `${Number(selected.currentDiscount)}%`}
+                </span>
+                <strong>
+                  {selected.proposedDiscount == null
+                    ? '—'
+                    : `${Number(selected.proposedDiscount)}%`}
+                </strong>
               </div>
               <div>
                 <b>Thưởng hiệu suất</b>
-                <span>{selected.currentBonus}</span>
-                <strong>{selected.proposedBonus}</strong>
+                <span>{selected.currentBonus || '—'}</span>
+                <strong>{selected.proposedBonus || '—'}</strong>
               </div>
             </div>
             <div className="policy-impact">
-              <b>Dự báo tăng trưởng biên lợi nhuận ròng</b>
+              <b>Tác động dự kiến</b>
               <p>{selected.impact}</p>
             </div>
             <div className="policy-readonly">
@@ -935,6 +918,7 @@ export function PolicyApproval() {
               Ý kiến phê duyệt / Chỉ đạo
               <textarea
                 value={note}
+                maxLength={2000}
                 onChange={(event) => setNote(event.target.value)}
                 placeholder="Nhập chỉ đạo hoặc yêu cầu chỉnh sửa chính sách..."
               />
@@ -947,14 +931,30 @@ export function PolicyApproval() {
                 <option value="month">Áp dụng từ đầu tháng sau</option>
               </select>
             </label>
+            <ErrorBox error={action.error} />
             <div className="policy-actions">
-              <button className="btn danger" onClick={() => decide('rejected')}>
+              <button
+                type="button"
+                className="btn danger"
+                disabled={action.busy}
+                onClick={() => decide('Rejected')}
+              >
                 Từ chối
               </button>
-              <button className="btn warning" onClick={() => decide('revision')}>
+              <button
+                type="button"
+                className="btn warning"
+                disabled={action.busy}
+                onClick={() => decide('RevisionRequested')}
+              >
                 Yêu cầu sửa
               </button>
-              <button className="btn primary" onClick={() => decide('approved')}>
+              <button
+                type="button"
+                className="btn primary"
+                disabled={action.busy}
+                onClick={() => decide('Approved')}
+              >
                 <CheckCircle2 size={17} /> Phê duyệt
               </button>
             </div>
@@ -1186,11 +1186,10 @@ export function Booking() {
             </Field>
             <Field
               label="Lịch hẹn (để trống nếu cần sớm nhất)"
-              hint="08:00–17:30, khung 30 phút; đặt trước ít nhất 30 phút, tối đa 30 ngày."
+              hint="08:00–17:59; đặt trước ít nhất 30 phút, tối đa 30 ngày."
             >
               <input
                 type="datetime-local"
-                step="1800"
                 value={form.scheduledAt}
                 onChange={(e) => set('scheduledAt', e.target.value)}
               />
@@ -1638,7 +1637,7 @@ export function Notifications() {
       <PageHead
         eyebrow="CẬP NHẬT MỚI"
         title="Thông báo"
-        text="Các thay đổi liên quan đến đơn dịch vụ và tài khoản của bạn."
+        text="Thông báo mới và toàn bộ lịch sử yêu cầu, cập nhật liên quan đến tài khoản của bạn."
       />
       <ErrorBox error={r.error || a.error} />
       {r.loading ? (
@@ -1683,7 +1682,10 @@ export function Notifications() {
           ))}
         </div>
       ) : (
-        <Empty title="Chưa có thông báo mới" />
+        <Empty
+          title="Chưa có thông báo"
+          text="Thông báo đã đọc vẫn được lưu trong lịch sử tại đây."
+        />
       )}
     </>
   );

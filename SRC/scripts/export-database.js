@@ -26,6 +26,7 @@ const files = [
   'CSDL_HomeFix_13_ChiMucVaToanVen.sql',
   'CSDL_HomeFix_14_GiaoDich.sql',
   'CSDL_HomeFix_15_PhanQuyen.sql',
+  'CSDL_HomeFix_16_ChuKyKyThuatVien.sql',
 ];
 let source = `-- Khởi tạo cơ sở dữ liệu HomeFix bằng SQLCMD.
 :on error exit

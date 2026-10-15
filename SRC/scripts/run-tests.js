@@ -15,6 +15,8 @@ const env = {
   HOST: '127.0.0.1',
   TEST_BASE_URL: `http://127.0.0.1:${port}/api`,
   JWT_SECRET: crypto.randomBytes(48).toString('base64url'),
+  // Keep isolated tests deterministic and prevent calls to a configured paid AI provider.
+  GEMINI_ENABLED: 'false',
 };
 fs.mkdirSync('test-results', { recursive: true });
 let api;

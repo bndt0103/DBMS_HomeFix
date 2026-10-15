@@ -285,7 +285,7 @@ quotesRouter.post(
           cause: str(5, 2000),
           solution: str(5, 2000),
           photoIds: z.array(z.number().int().positive()).min(1).max(5),
-          signatureId: z.number().int().positive().optional(),
+          technicianSignatureId: z.number().int().positive().optional(),
           proposedPaymentMethod: z.enum(['COD', 'BANK']).optional(),
           expectedVersion: versionSchema,
         })
@@ -324,7 +324,7 @@ WHERE
         )
           fail(404, 'ATTACHMENT_NOT_FOUND', 'Ảnh nghiệm thu không đúng quyền, đơn hoặc đã dùng.');
       if (
-        b.signatureId &&
+        b.technicianSignatureId &&
         !(await one(
           `SELECT
   Id
@@ -334,9 +334,9 @@ WHERE
   Id = @Id
   AND ChuSoHuuId = @uid
   AND DonHangId = @oid
-  AND MucDich = 'CustomerSignature'
+  AND MucDich = 'TechnicianSignature'
   AND NghiemThuId IS NULL`,
-          { id: b.signatureId, uid: req.user.id, oid },
+          { id: b.technicianSignatureId, uid: req.user.id, oid },
           t,
         ))
       )
@@ -392,14 +392,18 @@ WHERE
         t,
       );
       await q(
-        'UPDATE dbo.PhieuNghiemThu SET ChuKyId=@signature,PhuongThucThanhToanDeXuat=@PhuongThuc WHERE Id=@Id',
-        { id: acceptance.id, signature: b.signatureId, method: b.proposedPaymentMethod },
+        'UPDATE dbo.PhieuNghiemThu SET ChuKyKTVId=@technicianSignature,PhuongThucThanhToanDeXuat=@PhuongThuc WHERE Id=@Id',
+        {
+          id: acceptance.id,
+          technicianSignature: b.technicianSignatureId,
+          method: b.proposedPaymentMethod,
+        },
         t,
       );
-      if (b.signatureId)
+      if (b.technicianSignatureId)
         await q(
           'UPDATE dbo.TepDinhKem SET NghiemThuId=@aid WHERE Id=@Id',
-          { aid: acceptance.id, id: b.signatureId },
+          { aid: acceptance.id, id: b.technicianSignatureId },
           t,
         );
       for (const fid of b.photoIds)

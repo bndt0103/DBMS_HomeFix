@@ -1,4 +1,4 @@
--- Đề xuất chính sách và dữ liệu mẫu.
+-- Bảng lưu đề xuất chính sách do các bộ phận gửi lên.
 IF OBJECT_ID('dbo.DeXuatChinhSach') IS NULL
     BEGIN
         -- Đề xuất chính sách.
@@ -25,15 +25,152 @@ IF OBJECT_ID('dbo.DeXuatChinhSach') IS NULL
     END
 GO
 
-IF NOT EXISTS (SELECT 1
-               FROM dbo.DeXuatChinhSach)
-    BEGIN
-        INSERT INTO dbo.DeXuatChinhSach (MaDeXuat, TieuDe, BoPhan, NhomDichVu, ChietKhauHienTai, ChietKhauDeXuat, MucThuongHienTai, MucThuongDeXuat, TacDong, LyDo)
-        VALUES ('CS-10222', N'Điều chỉnh chiết khấu dịch vụ Điện nước từ 18% → 15%', N'Đề xuất: Lê Anh Tuấn', N'Điện nước', 18, 15, N'2.0% / đơn', N'3.5% / đơn', N'Dự báo tăng trưởng biên lợi nhuận ròng +2.4% cho nhóm dịch vụ kỹ thuật điện nước. Chính sách mới kỳ vọng tăng 12% lượng đơn hoàn thành do thu hút được đội ngũ kỹ thuật viên chất lượng cao.', N'Các hệ số chiết khấu hiện tại đang làm giảm động lực đăng ký mới của đội ngũ KTV, đề xuất giảm mức chiết khấu để tăng thưởng trực tiếp trên mỗi ca hoàn thành xuất sắc.'),
-        ('CS-10223', N'Cập nhật bảng giá sản phẩm Vệ sinh thiết bị', N'Người gửi: Đỗ Văn An', N'Vệ sinh & bảo trì', 12, 10, N'1.5% / đơn', N'2.0% / đơn', N'Điều chỉnh phù hợp với biến động giá vật tư vệ sinh và duy trì mức cạnh tranh.', N'Bảng giá vật tư đã được rà soát theo nhà cung cấp mới.'),
+-- Gửi thông báo cho giám đốc khi có đề xuất chính sách mới.
+CREATE OR ALTER TRIGGER dbo.trg_DeXuatChinhSach_ThongBaoGiamDoc
+ON dbo.DeXuatChinhSach
+AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
 
-        ('CS-10224', N'Chương trình ưu đãi Khách hàng mới tháng 11', N'Người gửi: Nguyễn Thị Hằng', N'Marketing', 0, 10, N'—', N'—', N'Dự kiến tăng lượng khách hàng mới và tỷ lệ đặt dịch vụ lần đầu.', N'Áp dụng mã giảm giá cho khách hàng lần đầu sử dụng HomeFix.');
-    END
+    INSERT dbo.ThongBao (NguoiDungId, TieuDe, NoiDungThongBao)
+    SELECT
+        gd.Id,
+        N'Đề xuất chính sách mới cần duyệt',
+        CONCAT(i.MaDeXuat, N' · ', i.TieuDe, N' — ', i.BoPhan)
+    FROM inserted i
+    CROSS JOIN dbo.NguoiDung gd
+    WHERE gd.VaiTro = 'GD'
+      AND gd.DangHoatDong = 1;
+END;
+GO
+
+-- Xóa các đề xuất demo đã từng được seed, để màn hình giám đốc chỉ nhận hồ sơ thật.
+DELETE FROM dbo.DeXuatChinhSach
+WHERE MaDeXuat IN ('CS-10222', 'CS-10223', 'CS-10224')
+  AND TrangThai = 'Pending';
+GO
+
+-- Bổ sung thông báo cho các đề xuất đã có để lịch sử cũ cũng hiển thị.
+INSERT dbo.ThongBao (NguoiDungId, TieuDe, NoiDungThongBao)
+SELECT
+    gd.Id,
+    N'Đề xuất chính sách mới cần duyệt',
+    CONCAT(p.MaDeXuat, N' · ', p.TieuDe, N' — ', p.BoPhan)
+FROM dbo.DeXuatChinhSach p
+CROSS JOIN dbo.NguoiDung gd
+WHERE gd.VaiTro = 'GD'
+  AND gd.DangHoatDong = 1
+  AND NOT EXISTS (
+      SELECT 1
+      FROM dbo.ThongBao t
+      WHERE t.NguoiDungId = gd.Id
+        AND t.TieuDe = N'Đề xuất chính sách mới cần duyệt'
+        AND t.NoiDungThongBao LIKE CONCAT(p.MaDeXuat, N' ·%')
+  );
+GO
+
+-- Khôi phục thông báo cho các yêu cầu hỗ trợ cũ chưa từng được đưa vào mục Thông báo.
+INSERT dbo.ThongBao (NguoiDungId, DonHangId, TieuDe, NoiDungThongBao, NgayTao)
+SELECT
+    t.KhachHangId,
+    t.DonHangId,
+    N'Đã tiếp nhận yêu cầu hỗ trợ',
+    CONCAT(N'Yêu cầu ', CASE WHEN t.Loai = 'Complaint' THEN N'khiếu nại' ELSE N'bảo hành' END, N': ', t.MoTa),
+    t.NgayTao
+FROM dbo.YeuCauHoTro t
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM dbo.ThongBao n
+    WHERE n.NguoiDungId = t.KhachHangId
+      AND n.DonHangId = t.DonHangId
+      AND n.TieuDe = N'Đã tiếp nhận yêu cầu hỗ trợ'
+      AND n.NoiDungThongBao = CONCAT(N'Yêu cầu ', CASE WHEN t.Loai = 'Complaint' THEN N'khiếu nại' ELSE N'bảo hành' END, N': ', t.MoTa)
+);
+GO
+
+INSERT dbo.ThongBao (NguoiDungId, DonHangId, TieuDe, NoiDungThongBao, NgayTao)
+SELECT
+    cs.Id,
+    t.DonHangId,
+    CASE WHEN t.Loai = 'Complaint' THEN N'Khách hàng gửi khiếu nại mới' ELSE N'Khách hàng gửi yêu cầu bảo hành mới' END,
+    t.MoTa,
+    t.NgayTao
+FROM dbo.YeuCauHoTro t
+CROSS JOIN dbo.NguoiDung cs
+WHERE cs.VaiTro = 'CSKH'
+  AND cs.DangHoatDong = 1
+  AND NOT EXISTS (
+      SELECT 1
+      FROM dbo.ThongBao n
+      WHERE n.NguoiDungId = cs.Id
+        AND n.DonHangId = t.DonHangId
+        AND n.TieuDe = CASE WHEN t.Loai = 'Complaint' THEN N'Khách hàng gửi khiếu nại mới' ELSE N'Khách hàng gửi yêu cầu bảo hành mới' END
+        AND n.NoiDungThongBao = t.MoTa
+  );
+GO
+
+-- Bổ sung thông báo cho các đơn đang chờ điều phối.
+INSERT dbo.ThongBao (NguoiDungId, DonHangId, TieuDe, NoiDungThongBao, NgayTao)
+SELECT dpv.Id, d.Id, N'Có đơn dịch vụ mới cần điều phối', CONCAT(N'Mã đơn #', d.Id), d.NgayTao
+FROM dbo.DonHang d
+CROSS JOIN dbo.NguoiDung dpv
+WHERE d.TrangThai IN ('ChoTiepNhan', 'ChoPhanCong')
+  AND dpv.VaiTro = 'DPV'
+  AND dpv.DangHoatDong = 1
+  AND NOT EXISTS (
+      SELECT 1 FROM dbo.ThongBao n
+      WHERE n.NguoiDungId = dpv.Id
+        AND n.DonHangId = d.Id
+        AND n.TieuDe = N'Có đơn dịch vụ mới cần điều phối'
+  );
+GO
+
+-- Bổ sung thông báo cho lời mời nhận việc còn hiệu lực của KTV.
+INSERT dbo.ThongBao (NguoiDungId, DonHangId, TieuDe, NoiDungThongBao, NgayTao)
+SELECT a.KyThuatVienId, a.DonHangId, N'Bạn có lệnh mới', CONCAT(N'Vui lòng phản hồi đơn #', a.DonHangId, N' trước thời hạn.'), a.NgayTao
+FROM dbo.LenhDieuPhoi a
+WHERE a.DangHoatDong = 1
+  AND a.TrangThai = 'Pending'
+  AND a.NgayHetHan > SYSUTCDATETIME()
+  AND NOT EXISTS (
+      SELECT 1 FROM dbo.ThongBao n
+      WHERE n.NguoiDungId = a.KyThuatVienId
+        AND n.DonHangId = a.DonHangId
+        AND n.TieuDe = N'Bạn có lệnh mới'
+  );
+GO
+
+-- Bổ sung thông báo cho hồ sơ KTV đang chờ quản trị viên.
+INSERT dbo.ThongBao (NguoiDungId, TieuDe, NoiDungThongBao, NgayTao)
+SELECT a.Id, N'Có hồ sơ kỹ thuật viên mới cần duyệt', CONCAT(N'Hồ sơ #', h.Id, N' của tài khoản #', h.NguoiDungId, N' đang chờ duyệt.'), h.NgayTao
+FROM dbo.HoSoKTV h
+CROSS JOIN dbo.NguoiDung a
+WHERE h.TrangThai = 'Pending'
+  AND a.VaiTro = 'ADMIN'
+  AND a.DangHoatDong = 1
+  AND NOT EXISTS (
+      SELECT 1 FROM dbo.ThongBao n
+      WHERE n.NguoiDungId = a.Id
+        AND n.TieuDe = N'Có hồ sơ kỹ thuật viên mới cần duyệt'
+        AND n.NoiDungThongBao LIKE CONCAT(N'Hồ sơ #', h.Id, N' %')
+  );
+GO
+
+-- Bổ sung thông báo cho yêu cầu ví đang chờ kế toán.
+INSERT dbo.ThongBao (NguoiDungId, TieuDe, NoiDungThongBao, NgayTao)
+SELECT kt.Id, N'Yêu cầu ví mới cần xử lý', CONCAT(N'Yêu cầu ví #', w.Id, N': ', CASE WHEN w.Loai = 'Withdrawal' THEN N'Rút ' ELSE N'Nạp ' END, CONVERT(nvarchar(30), w.SoTien), N' đ — ', w.GhiChu), w.NgayTao
+FROM dbo.YeuCauVi w
+CROSS JOIN dbo.NguoiDung kt
+WHERE w.TrangThai = 'Pending'
+  AND kt.VaiTro = 'KT'
+  AND kt.DangHoatDong = 1
+  AND NOT EXISTS (
+      SELECT 1 FROM dbo.ThongBao n
+      WHERE n.NguoiDungId = kt.Id
+        AND n.TieuDe = N'Yêu cầu ví mới cần xử lý'
+        AND n.NoiDungThongBao LIKE CONCAT(N'Yêu cầu ví #', w.Id, N':%')
+  );
 GO
 
 IF NOT EXISTS (SELECT 1

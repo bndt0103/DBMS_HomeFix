@@ -424,6 +424,17 @@ export function OrderDetail() {
                   </div>
                 </>
               )}
+              {a.technicianSignatureId && user.role !== 'KT' && (
+                <>
+                  <h3>Chữ ký kỹ thuật viên</h3>
+                  <div className="image-grid">
+                    <ProtectedImage
+                      id={a.technicianSignatureId}
+                      alt="Chữ ký kỹ thuật viên trên phiếu nghiệm thu"
+                    />
+                  </div>
+                </>
+              )}
               {a.reason && <p>Lý do yêu cầu sửa lại: {a.reason}</p>}
               {customer && a.status === 'Pending' && o.status === 'ChoNghiemThu' && (
                 <div className="actions">
@@ -654,7 +665,15 @@ function ActionModal({ modal, order, config, next, onClose, onDone }) {
     keyRef = useRef(uuid());
   const candidates = useData(
     type === 'assign' ? '/technicians/available?orderId=' + order.id : null,
+    10000,
   );
+  useEffect(() => {
+    if (type !== 'assign' || !form.technicianId || !candidates.data) return;
+    const selected = candidates.data.find(
+      (candidate) => candidate.id === Number(form.technicianId),
+    );
+    if (!selected?.canAssign) setForm((current) => ({ ...current, technicianId: '' }));
+  }, [type, form.technicianId, candidates.data]);
   const set = (k, v) => setForm((s) => ({ ...s, [k]: v }));
   const rejection = type.startsWith('reject-');
   async function fileIds(purpose) {
@@ -734,9 +753,9 @@ function ActionModal({ modal, order, config, next, onClose, onDone }) {
           if (!uploadCache.current.has(capturedSignature))
             uploadCache.current.set(
               capturedSignature,
-              (await upload(capturedSignature, 'CustomerSignature', order.id)).id,
+              (await upload(capturedSignature, 'TechnicianSignature', order.id)).id,
             );
-          body.signatureId = uploadCache.current.get(capturedSignature);
+          body.technicianSignatureId = uploadCache.current.get(capturedSignature);
         }
       } else if (type === 'cod') {
         path += '/payments/cod';
@@ -858,16 +877,25 @@ function ActionModal({ modal, order, config, next, onClose, onDone }) {
               >
                 <option value="">Chọn thợ phù hợp</option>
                 {candidates.data?.map((k) => (
-                  <option key={k.id} value={k.id}>
+                  <option key={k.id} value={k.id} disabled={!k.canAssign}>
                     {k.fullName} · {k.serviceArea}
+                    {k.assignmentStatus === 'SkillMismatch'
+                      ? ' · Khác chuyên môn'
+                      : k.assignmentStatus === 'Busy'
+                        ? ' · Đang có việc'
+                        : k.assignmentStatus === 'NotReady'
+                          ? ' · Chưa sẵn sàng'
+                          : k.assignmentStatus === 'InsufficientBalance'
+                            ? ' · Ví chưa đủ số dư'
+                            : ''}
                   </option>
                 ))}
               </select>
             </Field>
-            {candidates.data?.length === 0 && (
+            {candidates.data && !candidates.data.some((k) => k.canAssign) && (
               <div className="notice warning">
-                Chưa có thợ cùng chuyên môn sẵn sàng và đủ số dư ví. Hãy kiểm tra tài khoản KTV hoặc
-                thử lại sau.
+                Chưa có KTV đủ điều kiện để phân công. Tài khoản đang bị khóa không xuất hiện trong
+                danh sách này.
               </div>
             )}
             <p>Một thợ chỉ giữ một lệnh hoặc ca đang làm tại một thời điểm.</p>
@@ -1049,7 +1077,7 @@ function ActionModal({ modal, order, config, next, onClose, onDone }) {
                 <p className="pre-wrap">{form.solution}</p>
                 <PhotoPreview files={files} />
                 {capturedSignature && (
-                  <PhotoPreview files={[capturedSignature]} label="Chữ ký khách tại hiện trường" />
+                  <PhotoPreview files={[capturedSignature]} label="Chữ ký kỹ thuật viên" />
                 )}
                 <p>
                   Phương thức dự kiến: {form.paymentMethod === 'BANK' ? 'Chuyển khoản' : 'Tiền mặt'}
@@ -1085,13 +1113,13 @@ function ActionModal({ modal, order, config, next, onClose, onDone }) {
                     <option value="BANK">Chuyển khoản</option>
                   </select>
                 </Field>
-                <SignaturePad onChange={setCapturedSignature} />
+                <SignaturePad onChange={setCapturedSignature} label="Chữ ký kỹ thuật viên" />
                 {capturedSignature && (
-                  <PhotoPreview files={[capturedSignature]} label="Chữ ký đã lưu tạm" />
+                  <PhotoPreview files={[capturedSignature]} label="Chữ ký KTV đã lưu tạm" />
                 )}
                 <small>
-                  Khách có thể ký tại hiện trường. Phiếu vẫn cần khách xác nhận bằng tài khoản; lựa
-                  chọn thanh toán cuối cùng do khách xác nhận.
+                  KTV ký xác nhận người lập phiếu. Khách vẫn xác nhận nghiệm thu bằng tài khoản của
+                  mình; chữ ký KTV không thay thế chữ ký khách.
                 </small>
               </>
             )}

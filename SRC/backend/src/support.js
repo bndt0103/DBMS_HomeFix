@@ -145,6 +145,28 @@ VALUES
         { id: row.id, uid: req.user.id, note: b.description },
         t,
       );
+      await notify(
+        t,
+        req.user.id,
+        o.id,
+        'Đã tiếp nhận yêu cầu hỗ trợ',
+        `Yêu cầu ${b.type === 'Complaint' ? 'khiếu nại' : 'bảo hành'}: ${b.description}`,
+      );
+      const agents = await q(
+        "SELECT Id FROM dbo.NguoiDung WHERE VaiTro='CSKH' AND DangHoatDong=1",
+        {},
+        t,
+      );
+      for (const agent of agents)
+        await notify(
+          t,
+          agent.id,
+          o.id,
+          b.type === 'Complaint'
+            ? 'Khách hàng gửi khiếu nại mới'
+            : 'Khách hàng gửi yêu cầu bảo hành mới',
+          b.description,
+        );
       return row;
     });
     ok(res, ticket, 201);

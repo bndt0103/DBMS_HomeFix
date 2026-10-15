@@ -52,11 +52,11 @@ WHERE
       { destination },
       t,
     );
-    if (recent.n >= 3 || (recent.lastSent && Date.now() - recent.lastSent.getTime() < 90000))
+    if (recent.n >= 20 || (recent.lastSent && Date.now() - recent.lastSent.getTime() < 15000))
       fail(
         429,
         'OTP_RATE_LIMITED',
-        'Chờ ít nhất 90 giây trước khi gửi lại; tối đa 3 mã mỗi giờ cho một địa chỉ nhận.',
+        'Chờ ít nhất 15 giây trước khi gửi lại; tối đa 20 mã mỗi giờ cho một địa chỉ nhận.',
       );
     await q(
       'UPDATE dbo.XacThucOTP SET DaSuDung=1 WHERE DiaChiNhan=@DiaChiNhan AND MucDich=@MucDich',

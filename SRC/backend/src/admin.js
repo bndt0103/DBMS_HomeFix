@@ -217,10 +217,9 @@ adminRouter.get(
   wrap(async (req, res) =>
     ok(
       res,
-      await q(
-        'SELECT TOP 100 * FROM dbo.ThongBao WHERE NguoiDungId=@Id ORDER BY CASE WHEN NgayDoc IS NULL THEN 0 ELSE 1 END,Id DESC',
-        { id: req.user.id },
-      ),
+      await q('SELECT * FROM dbo.ThongBao WHERE NguoiDungId=@Id ORDER BY NgayTao DESC,Id DESC', {
+        id: req.user.id,
+      }),
     ),
   ),
 );
@@ -305,7 +304,7 @@ adminRouter.post(
           ))
         )
           fail(409, 'IDENTITY_EXISTS', 'CCCD này đã được đăng ký.');
-        return one(
+        const application = await one(
           `INSERT
   dbo.HoSoKTV (
     NguoiDungId,
@@ -340,6 +339,20 @@ VALUES
           },
           t,
         );
+        const admins = await q(
+          "SELECT Id FROM dbo.NguoiDung WHERE VaiTro='ADMIN' AND DangHoatDong=1",
+          {},
+          t,
+        );
+        for (const admin of admins)
+          await notify(
+            t,
+            admin.id,
+            null,
+            'Có hồ sơ kỹ thuật viên mới cần duyệt',
+            `Hồ sơ #${application.id} của tài khoản #${req.user.id} đang chờ duyệt.`,
+          );
+        return application;
       }),
       201,
     );
@@ -414,6 +427,17 @@ adminRouter.post(
           'UPDATE dbo.HoSoKTV SET TrangThai=@decision,LyDo=@LyDo,NguoiDuyetId=@uid WHERE Id=@Id',
           { id: hid, decision: b.decision, reason: b.reason, uid: req.user.id },
           t,
+        );
+        await notify(
+          t,
+          h.userId,
+          null,
+          b.decision === 'Approved'
+            ? 'Hồ sơ kỹ thuật viên đã được duyệt'
+            : 'Hồ sơ kỹ thuật viên chưa được duyệt',
+          b.decision === 'Approved'
+            ? 'Tài khoản của bạn đã được chuyển sang vai trò kỹ thuật viên.'
+            : b.reason,
         );
         await audit(t, req.user, 'DecideApplication', 'HoSoKTV', hid, b.decision);
         return one('SELECT * FROM dbo.HoSoKTV WHERE Id=@Id', { id: hid }, t);

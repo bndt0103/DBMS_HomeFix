@@ -739,46 +739,71 @@ function UserDetail({ record, onBack, onSecurity }) {
   );
 }
 function UserSecurity({ record, onBack, onLocked }) {
+  const { user: currentUser } = useApp();
   const [tab, setTab] = useState('lock');
   const [lockDuration, setLockDuration] = useState(1);
   const [lockDurationUnit, setLockDurationUnit] = useState('day');
-  const [disciplineReason, setDisciplineReason] = useState(
-    'Tự ý tăng giá vật tư thay thế cho khách hàng vượt mức 40% mà không qua hệ thống kiểm duyệt.',
-  );
+  const [disciplineReason, setDisciplineReason] = useState('');
   const [otp, setOtp] = useState('');
   const [otpChallenge, setOtpChallenge] = useState(null);
   const otpAction = useAction();
-  const isDelete = tab === 'delete';
-  const isTemporarilyLocked = record.lockedUntil && new Date(record.lockedUntil) > new Date();
+  const security = useData(`/users/${record.id}/security-info`);
+  const account = security.data || record;
+  const isPermanent = tab === 'permanent';
+  const isPermanentlyLocked = !account.isActive;
+  const isTemporarilyLocked =
+    account.isActive && account.lockedUntil && new Date(account.lockedUntil) > new Date();
+  const cannotUseTemporaryAction = !isPermanent && isPermanentlyLocked;
+  const isUnlocking = isPermanent ? isPermanentlyLocked : isTemporarilyLocked;
+  const adminEmailDomain = String(currentUser?.email || '')
+    .toLowerCase()
+    .split('@')
+    .at(-1);
+  const adminEmailIsDemo =
+    !currentUser?.email ||
+    ['localhost', 'local', 'test', 'invalid', 'example'].includes(adminEmailDomain) ||
+    ['.local', '.test', '.invalid', '.example'].some((suffix) => adminEmailDomain.endsWith(suffix));
+  const reasonHints = {
+    KH: 'Ghi rõ hành vi của khách hàng, thời điểm và bằng chứng đã kiểm tra.',
+    KTV: 'Ghi rõ vi phạm quy trình dịch vụ, thu tiền hoặc xử lý tài sản có bằng chứng.',
+    DPV: 'Ghi rõ sai phạm trong điều phối, phân công hoặc xử lý dữ liệu đơn hàng.',
+    CSKH: 'Ghi rõ sai phạm trong quy trình hỗ trợ hoặc việc sử dụng dữ liệu khách hàng.',
+    KT: 'Ghi rõ sai lệch đối soát, giao dịch hoặc thao tác tài chính đã xác minh.',
+    ADMIN: 'Ghi rõ thao tác quản trị vượt quyền hoặc truy cập dữ liệu đã xác minh.',
+    GD: 'Ghi rõ căn cứ quản trị và hành vi đã được xác minh.',
+  };
   const requestOtp = () =>
     otpAction.run(async () => {
       const response = await api('/admin/security/otp', { method: 'POST' });
       setOtpChallenge(response.data);
       setOtp('');
     }, 'Mã OTP đã được gửi đến email quản trị viên.');
-  const confirmTemporaryLock = () =>
+  const confirmSecurityAction = () =>
     otpAction.run(
       async () => {
-        const response = await api(
-          '/users/' + record.id + (isTemporarilyLocked ? '/unlock' : '/temporary-lock'),
-          {
-            method: 'POST',
-            body: isTemporarilyLocked
-              ? { challengeId: otpChallenge.challengeId, otp }
-              : {
-                  duration: Number(lockDuration),
-                  unit: lockDurationUnit,
-                  reason: disciplineReason,
-                  challengeId: otpChallenge.challengeId,
-                  otp,
-                },
-          },
-        );
+        const path = isPermanent
+          ? `/users/${record.id}/permanent-${isUnlocking ? 'unlock' : 'lock'}`
+          : `/users/${record.id}/${isUnlocking ? 'unlock' : 'temporary-lock'}`;
+        const body = isUnlocking
+          ? { challengeId: otpChallenge.challengeId, otp }
+          : {
+              ...(isPermanent ? {} : { duration: Number(lockDuration), unit: lockDurationUnit }),
+              reason: disciplineReason,
+              challengeId: otpChallenge.challengeId,
+              otp,
+            };
+        const response = await api(path, { method: 'POST', body });
         setOtp('');
         setOtpChallenge(null);
         onLocked(response.data);
       },
-      isTemporarilyLocked ? 'Đã hủy khóa tài khoản.' : 'Đã khóa tài khoản tạm thời.',
+      isPermanent
+        ? isUnlocking
+          ? 'Đã mở khóa vĩnh viễn tài khoản.'
+          : 'Đã khóa vĩnh viễn tài khoản.'
+        : isUnlocking
+          ? 'Đã hủy khóa tài khoản.'
+          : 'Đã khóa tài khoản tạm thời.',
     );
   return (
     <div className="user-security-page">
@@ -796,53 +821,83 @@ function UserSecurity({ record, onBack, onLocked }) {
           Quản lý tài khoản
         </span>
         <ChevronRight size={16} />
-        <b style={{ color: '#202124' }}>Quản trị rủi ro & Khóa/Xóa</b>
+        <b style={{ color: '#202124' }}>Quản trị rủi ro & Khóa tài khoản</b>
       </div>
 
       <PageHead
         title="Hành động rủi ro & Bảo mật tài khoản"
-        text="Quản lý tập trung các tài khoản cần tạm dừng hoạt động hoặc thu hồi vĩnh viễn quyền truy cập"
+        text="Xem thông tin tài khoản thực tế, lịch sử khóa và quản lý quyền truy cập có căn cứ"
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-        <Card title="Danh sách tài khoản cần rà soát đặc biệt">
-          <div
-            style={{
-              border: '1px solid #116a4e',
-              borderRadius: '8px',
-              padding: '16px',
-              marginBottom: '12px',
-              background: '#f8fdfa',
-              display: 'flex',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <b>{record.fullName}</b>{' '}
-              <small style={{ color: '#5f6368' }}>{roleNames[record.role]}</small>
-              <div style={{ color: '#d93025', fontSize: '13px', margin: '4px 0' }}>
-                Lý do: Tự ý tăng giá vật tư thay thế cho khách hàng
+        <Card title="Thông tin tài khoản từ cơ sở dữ liệu">
+          <ErrorBox error={security.error} />
+          {security.loading && !security.data ? (
+            <Loading />
+          ) : (
+            <div
+              style={{
+                border: '1px solid #116a4e',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '12px',
+                background: '#f8fdfa',
+                display: 'flex',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <b>{account.fullName}</b>{' '}
+                <small style={{ color: '#5f6368' }}>{roleNames[account.role]}</small>
+                <div style={{ fontSize: '13px', margin: '6px 0' }}>
+                  Mã: {account.role}-{String(account.id).padStart(4, '0')} · Điện thoại:{' '}
+                  {account.phone || '—'} · Email: {account.email || '—'}
+                </div>
+                <small style={{ color: '#5f6368' }}>
+                  Tạo tài khoản: {account.createdAt ? date(account.createdAt) : '—'}
+                </small>
+                {account.role === 'KTV' && (
+                  <small style={{ display: 'block', marginTop: '4px', color: '#5f6368' }}>
+                    Ca đang hoạt động: {account.activeAssignmentCount ?? '—'}
+                  </small>
+                )}
+                <div style={{ fontSize: '13px', marginTop: '8px' }}>
+                  {account.latestSecurityAction ? (
+                    <>
+                      {['TemporaryLockUser', 'PermanentLockUser'].includes(
+                        account.latestSecurityAction.action,
+                      )
+                        ? 'Lần khóa gần nhất'
+                        : 'Lần mở khóa gần nhất'}{' '}
+                      {date(account.latestSecurityAction.createdAt)}
+                      {account.latestSecurityAction.detail &&
+                        ` · ${account.latestSecurityAction.detail}`}
+                    </>
+                  ) : (
+                    'Chưa có lịch sử khóa/mở khóa trong nhật ký quản trị.'
+                  )}
+                </div>
               </div>
-              <small style={{ color: '#888' }}>Lần cuối: Đăng nhập 2 phút trước</small>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <Badge value="Yêu cầu rà soát" />
-              <div
-                style={{ color: '#1a73e8', fontSize: '13px', marginTop: '16px', cursor: 'pointer' }}
-              >
-                Đang xử lý →
+              <div style={{ textAlign: 'right' }}>
+                <Badge
+                  value={
+                    isPermanentlyLocked
+                      ? 'Đã khóa vĩnh viễn'
+                      : isTemporarilyLocked
+                        ? 'Đang khóa tạm thời'
+                        : 'Đang hoạt động'
+                  }
+                />
               </div>
             </div>
-          </div>
+          )}
         </Card>
 
         <Card
-          title={
-            'Xử lý kỷ luật tài khoản: ' + record.role + '-' + String(record.id).padStart(4, '0')
-          }
+          title={'Xử lý tài khoản: ' + account.role + '-' + String(account.id).padStart(4, '0')}
         >
           <p style={{ color: '#5f6368', marginBottom: '16px', fontSize: '14px' }}>
-            Áp dụng cho: {record.fullName}
+            Áp dụng cho: {account.fullName} ({roleNames[account.role]})
           </p>
 
           <div
@@ -855,7 +910,11 @@ function UserSecurity({ record, onBack, onLocked }) {
             }}
           >
             <div
-              onClick={() => setTab('lock')}
+              onClick={() => {
+                setTab('lock');
+                setOtp('');
+                setOtpChallenge(null);
+              }}
               style={{
                 flex: 1,
                 textAlign: 'center',
@@ -864,15 +923,19 @@ function UserSecurity({ record, onBack, onLocked }) {
                 fontWeight: '500',
                 cursor: 'pointer',
                 transition: 'all .15s',
-                background: !isDelete ? '#fff' : 'transparent',
-                color: !isDelete ? '#202124' : '#5f6368',
-                boxShadow: !isDelete ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                background: !isPermanent ? '#fff' : 'transparent',
+                color: !isPermanent ? '#202124' : '#5f6368',
+                boxShadow: !isPermanent ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
               }}
             >
               Khóa tài khoản tạm thời
             </div>
             <div
-              onClick={() => setTab('delete')}
+              onClick={() => {
+                setTab('permanent');
+                setOtp('');
+                setOtpChallenge(null);
+              }}
               style={{
                 flex: 1,
                 textAlign: 'center',
@@ -881,16 +944,16 @@ function UserSecurity({ record, onBack, onLocked }) {
                 fontWeight: '500',
                 cursor: 'pointer',
                 transition: 'all .15s',
-                background: isDelete ? '#fff' : 'transparent',
-                color: isDelete ? '#d93025' : '#5f6368',
-                boxShadow: isDelete ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                background: isPermanent ? '#fff' : 'transparent',
+                color: isPermanent ? '#d93025' : '#5f6368',
+                boxShadow: isPermanent ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
               }}
             >
-              Xóa vĩnh viễn dữ liệu
+              Khóa vĩnh viễn tài khoản
             </div>
           </div>
 
-          {isDelete && (
+          {isPermanent && (
             <div
               style={{
                 background: '#fce8e6',
@@ -905,34 +968,47 @@ function UserSecurity({ record, onBack, onLocked }) {
               <ShieldCheck size={20} color="#d93025" style={{ flexShrink: 0, marginTop: '2px' }} />
               <div>
                 <b style={{ color: '#d93025', display: 'block', marginBottom: '4px' }}>
-                  Cảnh báo: Hành động không thể hoàn tác
+                  {isPermanentlyLocked
+                    ? 'Tài khoản đã bị khóa vĩnh viễn'
+                    : 'Khóa vĩnh viễn tài khoản'}
                 </b>
                 <small style={{ color: '#c62828' }}>
-                  Toàn bộ dữ liệu tài khoản sẽ bị xóa vĩnh viễn khỏi hệ thống. Hãy chắc chắn đã sao
-                  lưu đầy đủ trước khi thực hiện.
+                  {isPermanentlyLocked
+                    ? 'Tài khoản không thể đăng nhập. Dữ liệu và lịch sử nghiệp vụ vẫn được giữ nguyên; quản trị viên có thể mở khóa bằng OTP.'
+                    : 'Thao tác sẽ thu hồi quyền đăng nhập và giữ nguyên dữ liệu, lịch sử giao dịch, đơn hàng và nhật ký. Quản trị viên có thể mở khóa lại bằng OTP.'}
                 </small>
               </div>
             </div>
           )}
 
-          {!isDelete && isTemporarilyLocked && (
+          {cannotUseTemporaryAction && (
             <div className="notice warning">
-              Tài khoản đang bị khóa đến {date(record.lockedUntil)}. Nhận và nhập OTP quản trị để
+              Tài khoản đã bị khóa vĩnh viễn. Chuyển sang mục “Khóa vĩnh viễn tài khoản” để mở khóa.
+            </div>
+          )}
+
+          {!isPermanent && isTemporarilyLocked && (
+            <div className="notice warning">
+              Tài khoản đang bị khóa đến {date(account.lockedUntil)}. Nhận và nhập OTP quản trị để
               hủy khóa sớm.
             </div>
           )}
 
-          {!isTemporarilyLocked && (
+          {!cannotUseTemporaryAction && !isUnlocking && (
             <Field label="Lý do áp dụng biện pháp">
               <textarea
                 rows={2}
+                required
+                minLength={5}
+                maxLength={1000}
                 value={disciplineReason}
                 onChange={(event) => setDisciplineReason(event.target.value)}
+                placeholder={reasonHints[account.role] || 'Ghi rõ lý do đã được xác minh.'}
               />
             </Field>
           )}
 
-          {!isDelete && !isTemporarilyLocked && (
+          {!isPermanent && !cannotUseTemporaryAction && !isTemporarilyLocked && (
             <div className="form-grid">
               <Field label="Thời hạn khóa">
                 <input
@@ -958,74 +1034,84 @@ function UserSecurity({ record, onBack, onLocked }) {
             </div>
           )}
 
-          <Field label="Chuyển giao công việc & dữ liệu">
-            <select>
-              <option>Bàn giao cho KTV Lê Anh Tuấn</option>
-            </select>
-          </Field>
-          <small style={{ color: '#5f6368', display: 'block', marginBottom: '24px' }}>
-            {isDelete
-              ? 'Dữ liệu công việc đang dở dang sẽ được chuyển sang người nhận bàn giao trước khi xóa.'
-              : 'Hệ thống sẽ tự động gán lại 4 đơn bảo trì đang dở dang sang KTV nhận bàn giao.'}
-          </small>
+          {!cannotUseTemporaryAction && account.role === 'KTV' && (
+            <div className="notice warning" style={{ marginBottom: '24px' }}>
+              {security.loading
+                ? 'Đang tải số ca hoạt động từ cơ sở dữ liệu…'
+                : Number(account.activeAssignmentCount) > 0
+                  ? `Có ${account.activeAssignmentCount} ca đang hoạt động. Hãy điều phối hoặc hoàn tất các ca trước khi khóa tài khoản.`
+                  : 'Không có ca hoạt động cần điều phối trước khi khóa.'}
+            </div>
+          )}
 
-          <div style={{ border: '1px solid #eee', padding: '16px', borderRadius: '8px' }}>
-            <b style={{ display: 'block', marginBottom: '12px' }}>
-              Xác nhận OTP Quản trị để thực thi
-            </b>
-            <ErrorBox error={otpAction.error} />
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <input
-                className="admin-otp-input"
-                type="text"
-                value={otp}
-                onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="Nhập OTP"
-                aria-label="Mã OTP quản trị"
-                style={{
-                  width: '120px',
-                  letterSpacing: '4px',
-                  textAlign: 'center',
-                  color: '#d93025',
-                  fontWeight: 'bold',
-                  fontSize: '18px',
-                }}
-              />
+          {!cannotUseTemporaryAction && (
+            <div style={{ border: '1px solid #eee', padding: '16px', borderRadius: '8px' }}>
+              <b style={{ display: 'block', marginBottom: '12px' }}>
+                Xác nhận OTP Quản trị để thực thi
+              </b>
+              <ErrorBox error={otpAction.error} />
+              {adminEmailIsDemo && (
+                <div className="notice warning" style={{ marginBottom: '12px' }}>
+                  Email OTP quản trị hiện tại ({currentUser?.email || 'chưa có email'}) không nhận
+                  được thư. Hãy vào Hồ sơ, đổi sang email thật và nhập mật khẩu hiện tại trước khi
+                  yêu cầu OTP.
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <input
+                  className="admin-otp-input"
+                  type="text"
+                  value={otp}
+                  onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="Nhập OTP"
+                  aria-label="Mã OTP quản trị"
+                  style={{
+                    width: '120px',
+                    letterSpacing: '4px',
+                    textAlign: 'center',
+                    color: '#d93025',
+                    fontWeight: 'bold',
+                    fontSize: '18px',
+                  }}
+                />
+                <button
+                  type="button"
+                  className={'btn ' + (otpChallenge ? 'otp-request-btn' : '')}
+                  disabled={otpAction.busy || adminEmailIsDemo}
+                  onClick={requestOtp}
+                >
+                  {otpAction.busy ? 'Đang gửi…' : otpChallenge ? 'Gửi lại mã' : 'Nhận mã OTP'}
+                </button>
+              </div>
+              <small style={{ color: '#5f6368', display: 'block', marginTop: '10px' }}>
+                {otpChallenge
+                  ? 'Mã đã gửi về email quản trị viên và có hiệu lực trong 5 phút.'
+                  : 'Nhấn “Nhận mã OTP” để gửi mã xác thực về email quản trị viên.'}
+              </small>
               <button
                 type="button"
-                className={'btn ' + (otpChallenge ? 'otp-request-btn' : '')}
-                disabled={otpAction.busy}
-                onClick={requestOtp}
+                className="btn primary"
+                disabled={otpAction.busy || !otpChallenge || otp.length !== 6}
+                onClick={confirmSecurityAction}
+                style={{
+                  background: isUnlocking ? '#116a4e' : '#d93025',
+                  width: '100%',
+                  marginTop: '16px',
+                  borderColor: isUnlocking ? '#116a4e' : '#d93025',
+                }}
               >
-                {otpAction.busy ? 'Đang gửi…' : otpChallenge ? 'Gửi lại mã' : 'Nhận mã OTP'}
+                {isPermanent
+                  ? isUnlocking
+                    ? 'MỞ KHÓA TÀI KHOẢN'
+                    : 'KHÓA VĨNH VIỄN TÀI KHOẢN'
+                  : isUnlocking
+                    ? 'HỦY KHÓA TÀI KHOẢN'
+                    : 'XÁC NHẬN KHÓA TÀI KHOẢN NGAY'}
               </button>
             </div>
-            <small style={{ color: '#5f6368', display: 'block', marginTop: '10px' }}>
-              {otpChallenge
-                ? 'Mã đã gửi về email quản trị viên và có hiệu lực trong 5 phút.'
-                : 'Nhấn “Nhận mã OTP” để gửi mã xác thực về email quản trị viên.'}
-            </small>
-            <button
-              type="button"
-              className="btn primary"
-              disabled={isDelete || otpAction.busy || !otpChallenge || otp.length !== 6}
-              onClick={confirmTemporaryLock}
-              style={{
-                background: isTemporarilyLocked ? '#116a4e' : '#d93025',
-                width: '100%',
-                marginTop: '16px',
-                borderColor: isTemporarilyLocked ? '#116a4e' : '#d93025',
-              }}
-            >
-              {isDelete
-                ? 'XÁC NHẬN XÓA VĨNH VIỄN TÀI KHOẢN'
-                : isTemporarilyLocked
-                  ? 'HỦY KHÓA TÀI KHOẢN'
-                  : 'XÁC NHẬN KHÓA TÀI KHOẢN NGAY'}
-            </button>
-          </div>
+          )}
         </Card>
       </div>
     </div>
@@ -1870,6 +1956,7 @@ export function WalletPage() {
           key={type}
           type={type}
           balance={wallet.data?.balance}
+          availableBalance={wallet.data?.availableBalance}
           onTypeChange={setType}
           onClose={() => setType(null)}
           onDone={() => {
@@ -1881,7 +1968,7 @@ export function WalletPage() {
     </>
   );
 }
-function WalletRequest({ type, balance, onTypeChange, onClose, onDone }) {
+function WalletRequest({ type, balance, availableBalance, onTypeChange, onClose, onDone }) {
   const a = useAction(),
     [amount, setAmount] = useState(''),
     [note, setNote] = useState(''),
@@ -1895,8 +1982,8 @@ function WalletRequest({ type, balance, onTypeChange, onClose, onDone }) {
         onSubmit={(e) => {
           e.preventDefault();
           a.run(async () => {
-            if (type === 'Withdrawal' && Number(amount) > Number(balance))
-              throw new Error('Số tiền rút vượt số dư ví.');
+            if (type === 'Withdrawal' && Number(amount) > Number(availableBalance))
+              throw new Error('Số tiền rút vượt số dư khả dụng sau khi tính các yêu cầu đang chờ.');
             if (file && !proof.current) proof.current = (await upload(file, 'WalletProof')).id;
             await api('/wallet-requests', {
               method: 'POST',
@@ -1932,14 +2019,16 @@ function WalletRequest({ type, balance, onTypeChange, onClose, onDone }) {
           ))}
         </div>
         <div className="notice info">
-          Yêu cầu được kế toán xét duyệt. Số dư chỉ thay đổi sau khi duyệt; chưa hỗ trợ chuyển tiền
-          tức thì.
+          Yêu cầu rút sẽ giữ chỗ số tiền tương ứng trong khi chờ kế toán xét duyệt. Hủy hoặc bị từ
+          chối sẽ giải phóng khoản giữ chỗ; tiền chỉ được trừ khi kế toán duyệt.
         </div>
         <Field label="Số tiền (đ)">
           <input
             required
             min="1"
-            max={type === 'Withdrawal' ? Math.min(Number(balance || 0), 100000000) : 100000000}
+            max={
+              type === 'Withdrawal' ? Math.min(Number(availableBalance || 0), 100000000) : 100000000
+            }
             step="1"
             type="number"
             value={amount}
@@ -1952,7 +2041,7 @@ function WalletRequest({ type, balance, onTypeChange, onClose, onDone }) {
               key={v}
               className="btn"
               type="button"
-              disabled={type === 'Withdrawal' && v > Number(balance)}
+              disabled={type === 'Withdrawal' && v > Number(availableBalance)}
               onClick={() => setAmount(String(v))}
             >
               {money(v)}
@@ -1962,7 +2051,7 @@ function WalletRequest({ type, balance, onTypeChange, onClose, onDone }) {
             <button
               type="button"
               className="btn"
-              onClick={() => setAmount(String(Math.min(Number(balance || 0), 100000000)))}
+              onClick={() => setAmount(String(Math.min(Number(availableBalance || 0), 100000000)))}
             >
               Tất cả
             </button>
@@ -1971,7 +2060,8 @@ function WalletRequest({ type, balance, onTypeChange, onClose, onDone }) {
         {type === 'Withdrawal' && (
           <>
             <p>
-              Số dư hiện tại: <b>{money(balance)}</b>
+              Số dư hiện tại: <b>{money(balance)}</b>. Khả dụng để rút:{' '}
+              <b>{money(availableBalance)}</b>
             </p>
             <Field label="Ngân hàng nhận tiền">
               <input
@@ -2243,7 +2333,11 @@ function ApplicationDecision({ record, onClose, onDone }) {
         }}
       >
         <p>{record.experience}</p>
-        {record.profileJson && <ApplicationProfile json={record.profileJson} />}
+        {record.profileJson && (
+          <div className="application-review">
+            <ApplicationProfile json={record.profileJson} />
+          </div>
+        )}
         {(record.frontDocumentId || record.backDocumentId) && (
           <div className="image-grid">
             {record.frontDocumentId && (

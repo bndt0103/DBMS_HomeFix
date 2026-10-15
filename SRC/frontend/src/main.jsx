@@ -53,6 +53,7 @@ import {
 } from './pages';
 import { OrderDetail } from './order-detail';
 import { Management, Finance, WalletPage, Support, Reports, Applications } from './management';
+import { AIChat } from './ai-chat';
 import './style.css';
 import './technician.css';
 function Connection({ onClose }) {
@@ -534,7 +535,10 @@ function App() {
   };
   return (
     <AppContext.Provider value={{ user, setUser, login, logout, toast }}>
-      <BrowserRouter>{user ? <Layout /> : <AuthPage />}</BrowserRouter>
+      <BrowserRouter>
+        {user ? <Layout /> : <AuthPage />}
+        <AIChat />
+      </BrowserRouter>
       {message && (
         <div className="toast" role="status">
           <CheckCircle2 size={20} />

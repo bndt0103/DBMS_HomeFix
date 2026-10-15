@@ -179,14 +179,13 @@ ordersRouter.post(
             when.getTime() > Date.now() + 30 * 86400000 ||
             vnHour < 8 ||
             vnHour >= 18 ||
-            when.getUTCMinutes() % 30 !== 0 ||
             when.getUTCSeconds() !== 0 ||
             when.getUTCMilliseconds() !== 0
           )
             fail(
               422,
               'INVALID_SCHEDULE',
-              'Lịch hẹn từ 08:00–17:30, cách nhau 30 phút, trước ít nhất 30 phút và trong 30 ngày.',
+              'Lịch hẹn từ 08:00–17:59, trước ít nhất 30 phút và trong 30 ngày.',
             );
         }
         if (new Set(b.attachmentIds).size !== b.attachmentIds.length)
@@ -227,6 +226,19 @@ ordersRouter.post(
           'Đặt dịch vụ thành công',
           'Điều phối viên sẽ liên hệ và gửi báo giá.',
         );
+        const dispatchers = await q(
+          "SELECT Id FROM dbo.NguoiDung WHERE VaiTro='DPV' AND DangHoatDong=1",
+          {},
+          t,
+        );
+        for (const dispatcher of dispatchers)
+          await notify(
+            t,
+            dispatcher.id,
+            o.id,
+            'Có đơn dịch vụ mới cần điều phối',
+            `Mã đơn #${o.id}`,
+          );
         return freshOrder(o.id, t);
       }),
     );
@@ -517,27 +529,36 @@ ordersRouter.get(
   k.NhomTayNghe,
   k.KhuVucPhucVu,
   k.TrangThaiSanSang,
+  n.DangHoatDong,
+  n.KhoaDenNgay,
+  k.SoDu,
   k.ViDo,
   k.KinhDo,
-  k.NgayCapNhatViTri
+  k.NgayCapNhatViTri,
+  CAST(CASE WHEN n.DangHoatDong=1
+    AND (n.KhoaDenNgay IS NULL OR n.KhoaDenNgay<=SYSUTCDATETIME())
+    AND k.NhomTayNghe=@group
+    AND k.TrangThaiSanSang='SanSang'
+    AND k.SoDu>=CAST(@min AS decimal(18,2))
+    AND NOT EXISTS (SELECT 1 FROM dbo.LenhDieuPhoi a WHERE a.KyThuatVienId=k.Id AND a.DangHoatDong=1)
+    THEN 1 ELSE 0 END AS bit) canAssign,
+  CASE
+    WHEN n.DangHoatDong=0 THEN 'PermanentlyLocked'
+    WHEN n.KhoaDenNgay>SYSUTCDATETIME() THEN 'TemporarilyLocked'
+    WHEN k.NhomTayNghe<>@group THEN 'SkillMismatch'
+    WHEN EXISTS (SELECT 1 FROM dbo.LenhDieuPhoi a WHERE a.KyThuatVienId=k.Id AND a.DangHoatDong=1) THEN 'Busy'
+    WHEN k.TrangThaiSanSang<>'SanSang' THEN 'NotReady'
+    WHEN k.SoDu<CAST(@min AS decimal(18,2)) THEN 'InsufficientBalance'
+    ELSE 'Eligible'
+  END assignmentStatus
 FROM
   dbo.KyThuatVien k
   JOIN dbo.NguoiDung n ON n.Id = k.Id
 WHERE
-  n.DangHoatDong = 1
-  AND n.VaiTro = 'KTV'
-  AND k.TrangThaiSanSang = 'SanSang'
-  AND k.SoDu >= CAST(@min AS decimal(18, 2))
-  AND k.NhomTayNghe = @group
-  AND NOT EXISTS (
-    SELECT
-      1
-    FROM
-      dbo.LenhDieuPhoi a
-    WHERE
-      a.KyThuatVienId = k.Id
-      AND a.DangHoatDong = 1
-  )`,
+  n.VaiTro = 'KTV'
+  AND n.DangHoatDong = 1
+  AND (n.KhoaDenNgay IS NULL OR n.KhoaDenNgay <= SYSUTCDATETIME())
+ORDER BY canAssign DESC,n.HoTen`,
         { min, group: order.serviceGroup },
       ),
     );
@@ -579,13 +600,25 @@ ordersRouter.post(
       checkVersion(o, b.expectedVersion);
       state(o, 'ChoPhanCong');
       const k = await one(
-        'SELECT k.*,n.DangHoatDong,n.VaiTro FROM dbo.KyThuatVien k JOIN dbo.NguoiDung n ON n.Id=k.Id WHERE k.Id=@Id',
+        'SELECT k.*,n.DangHoatDong,n.VaiTro,n.KhoaDenNgay FROM dbo.KyThuatVien k JOIN dbo.NguoiDung n WITH (UPDLOCK,HOLDLOCK) ON n.Id=k.Id WHERE k.Id=@Id',
         { id: b.technicianId },
         t,
       );
+      if (!k || k.role !== 'KTV')
+        fail(409, 'TECHNICIAN_UNAVAILABLE', 'Tài khoản này không phải kỹ thuật viên hợp lệ.');
+      if (!k.isActive)
+        fail(
+          409,
+          'TECHNICIAN_LOCKED',
+          'Tài khoản kỹ thuật viên đã bị khóa vĩnh viễn, không thể phân công.',
+        );
+      if (k.lockedUntil && new Date(k.lockedUntil) > new Date())
+        fail(
+          409,
+          'TECHNICIAN_LOCKED',
+          'Tài khoản kỹ thuật viên đang bị khóa tạm thời, không thể phân công.',
+        );
       if (
-        !k?.isActive ||
-        k.role !== 'KTV' ||
         k.availability !== 'SanSang' ||
         k.skillGroup !== o.serviceGroup ||
         Number(k.balance) < Number(await setting(t, 'minimumWallet', '200000')) ||

@@ -173,9 +173,20 @@ financeRouter.get(
   '/technicians/me/wallet',
   roles('KTV'),
   wrap(async (req, res) => {
-    const k = await one('SELECT SoDu,PhienBan FROM dbo.KyThuatVien WHERE Id=@Id', {
-      id: req.user.id,
-    });
+    const k = await one(
+      `SELECT k.SoDu, k.PhienBan,
+  COALESCE(p.SoTien, 0) AS TienDangGiu,
+  CASE WHEN k.SoDu > COALESCE(p.SoTien, 0)
+    THEN k.SoDu - COALESCE(p.SoTien, 0) ELSE 0 END AS SoDuKhaDung
+FROM dbo.KyThuatVien k
+OUTER APPLY (
+  SELECT SUM(SoTien) AS SoTien
+  FROM dbo.YeuCauVi
+  WHERE KyThuatVienId = k.Id AND Loai = 'Withdrawal' AND TrangThai = 'Pending'
+) p
+WHERE k.Id = @Id`,
+      { id: req.user.id },
+    );
     ok(res, {
       ...k,
       transactions: await q(
@@ -249,7 +260,25 @@ financeRouter.post(
           ))
         )
           fail(404, 'ATTACHMENT_NOT_FOUND', 'Chứng từ không hợp lệ.');
-        return one(
+        if (b.type === 'Withdrawal') {
+          const wallet = await one(
+            `SELECT k.SoDu - COALESCE(SUM(w.SoTien), 0) AS SoDuKhaDung
+FROM dbo.KyThuatVien k WITH (UPDLOCK, HOLDLOCK)
+LEFT JOIN dbo.YeuCauVi w WITH (HOLDLOCK)
+  ON w.KyThuatVienId = k.Id AND w.Loai = 'Withdrawal' AND w.TrangThai = 'Pending'
+WHERE k.Id = @uid
+GROUP BY k.SoDu`,
+            { uid: req.user.id },
+            t,
+          );
+          if (!wallet || Number(b.amount) > Number(wallet.availableBalance))
+            fail(
+              409,
+              'INSUFFICIENT_AVAILABLE_BALANCE',
+              'Số dư khả dụng không đủ sau khi tính các yêu cầu rút đang chờ.',
+            );
+        }
+        const request = await one(
           `INSERT
   dbo.YeuCauVi (
     KyThuatVienId,
@@ -263,6 +292,19 @@ VALUES
           { uid: req.user.id, proofId: null, ...b },
           t,
         );
+        for (const accountant of await q(
+          "SELECT Id FROM dbo.NguoiDung WHERE VaiTro='KT' AND DangHoatDong=1",
+          {},
+          t,
+        ))
+          await notify(
+            t,
+            accountant.id,
+            null,
+            'Yêu cầu ví mới cần xử lý',
+            `Yêu cầu ví #${request.id}: ${b.type === 'Withdrawal' ? 'Rút' : 'Nạp'} ${b.amount} đ — ${b.note}`,
+          );
+        return request;
       }),
     );
     ok(res, r.data, r.replay ? 200 : 201);
