@@ -10,6 +10,14 @@ const base =
   steps = [],
   faults = [];
 let orderId;
+let captureIndex = 0;
+const reportCaptures = [];
+async function reportCapture(page, label) {
+  if (process.env.HOMEFIX_REPORT_CAPTURE !== '1') return;
+  const filename = `report-${String(++captureIndex).padStart(2, '0')}.png`;
+  await page.screenshot({ path: out + '/' + filename, fullPage: false });
+  reportCaptures.push({ filename, label, url: page.url() });
+}
 fs.mkdirSync(out, { recursive: true });
 await sharp({ create: { width: 640, height: 480, channels: 3, background: '#e2f0e7' } })
   .composite([
@@ -61,6 +69,7 @@ async function action(page, name, fill = async () => {}) {
   const dialog = page.getByRole('dialog');
   await dialog.waitFor();
   await fill(dialog);
+  await reportCapture(page, name + ' — dữ liệu trước khi gửi');
   const submitName =
     name === 'Chấp nhận đơn'
       ? 'Xác nhận nhận đơn'
@@ -81,6 +90,7 @@ async function action(page, name, fill = async () => {}) {
   ]);
   steps.push(name);
   await page.waitForTimeout(400);
+  await reportCapture(page, name + ' — kết quả');
 }
 try {
   const kh = await login('kh'),
@@ -100,10 +110,12 @@ try {
   await kh
     .getByLabel('Thiết bị gặp vấn đề gì?')
     .fill('[UI TEST] Máy lạnh không làm mát. Đề nghị kiểm tra tại nhà.');
+  await reportCapture(kh, 'Đặt dịch vụ — dữ liệu nhập');
   await kh.getByRole('button', { name: 'Gửi yêu cầu đặt dịch vụ' }).click();
   await kh.waitForURL(/\/orders\/\d+$/);
   orderId = Number(kh.url().split('/').at(-1));
   steps.push('KH đặt dịch vụ');
+  await reportCapture(kh, 'Đặt dịch vụ — kết quả');
   await nav(dpv, '/orders/' + orderId);
   await action(dpv, 'Lập báo giá sơ bộ', (d) =>
     d
@@ -197,14 +209,27 @@ try {
     await d.page().mouse.move(box.x + 100, box.y + 90, { steps: 8 });
     await d.page().mouse.move(box.x + 150, box.y + 35, { steps: 8 });
     await d.page().mouse.up();
-    await d.getByAltText('Chữ ký đã lưu tạm 1', { exact: true }).waitFor();
+    await d.getByAltText('Chữ ký KTV đã lưu tạm 1', { exact: true }).waitFor();
     await d.getByRole('button', { name: 'Xem lại phiếu', exact: true }).click();
     await d.getByRole('heading', { name: 'Xem lại phiếu nghiệm thu', exact: true }).waitFor();
   });
   await fresh(kh);
-  await kh.getByRole('heading', { name: 'Chữ ký khách hàng', exact: true }).waitFor();
+  await kh.getByRole('heading', { name: 'Chữ ký kỹ thuật viên', exact: true }).waitFor();
+  assert.equal(
+    await kh.getByRole('heading', { name: 'Chữ ký khách hàng', exact: true }).count(),
+    0,
+    'Chữ ký KTV không được hiển thị thành chữ ký khách hàng',
+  );
   await kh.screenshot({ path: out + '/workflow-kh-acceptance.png', fullPage: true });
-  await action(kh, 'Xác nhận nghiệm thu', (d) => d.getByRole('checkbox').check());
+  await action(kh, 'Xác nhận nghiệm thu', async (d) => {
+    await d.getByRole('checkbox').check();
+    await d
+      .getByLabel('Ảnh chữ ký của khách hàng', { exact: true })
+      .setInputFiles('test-results/repair-evidence.png');
+  });
+  await kh.getByRole('heading', { name: 'Chữ ký khách hàng', exact: true }).waitFor();
+  await kh.getByRole('heading', { name: 'Chữ ký kỹ thuật viên', exact: true }).waitFor();
+  steps.push('Hai chữ ký KH/KTV hiển thị riêng sau nghiệm thu');
   await fresh(ktv);
   await action(ktv, 'Xác nhận đã thu COD', (d) => d.getByRole('checkbox').check());
   await nav(kt, '/finance?tab=wallet');
@@ -215,6 +240,7 @@ try {
   await kt.getByRole('dialog').getByRole('button', { name: 'Xác nhận xử lý' }).click();
   await kt.getByRole('dialog').waitFor({ state: 'hidden' });
   steps.push('KT đối soát hoa hồng');
+  await reportCapture(kt, 'Kế toán — kết quả đối soát');
   await fresh(kh);
   await action(kh, 'Đánh giá dịch vụ', (d) =>
     d.getByLabel('Nhận xét của bạn').fill('Kỹ thuật viên giải thích rõ, sửa đúng yêu cầu.'),
@@ -241,6 +267,10 @@ try {
   await browser.close();
   fs.writeFileSync(
     'test-results/ui-workflow-results.json',
-    JSON.stringify({ executedAt: new Date().toISOString(), orderId, steps, faults }, null, 2),
+    JSON.stringify(
+      { executedAt: new Date().toISOString(), orderId, steps, faults, reportCaptures },
+      null,
+      2,
+    ),
   );
 }

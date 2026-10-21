@@ -1,24 +1,23 @@
--- Khởi tạo cơ sở dữ liệu HomeFix bằng SQLCMD.
+-- HomeFix: bộ cài được sinh từ SRC/database bởi npm run sql:build.
+-- Không sửa bản sinh; sửa nguồn rồi sinh lại. Chỉ cài vào CSDL mới.
 :on error exit
 :setvar TenCSDL "HomeFix_DBMS_Nhom08_Import"
-
--- Tạo cơ sở dữ liệu mới.
 USE master;
 GO
-
 IF DB_ID(N'$(TenCSDL)') IS NOT NULL
     THROW 51009, 'DATABASE_ALREADY_EXISTS_CHOOSE_NEW_NAME', 1;
 CREATE DATABASE [$(TenCSDL)];
 GO
-
 USE [$(TenCSDL)];
 GO
-
--- Bảng dữ liệu và ràng buộc toàn vẹn.
+-- HomeFix / 00_schema: sinh bởi npm run sql:build.
+-- Chạy trong CSDL HomeFix theo thứ tự ở CSDL_HomeFix_Modules.sql.
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_01_BangVaRangBuoc.sql
 -- Phiên bản cơ sở dữ liệu.
 CREATE TABLE dbo.PhienBanCSDL (
     PhienBan INT NOT NULL PRIMARY KEY,
@@ -42,12 +41,10 @@ CREATE TABLE dbo.NguoiDung (
 );
 
 -- Ngăn trùng địa chỉ email.
-CREATE UNIQUE INDEX UX_NguoiDung_Email
-    ON dbo.NguoiDung (Email) WHERE Email IS NOT NULL;
+
 
 -- Ngăn trùng căn cước công dân.
-CREATE UNIQUE INDEX UX_NguoiDung_CCCD
-    ON dbo.NguoiDung (CCCD) WHERE CCCD IS NOT NULL;
+
 
 -- Thông tin và số dư kỹ thuật viên.
 CREATE TABLE dbo.KyThuatVien (
@@ -105,12 +102,10 @@ CREATE TABLE dbo.DonHang (
 );
 
 -- Tăng tốc tra cứu đơn theo khách hàng.
-CREATE INDEX IX_DonHang_KhachHang
-    ON dbo.DonHang (KhachHangId, NgayTao DESC);
+
 
 -- Tăng tốc lọc đơn theo trạng thái.
-CREATE INDEX IX_DonHang_TrangThai
-    ON dbo.DonHang (TrangThai, NgayTao);
+
 
 -- Báo giá sơ bộ.
 CREATE TABLE dbo.BaoGiaSoBo (
@@ -146,12 +141,10 @@ CREATE TABLE dbo.LenhDieuPhoi (
 );
 
 -- Mỗi đơn có tối đa một lệnh phân công đang hoạt động.
-CREATE UNIQUE INDEX UX_PhanCong_DonHang
-    ON dbo.LenhDieuPhoi (DonHangId) WHERE DangHoatDong = 1;
+
 
 -- Mỗi kỹ thuật viên có tối đa một lệnh đang hoạt động.
-CREATE UNIQUE INDEX UX_PhanCong_KyThuatVien
-    ON dbo.LenhDieuPhoi (KyThuatVienId) WHERE DangHoatDong = 1;
+
 
 -- Đề xuất vật tư.
 CREATE TABLE dbo.DeXuatVatTu (
@@ -172,8 +165,7 @@ CREATE TABLE dbo.DeXuatVatTu (
 );
 
 -- Mỗi đơn có tối đa một đề xuất vật tư đang áp dụng.
-CREATE UNIQUE INDEX UX_VatTu_DangApDung
-    ON dbo.DeXuatVatTu (DonHangId) WHERE DangApDung = 1;
+
 
 -- Chi tiết vật tư và bảo hành.
 CREATE TABLE dbo.ChiTietDeXuatVatTu (
@@ -211,12 +203,10 @@ CREATE TABLE dbo.PhieuNghiemThu (
 );
 
 -- Mỗi đơn có tối đa một nghiệm thu chờ duyệt.
-CREATE UNIQUE INDEX UX_NghiemThu_ChoDuyet
-    ON dbo.PhieuNghiemThu (DonHangId) WHERE TrangThai = 'Pending';
+
 
 -- Mỗi đơn có tối đa một nghiệm thu đã duyệt.
-CREATE UNIQUE INDEX UX_NghiemThu_DaDuyet
-    ON dbo.PhieuNghiemThu (DonHangId) WHERE TrangThai = 'Approved';
+
 
 -- Tệp đính kèm.
 CREATE TABLE dbo.TepDinhKem (
@@ -386,8 +376,7 @@ CREATE TABLE dbo.HoSoKTV (
 );
 
 -- Mỗi người dùng có tối đa một hồ sơ chờ duyệt.
-CREATE UNIQUE INDEX UX_HoSo_ChoDuyet
-    ON dbo.HoSoKTV (NguoiDungId) WHERE TrangThai = 'Pending';
+
 
 -- Cấu hình nghiệp vụ.
 CREATE TABLE dbo.CauHinh (
@@ -412,102 +401,14 @@ INSERT INTO dbo.PhienBanCSDL (PhienBan)
 VALUES (1);
 GO
 
--- Thủ tục tra cứu và trigger nghiệp vụ.
-SET ANSI_NULLS ON;
-SET QUOTED_IDENTIFIER ON;
-GO
-
--- Tra cứu đơn hàng của khách hàng.
-CREATE OR ALTER PROCEDURE dbo.sp_DonHangCuaKhach
-    @KhachHangId INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SELECT d.*, CASE WHEN t.Id IS NULL THEN 'Unpaid' ELSE 'Paid' END AS TrangThaiThanhToan
-    FROM dbo.DonHang AS d
-         LEFT OUTER JOIN dbo.ThanhToan AS t ON t.DonHangId = d.Id
-    WHERE KhachHangId = @KhachHangId
-    ORDER BY d.Id DESC;
-END
-GO
-
--- Cập nhật số dư sau khi ghi giao dịch ví.
-CREATE OR ALTER TRIGGER dbo.trg_Vi_GhiSo
-    ON dbo.GiaoDichVi
-    AFTER INSERT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    WITH ChenhLechVi
-    AS (SELECT KyThuatVienId, SUM(SoTien) AS SoTien
-        FROM inserted
-        GROUP BY KyThuatVienId)
-    UPDATE k
-    SET SoDu = k.SoDu + d.SoTien
-    FROM dbo.KyThuatVien AS k
-         INNER JOIN ChenhLechVi AS d ON d.KyThuatVienId = k.Id;
-END
-GO
-
--- Ngăn sửa và xóa giao dịch ví.
-CREATE OR ALTER TRIGGER dbo.trg_Vi_BatBien
-    ON dbo.GiaoDichVi
-    INSTEAD OF UPDATE, DELETE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    THROW 51009, 'LEDGER_IMMUTABLE', 1;
-END
-GO
-
--- Ngăn sửa và xóa khoản thanh toán.
-CREATE OR ALTER TRIGGER dbo.trg_ThanhToan_BatBien
-    ON dbo.ThanhToan
-    INSTEAD OF UPDATE, DELETE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    THROW 51009, 'PAYMENT_IMMUTABLE', 1;
-END
-GO
-
--- Ghi nhật ký khi trạng thái đơn thay đổi.
-CREATE OR ALTER TRIGGER dbo.trg_DonHang_GhiNhatKy
-    ON dbo.DonHang
-    AFTER UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    INSERT INTO dbo.NhatKy (ThaoTac, DoiTuong, DoiTuongId, ChiTiet)
-    SELECT 'OrderStatus', 'DonHang', i.Id, CONCAT(d.TrangThai, ' -> ', i.TrangThai)
-    FROM inserted AS i
-         INNER JOIN deleted AS d ON d.Id = i.Id
-    WHERE i.TrangThai <> d.TrangThai;
-END
-GO
-
--- Kiểm tra điều kiện đánh giá dịch vụ.
-CREATE OR ALTER TRIGGER dbo.trg_DanhGia_DieuKien
-    ON dbo.DanhGia
-    AFTER INSERT, UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    IF EXISTS (SELECT 1
-               FROM inserted AS i
-                    INNER JOIN dbo.DonHang AS d ON d.Id = i.DonHangId
-                    LEFT OUTER JOIN dbo.ThanhToan AS p ON p.DonHangId = d.Id
-               WHERE i.KhachHangId <> d.KhachHangId OR d.TrangThai <> 'HoanThanh' OR p.Id IS NULL OR i.KyThuatVienId <> p.NguoiThuTienId)
-        THROW 51009, 'REVIEW_NOT_ELIGIBLE', 1;
-END
-GO
-
+-- Nguồn: SRC/database/CSDL_HomeFix_03_PhiHuyDon.sql
 -- Phí hủy tại thời điểm đặt đơn.
 IF COL_LENGTH('dbo.DonHang', 'PhiHuyTaiThoiDiemDat') IS NULL
     ALTER TABLE dbo.DonHang
         ADD PhiHuyTaiThoiDiemDat DECIMAL(18, 2) CONSTRAINT DF_DonHang_PhiHuyTaiThoiDiemDat DEFAULT 50000 WITH VALUES NOT NULL CONSTRAINT CK_DonHang_PhiHuyTaiThoiDiemDat CHECK (PhiHuyTaiThoiDiemDat >= 0);
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_03_PhiHuyDon.sql
 IF NOT EXISTS (SELECT 1
                FROM dbo.PhienBanCSDL
                WHERE PhienBan = 2)
@@ -515,6 +416,7 @@ IF NOT EXISTS (SELECT 1
     VALUES (2);
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_04_XacThucOTP.sql
 -- Mã xác thực tài khoản.
 IF OBJECT_ID('dbo.XacThucOTP') IS NULL
     BEGIN
@@ -533,11 +435,11 @@ IF OBJECT_ID('dbo.XacThucOTP') IS NULL
             NgayHetHan DATETIME2 NOT NULL
         );
         -- Tăng tốc tra cứu OTP theo người nhận và thời gian.
-        CREATE INDEX IX_XacThucOTP_DiaChiNhan
-            ON dbo.XacThucOTP (DiaChiNhan, NgayTao);
+
     END
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_05_ThanhToanNganHang.sql
 -- Thanh toán và xác nhận chuyển khoản.
 SET XACT_ABORT ON;
 
@@ -561,6 +463,7 @@ IF OBJECT_ID('dbo.TaiKhoanNhanTien') IS NULL
     );
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_05_ThanhToanNganHang.sql
 DECLARE @LenhSQL AS NVARCHAR(MAX) = '';
 
 SELECT @LenhSQL = @LenhSQL + 'ALTER TABLE dbo.ThanhToan DROP CONSTRAINT ' + QUOTENAME(name) + ';'
@@ -590,13 +493,7 @@ IF COL_LENGTH('dbo.ThanhToan', 'TaiKhoanNganHangId') IS NULL
             MaThamChieuNganHang VARCHAR(100) NULL;
 GO
 
-IF NOT EXISTS (SELECT 1
-               FROM sys.indexes
-               WHERE name = 'UX_ThanhToan_MaThamChieuNganHang' AND object_id = OBJECT_ID('dbo.ThanhToan'))
-    -- Ngăn dùng lại mã tham chiếu ngân hàng.
-    CREATE UNIQUE INDEX UX_ThanhToan_MaThamChieuNganHang
-        ON dbo.ThanhToan (TaiKhoanNganHangId, MaThamChieuNganHang) WHERE MaThamChieuNganHang IS NOT NULL;
-
+-- Nguồn: SRC/database/CSDL_HomeFix_05_ThanhToanNganHang.sql
 IF OBJECT_ID('dbo.YeuCauThanhToan') IS NULL
     BEGIN
         -- Yêu cầu xác nhận chuyển khoản.
@@ -625,17 +522,15 @@ IF OBJECT_ID('dbo.YeuCauThanhToan') IS NULL
             PhienBan ROWVERSION
         );
         -- Mỗi đơn có tối đa một yêu cầu chuyển khoản đang hoạt động.
-        CREATE UNIQUE INDEX UX_ChuyenKhoan_DangHoatDong
-            ON dbo.YeuCauThanhToan (DonHangId) WHERE DangHoatDong = 1;
+
         -- Ngăn trùng nội dung chuyển khoản.
-        CREATE UNIQUE INDEX UX_ChuyenKhoan_NoiDung
-            ON dbo.YeuCauThanhToan (NoiDungChuyenKhoan) WHERE NoiDungChuyenKhoan IS NOT NULL;
+
         -- Ngăn dùng lại chứng từ chuyển khoản.
-        CREATE UNIQUE INDEX UX_ChuyenKhoan_ChungTu
-            ON dbo.YeuCauThanhToan (ChungTuId) WHERE ChungTuId IS NOT NULL;
+
     END
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_05_ThanhToanNganHang.sql
 DECLARE @LenhSQL AS NVARCHAR(MAX) = '';
 
 SELECT @LenhSQL = @LenhSQL + 'ALTER TABLE dbo.TepDinhKem DROP CONSTRAINT ' + QUOTENAME(name) + ';'
@@ -645,7 +540,8 @@ WHERE parent_object_id = OBJECT_ID('dbo.TepDinhKem') AND (parent_column_id = COL
 EXECUTE sp_executesql @LenhSQL;
 
 ALTER TABLE dbo.TepDinhKem
-    ADD CONSTRAINT CK_TepDinhKem_MucDich CHECK (MucDich IN ('OrderFault', 'MaterialEvidence', 'AcceptancePhoto', 'CustomerSignature', 'WalletProof', 'TechnicianDocument', 'PaymentProof'));
+    -- Giữ đủ mục đích hiện hành khi migration chạy lại trên dữ liệu đã nâng cấp.
+    ADD CONSTRAINT CK_TepDinhKem_MucDich CHECK (MucDich IN ('OrderFault', 'MaterialEvidence', 'AcceptancePhoto', 'CustomerSignature', 'TechnicianSignature', 'WalletProof', 'TechnicianDocument', 'PaymentProof', 'Avatar'));
 
 SET @LenhSQL = '';
 
@@ -659,23 +555,7 @@ ALTER TABLE dbo.GiaoDichVi
     ADD CONSTRAINT CK_Vi_Loai CHECK (Loai IN ('Opening', 'Deposit', 'Withdrawal', 'Commission', 'Reversal', 'SettlementCredit'));
 GO
 
--- Kiểm tra điều kiện đánh giá dịch vụ.
-CREATE OR ALTER TRIGGER dbo.trg_DanhGia_DieuKien
-    ON dbo.DanhGia
-    AFTER INSERT, UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    IF EXISTS (SELECT 1
-               FROM inserted AS i
-                    INNER JOIN dbo.DonHang AS d ON d.Id = i.DonHangId
-                    LEFT OUTER JOIN dbo.ThanhToan AS p ON p.DonHangId = d.Id
-                    LEFT OUTER JOIN dbo.PhieuNghiemThu AS a ON a.Id = p.NghiemThuId
-               WHERE i.KhachHangId <> d.KhachHangId OR d.TrangThai <> 'HoanThanh' OR p.Id IS NULL OR i.KyThuatVienId <> a.KyThuatVienId)
-        THROW 51009, 'REVIEW_NOT_ELIGIBLE', 1;
-END
-GO
-
+-- Nguồn: SRC/database/CSDL_HomeFix_05_ThanhToanNganHang.sql
 IF NOT EXISTS (SELECT 1
                FROM dbo.PhienBanCSDL
                WHERE PhienBan = 5)
@@ -683,18 +563,21 @@ IF NOT EXISTS (SELECT 1
     VALUES (5);
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_06_DanhMucDichVu.sql
 -- Phân loại dịch vụ phổ biến.
 IF COL_LENGTH('dbo.DichVu', 'PhoBien') IS NULL
     ALTER TABLE dbo.DichVu
         ADD PhoBien BIT CONSTRAINT DF_DichVu_PhoBien DEFAULT 0 NOT NULL;
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_07_AnhDaiDien.sql
 -- Ảnh đại diện và mục đích tệp đính kèm.
 IF COL_LENGTH('dbo.NguoiDung', 'DuongDanAnhDaiDien') IS NULL
     ALTER TABLE dbo.NguoiDung
         ADD DuongDanAnhDaiDien NVARCHAR(500) NULL;
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_07_AnhDaiDien.sql
 DECLARE @LenhSQL AS NVARCHAR(MAX) = '';
 
 SELECT @LenhSQL = @LenhSQL + 'ALTER TABLE dbo.TepDinhKem DROP CONSTRAINT ' + QUOTENAME(name) + ';'
@@ -704,16 +587,19 @@ WHERE parent_object_id = OBJECT_ID('dbo.TepDinhKem') AND (parent_column_id = COL
 EXECUTE sp_executesql @LenhSQL;
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_07_AnhDaiDien.sql
 ALTER TABLE dbo.TepDinhKem
-    ADD CONSTRAINT CK_TepDinhKem_MucDich CHECK (MucDich IN ('OrderFault', 'MaterialEvidence', 'AcceptancePhoto', 'CustomerSignature', 'WalletProof', 'TechnicianDocument', 'PaymentProof', 'Avatar'));
+    ADD CONSTRAINT CK_TepDinhKem_MucDich CHECK (MucDich IN ('OrderFault', 'MaterialEvidence', 'AcceptancePhoto', 'CustomerSignature', 'TechnicianSignature', 'WalletProof', 'TechnicianDocument', 'PaymentProof', 'Avatar'));
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_08_KhoaTaiKhoan.sql
 -- Thời hạn khóa tài khoản.
 IF COL_LENGTH('dbo.NguoiDung', 'KhoaDenNgay') IS NULL
     ALTER TABLE dbo.NguoiDung
         ADD KhoaDenNgay DATETIME2 NULL;
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_08_KhoaTaiKhoan.sql
 IF NOT EXISTS (SELECT 1
                FROM dbo.PhienBanCSDL
                WHERE PhienBan = 7)
@@ -721,7 +607,8 @@ IF NOT EXISTS (SELECT 1
     VALUES (7);
 GO
 
--- Đề xuất chính sách và dữ liệu mẫu.
+-- Nguồn: SRC/database/CSDL_HomeFix_09_DeXuatChinhSach.sql
+-- Bảng lưu đề xuất chính sách do các bộ phận gửi lên.
 IF OBJECT_ID('dbo.DeXuatChinhSach') IS NULL
     BEGIN
         -- Đề xuất chính sách.
@@ -748,17 +635,7 @@ IF OBJECT_ID('dbo.DeXuatChinhSach') IS NULL
     END
 GO
 
-IF NOT EXISTS (SELECT 1
-               FROM dbo.DeXuatChinhSach)
-    BEGIN
-        INSERT INTO dbo.DeXuatChinhSach (MaDeXuat, TieuDe, BoPhan, NhomDichVu, ChietKhauHienTai, ChietKhauDeXuat, MucThuongHienTai, MucThuongDeXuat, TacDong, LyDo)
-        VALUES ('CS-10222', N'Điều chỉnh chiết khấu dịch vụ Điện nước từ 18% → 15%', N'Đề xuất: Lê Anh Tuấn', N'Điện nước', 18, 15, N'2.0% / đơn', N'3.5% / đơn', N'Dự báo tăng trưởng biên lợi nhuận ròng +2.4% cho nhóm dịch vụ kỹ thuật điện nước. Chính sách mới kỳ vọng tăng 12% lượng đơn hoàn thành do thu hút được đội ngũ kỹ thuật viên chất lượng cao.', N'Các hệ số chiết khấu hiện tại đang làm giảm động lực đăng ký mới của đội ngũ KTV, đề xuất giảm mức chiết khấu để tăng thưởng trực tiếp trên mỗi ca hoàn thành xuất sắc.'),
-        ('CS-10223', N'Cập nhật bảng giá sản phẩm Vệ sinh thiết bị', N'Người gửi: Đỗ Văn An', N'Vệ sinh & bảo trì', 12, 10, N'1.5% / đơn', N'2.0% / đơn', N'Điều chỉnh phù hợp với biến động giá vật tư vệ sinh và duy trì mức cạnh tranh.', N'Bảng giá vật tư đã được rà soát theo nhà cung cấp mới.'),
-
-        ('CS-10224', N'Chương trình ưu đãi Khách hàng mới tháng 11', N'Người gửi: Nguyễn Thị Hằng', N'Marketing', 0, 10, N'—', N'—', N'Dự kiến tăng lượng khách hàng mới và tỷ lệ đặt dịch vụ lần đầu.', N'Áp dụng mã giảm giá cho khách hàng lần đầu sử dụng HomeFix.');
-    END
-GO
-
+-- Nguồn: SRC/database/CSDL_HomeFix_09_DeXuatChinhSach.sql
 IF NOT EXISTS (SELECT 1
                FROM dbo.PhienBanCSDL
                WHERE PhienBan = 8)
@@ -766,6 +643,7 @@ IF NOT EXISTS (SELECT 1
     VALUES (8);
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_10_HoSoKyThuatVien.sql
 -- Thông tin hồ sơ kỹ thuật viên.
 IF COL_LENGTH('dbo.HoSoKTV', 'HoSoJSON') IS NULL
     ALTER TABLE dbo.HoSoKTV
@@ -788,6 +666,7 @@ IF COL_LENGTH('dbo.PhieuNghiemThu', 'PhuongThucThanhToanDeXuat') IS NULL
         ADD PhuongThucThanhToanDeXuat VARCHAR(10) NULL CHECK (PhuongThucThanhToanDeXuat IN ('COD', 'BANK'));
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_11_ViTriKhachHang.sql
 -- Vị trí khách hàng theo đơn hàng.
 IF OBJECT_ID('dbo.ViTriKhachHang', 'U') IS NULL
     BEGIN
@@ -802,11 +681,183 @@ IF OBJECT_ID('dbo.ViTriKhachHang', 'U') IS NULL
     END
 GO
 
--- Hàm nghiệp vụ, khung nhìn và báo cáo tổng hợp.
-SET ANSI_NULLS ON;
-SET QUOTED_IDENTIFIER ON;
+-- Nguồn: SRC/database/CSDL_HomeFix_16_ChuKyKyThuatVien.sql
+-- Tach chu ky cua KTV khoi chu ky khach hang tren phieu nghiem thu.
+IF COL_LENGTH('dbo.PhieuNghiemThu', 'ChuKyKTVId') IS NULL
+    ALTER TABLE dbo.PhieuNghiemThu ADD ChuKyKTVId INT NULL;
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_16_ChuKyKyThuatVien.sql
+IF NOT EXISTS (
+    SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_NghiemThu_ChuKyKTV'
+)
+    ALTER TABLE dbo.PhieuNghiemThu
+        ADD CONSTRAINT FK_NghiemThu_ChuKyKTV FOREIGN KEY (ChuKyKTVId) REFERENCES dbo.TepDinhKem (Id);
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_16_ChuKyKyThuatVien.sql
+DECLARE @LenhSQL AS NVARCHAR(MAX) = '';
+
+SELECT @LenhSQL = @LenhSQL + 'ALTER TABLE dbo.TepDinhKem DROP CONSTRAINT ' + QUOTENAME(name) + ';'
+FROM sys.check_constraints
+WHERE parent_object_id = OBJECT_ID('dbo.TepDinhKem')
+  AND (parent_column_id = COLUMNPROPERTY(OBJECT_ID('dbo.TepDinhKem'), 'MucDich', 'ColumnId')
+       OR name = 'CK_TepDinhKem_MucDich');
+
+EXECUTE sp_executesql @LenhSQL;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_16_ChuKyKyThuatVien.sql
+ALTER TABLE dbo.TepDinhKem
+    ADD CONSTRAINT CK_TepDinhKem_MucDich CHECK (
+        MucDich IN ('OrderFault', 'MaterialEvidence', 'AcceptancePhoto', 'CustomerSignature', 'TechnicianSignature', 'WalletProof', 'TechnicianDocument', 'PaymentProof', 'Avatar')
+    );
+GO
+
+-- HomeFix / 01_index: sinh bởi npm run sql:build.
+-- Chạy trong CSDL HomeFix theo thứ tự ở CSDL_HomeFix_Modules.sql.
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_01_BangVaRangBuoc.sql
+CREATE UNIQUE INDEX UX_NguoiDung_Email
+    ON dbo.NguoiDung (Email) WHERE Email IS NOT NULL;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_01_BangVaRangBuoc.sql
+CREATE UNIQUE INDEX UX_NguoiDung_CCCD
+    ON dbo.NguoiDung (CCCD) WHERE CCCD IS NOT NULL;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_01_BangVaRangBuoc.sql
+CREATE INDEX IX_DonHang_KhachHang
+    ON dbo.DonHang (KhachHangId, NgayTao DESC);
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_01_BangVaRangBuoc.sql
+CREATE INDEX IX_DonHang_TrangThai
+    ON dbo.DonHang (TrangThai, NgayTao);
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_01_BangVaRangBuoc.sql
+CREATE UNIQUE INDEX UX_PhanCong_DonHang
+    ON dbo.LenhDieuPhoi (DonHangId) WHERE DangHoatDong = 1;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_01_BangVaRangBuoc.sql
+CREATE UNIQUE INDEX UX_PhanCong_KyThuatVien
+    ON dbo.LenhDieuPhoi (KyThuatVienId) WHERE DangHoatDong = 1;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_01_BangVaRangBuoc.sql
+CREATE UNIQUE INDEX UX_VatTu_DangApDung
+    ON dbo.DeXuatVatTu (DonHangId) WHERE DangApDung = 1;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_01_BangVaRangBuoc.sql
+CREATE UNIQUE INDEX UX_NghiemThu_ChoDuyet
+    ON dbo.PhieuNghiemThu (DonHangId) WHERE TrangThai = 'Pending';
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_01_BangVaRangBuoc.sql
+CREATE UNIQUE INDEX UX_NghiemThu_DaDuyet
+    ON dbo.PhieuNghiemThu (DonHangId) WHERE TrangThai = 'Approved';
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_01_BangVaRangBuoc.sql
+CREATE UNIQUE INDEX UX_HoSo_ChoDuyet
+    ON dbo.HoSoKTV (NguoiDungId) WHERE TrangThai = 'Pending';
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_04_XacThucOTP.sql
+CREATE INDEX IX_XacThucOTP_DiaChiNhan
+            ON dbo.XacThucOTP (DiaChiNhan, NgayTao);
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_05_ThanhToanNganHang.sql
+IF NOT EXISTS (SELECT 1
+               FROM sys.indexes
+               WHERE name = 'UX_ThanhToan_MaThamChieuNganHang' AND object_id = OBJECT_ID('dbo.ThanhToan'))
+    -- Ngăn dùng lại mã tham chiếu ngân hàng.
+    CREATE UNIQUE INDEX UX_ThanhToan_MaThamChieuNganHang
+        ON dbo.ThanhToan (TaiKhoanNganHangId, MaThamChieuNganHang) WHERE MaThamChieuNganHang IS NOT NULL;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_05_ThanhToanNganHang.sql
+CREATE UNIQUE INDEX UX_ChuyenKhoan_DangHoatDong
+            ON dbo.YeuCauThanhToan (DonHangId) WHERE DangHoatDong = 1;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_05_ThanhToanNganHang.sql
+CREATE UNIQUE INDEX UX_ChuyenKhoan_NoiDung
+            ON dbo.YeuCauThanhToan (NoiDungChuyenKhoan) WHERE NoiDungChuyenKhoan IS NOT NULL;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_05_ThanhToanNganHang.sql
+CREATE UNIQUE INDEX UX_ChuyenKhoan_ChungTu
+            ON dbo.YeuCauThanhToan (ChungTuId) WHERE ChungTuId IS NOT NULL;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_13_ChiMucVaToanVen.sql
+IF NOT EXISTS (SELECT 1
+               FROM sys.indexes
+               WHERE object_id = OBJECT_ID('dbo.GiaoDichVi') AND name = 'IX_Vi_KyThuatVien_Ngay')
+    -- Tăng tốc tra cứu giao dịch ví theo kỹ thuật viên và ngày.
+    CREATE INDEX IX_Vi_KyThuatVien_Ngay
+        ON dbo.GiaoDichVi (KyThuatVienId, NgayTao DESC)
+        INCLUDE (SoTien, Loai, ThamChieuId);
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_13_ChiMucVaToanVen.sql
+IF NOT EXISTS (SELECT 1
+               FROM sys.indexes
+               WHERE object_id = OBJECT_ID('dbo.DoiSoat') AND name = 'IX_DoiSoat_TrangThai')
+    -- Tăng tốc lọc đối soát theo trạng thái.
+    CREATE INDEX IX_DoiSoat_TrangThai
+        ON dbo.DoiSoat (TrangThai, KyThuatVienId)
+        INCLUDE (TienHoaHong, ThanhToanId);
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_13_ChiMucVaToanVen.sql
+IF NOT EXISTS (SELECT 1
+               FROM sys.indexes
+               WHERE object_id = OBJECT_ID('dbo.YeuCauHoTro') AND name = 'IX_HoTro_TrangThai_Ngay')
+    -- Tăng tốc tra cứu hỗ trợ theo trạng thái và ngày.
+    CREATE INDEX IX_HoTro_TrangThai_Ngay
+        ON dbo.YeuCauHoTro (TrangThai, NgayTao)
+        INCLUDE (DonHangId, KhachHangId, Loai);
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_13_ChiMucVaToanVen.sql
+IF NOT EXISTS (SELECT 1
+               FROM sys.indexes
+               WHERE object_id = OBJECT_ID('dbo.ThanhToan') AND name = 'IX_ThanhToan_Ngay')
+    -- Tăng tốc tổng hợp thanh toán theo ngày.
+    CREATE INDEX IX_ThanhToan_Ngay
+        ON dbo.ThanhToan (NgayThanhToan)
+        INCLUDE (SoTien, PhuongThuc, DonHangId);
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_13_ChiMucVaToanVen.sql
+IF NOT EXISTS (SELECT 1
+               FROM sys.indexes
+               WHERE object_id = OBJECT_ID('dbo.DanhGia') AND name = 'IX_DanhGia_KyThuatVien')
+    -- Tăng tốc tổng hợp đánh giá kỹ thuật viên.
+    CREATE INDEX IX_DanhGia_KyThuatVien
+        ON dbo.DanhGia (KyThuatVienId)
+        INCLUDE (DiemDanhGia);
+GO
+
+-- HomeFix / 02_function: sinh bởi npm run sql:build.
+-- Chạy trong CSDL HomeFix theo thứ tự ở CSDL_HomeFix_Modules.sql.
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
 -- Tính hoa hồng từ tiền công và tỷ lệ.
 CREATE OR ALTER FUNCTION dbo.fn_HoaHong
 (
@@ -824,6 +875,7 @@ BEGIN
 END
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
 -- Tính số dư từ sổ giao dịch ví.
 CREATE OR ALTER FUNCTION dbo.fn_SoDuVi
 (@KyThuatVienId INT)
@@ -835,6 +887,7 @@ RETURN
      WHERE KyThuatVienId = @KyThuatVienId)
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
 -- Tính số lượt và điểm đánh giá trung bình.
 CREATE OR ALTER FUNCTION dbo.fn_DiemDanhGia
 (@KyThuatVienId INT)
@@ -847,6 +900,7 @@ RETURN
      WHERE KyThuatVienId = @KyThuatVienId)
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
 -- Tra cứu thời hạn bảo hành vật tư.
 CREATE OR ALTER FUNCTION dbo.fn_HanBaoHanh
 (@NghiemThuId INT)
@@ -864,6 +918,7 @@ RETURN
        AND i.SoThangBaoHanh > 0)
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
 -- Thống kê đơn hàng theo nhóm dịch vụ.
 CREATE OR ALTER FUNCTION dbo.fn_ThongKeDon
 (@TuNgay DATETIME2, @DenNgay DATETIME2)
@@ -879,6 +934,14 @@ RETURN
      GROUP BY NhomDichVu)
 GO
 
+-- HomeFix / 03_view: sinh bởi npm run sql:build.
+-- Chạy trong CSDL HomeFix theo thứ tự ở CSDL_HomeFix_Modules.sql.
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
 -- Tổng hợp đơn hàng, khách hàng và thanh toán.
 CREATE OR ALTER VIEW dbo.vw_DonHangTongHop
 AS
@@ -892,6 +955,7 @@ FROM dbo.DonHang AS d
      LEFT OUTER JOIN dbo.ThanhToan AS p ON p.DonHangId = d.Id;
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
 -- Tổng hợp doanh thu theo ngày Việt Nam.
 CREATE OR ALTER VIEW dbo.vw_DoanhThuNgay
 AS
@@ -904,6 +968,7 @@ FROM dbo.ThanhToan AS p
 GROUP BY CONVERT(DATE, DATEADD(hour, 7, p.NgayThanhToan));
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
 -- Đối chiếu số dư ví với sổ giao dịch.
 CREATE OR ALTER VIEW dbo.vw_ViKyThuatVien
 AS
@@ -918,6 +983,7 @@ FROM dbo.KyThuatVien AS k
      CROSS APPLY dbo.fn_SoDuVi(k.Id) AS v;
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
 -- Tổng hợp hiệu suất và đánh giá kỹ thuật viên.
 CREATE OR ALTER VIEW dbo.vw_HieuSuatKyThuatVien
 AS
@@ -938,6 +1004,7 @@ FROM dbo.KyThuatVien AS k
      CROSS APPLY dbo.fn_DiemDanhGia(k.Id) AS r;
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
 -- Danh sách yêu cầu hỗ trợ chưa hoàn tất.
 CREATE OR ALTER VIEW dbo.vw_HoTroCanXuLy
 AS
@@ -956,6 +1023,7 @@ FROM dbo.YeuCauHoTro AS t
 WHERE t.TrangThai IN ('Open', 'InProgress');
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
 -- Danh sách dịch vụ đang cung cấp.
 CREATE OR ALTER VIEW dbo.vw_DichVuCongKhai
 AS
@@ -971,6 +1039,29 @@ FROM dbo.DichVu
 WHERE DangHoatDong = 1;
 GO
 
+-- HomeFix / 04_sp: sinh bởi npm run sql:build.
+-- Chạy trong CSDL HomeFix theo thứ tự ở CSDL_HomeFix_Modules.sql.
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_02_ThuTucVaTrigger.sql
+-- Tra cứu đơn hàng của khách hàng.
+CREATE OR ALTER PROCEDURE dbo.sp_DonHangCuaKhach
+    @KhachHangId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT d.*, CASE WHEN t.Id IS NULL THEN 'Unpaid' ELSE 'Paid' END AS TrangThaiThanhToan
+    FROM dbo.DonHang AS d
+         LEFT OUTER JOIN dbo.ThanhToan AS t ON t.DonHangId = d.Id
+    WHERE KhachHangId = @KhachHangId
+    ORDER BY d.Id DESC;
+END
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
 -- Báo cáo đơn hàng theo khoảng thời gian.
 CREATE OR ALTER PROCEDURE dbo.sp_BaoCaoTongHop
     @TuNgay DATETIME2,
@@ -991,83 +1082,14 @@ BEGIN
 END
 GO
 
--- Chỉ mục tra cứu và trigger kiểm tra toàn vẹn.
-IF NOT EXISTS (SELECT 1
-               FROM sys.indexes
-               WHERE object_id = OBJECT_ID('dbo.GiaoDichVi') AND name = 'IX_Vi_KyThuatVien_Ngay')
-    -- Tăng tốc tra cứu giao dịch ví theo kỹ thuật viên và ngày.
-    CREATE INDEX IX_Vi_KyThuatVien_Ngay
-        ON dbo.GiaoDichVi (KyThuatVienId, NgayTao DESC)
-        INCLUDE (SoTien, Loai, ThamChieuId);
-
-IF NOT EXISTS (SELECT 1
-               FROM sys.indexes
-               WHERE object_id = OBJECT_ID('dbo.DoiSoat') AND name = 'IX_DoiSoat_TrangThai')
-    -- Tăng tốc lọc đối soát theo trạng thái.
-    CREATE INDEX IX_DoiSoat_TrangThai
-        ON dbo.DoiSoat (TrangThai, KyThuatVienId)
-        INCLUDE (TienHoaHong, ThanhToanId);
-
-IF NOT EXISTS (SELECT 1
-               FROM sys.indexes
-               WHERE object_id = OBJECT_ID('dbo.YeuCauHoTro') AND name = 'IX_HoTro_TrangThai_Ngay')
-    -- Tăng tốc tra cứu hỗ trợ theo trạng thái và ngày.
-    CREATE INDEX IX_HoTro_TrangThai_Ngay
-        ON dbo.YeuCauHoTro (TrangThai, NgayTao)
-        INCLUDE (DonHangId, KhachHangId, Loai);
-
-IF NOT EXISTS (SELECT 1
-               FROM sys.indexes
-               WHERE object_id = OBJECT_ID('dbo.ThanhToan') AND name = 'IX_ThanhToan_Ngay')
-    -- Tăng tốc tổng hợp thanh toán theo ngày.
-    CREATE INDEX IX_ThanhToan_Ngay
-        ON dbo.ThanhToan (NgayThanhToan)
-        INCLUDE (SoTien, PhuongThuc, DonHangId);
-
-IF NOT EXISTS (SELECT 1
-               FROM sys.indexes
-               WHERE object_id = OBJECT_ID('dbo.DanhGia') AND name = 'IX_DanhGia_KyThuatVien')
-    -- Tăng tốc tổng hợp đánh giá kỹ thuật viên.
-    CREATE INDEX IX_DanhGia_KyThuatVien
-        ON dbo.DanhGia (KyThuatVienId)
-        INCLUDE (DiemDanhGia);
-GO
-
--- Kiểm tra vai trò khách hàng của đơn.
-CREATE OR ALTER TRIGGER dbo.trg_DonHang_KhachHang
-    ON dbo.DonHang
-    AFTER INSERT, UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    IF EXISTS (SELECT 1
-               FROM inserted AS i
-                    INNER JOIN dbo.NguoiDung AS u ON u.Id = i.KhachHangId
-               WHERE u.VaiTro <> 'KH')
-        THROW 51009, 'CUSTOMER_ROLE_REQUIRED', 1;
-END
-GO
-
--- Kiểm tra thanh toán khớp nghiệm thu.
-CREATE OR ALTER TRIGGER dbo.trg_ThanhToan_NghiemThu
-    ON dbo.ThanhToan
-    AFTER INSERT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    IF EXISTS (SELECT 1
-               FROM inserted AS i
-                    INNER JOIN dbo.PhieuNghiemThu AS a ON a.Id = i.NghiemThuId
-               WHERE a.DonHangId <> i.DonHangId OR a.TrangThai <> 'Approved' OR a.TongTien <> i.SoTien OR (i.PhuongThuc = 'COD' AND i.NguoiThuTienId <> a.KyThuatVienId))
-        THROW 51009, 'PAYMENT_ACCEPTANCE_MISMATCH', 1;
-END
-GO
-
--- Giao dịch nghiệp vụ và xử lý lỗi.
+-- HomeFix / 05_transaction: sinh bởi npm run sql:build.
+-- Chạy trong CSDL HomeFix theo thứ tự ở CSDL_HomeFix_Modules.sql.
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_14_GiaoDich.sql
 -- Chuyển trạng thái đơn và ghi lịch sử.
 CREATE OR ALTER PROCEDURE dbo.sp_ChuyenTrangThaiDon
     @DonHangId INT,
@@ -1124,6 +1146,7 @@ BEGIN
 END
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_14_GiaoDich.sql
 -- Xác nhận đối soát và ghi sổ ví.
 CREATE OR ALTER PROCEDURE dbo.sp_DoiSoatCOD
     @DoiSoatId INT,
@@ -1198,6 +1221,7 @@ BEGIN
 END
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_14_GiaoDich.sql
 -- Tạo đơn hàng và lịch sử ban đầu.
 CREATE OR ALTER PROCEDURE dbo.sp_TaoDonHang
     @KhachHangId INT,
@@ -1253,6 +1277,7 @@ BEGIN
 END
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_14_GiaoDich.sql
 -- Duyệt yêu cầu nạp hoặc rút ví.
 CREATE OR ALTER PROCEDURE dbo.sp_DuyetYeuCauVi
     @YeuCauId INT,
@@ -1278,22 +1303,31 @@ BEGIN
             THROW 51009, 'INVALID_DECISION', 1;
         IF @QuyetDinh = 'Rejected' AND NULLIF (LTRIM(RTRIM(@LyDo)), '') IS NULL
             THROW 51009, 'REASON_REQUIRED', 1;
-        DECLARE @KyThuatVienId AS INT, @SoTien AS DECIMAL(18, 2), @Loai AS VARCHAR(15), @TrangThai AS VARCHAR(10), @PhienBan AS BINARY(8);
-        SELECT @KyThuatVienId = KyThuatVienId, @SoTien = SoTien, @Loai = Loai, @TrangThai = TrangThai, @PhienBan = PhienBan
-        FROM dbo.YeuCauVi WITH (UPDLOCK, HOLDLOCK)
+        DECLARE @KyThuatVienId AS INT, @SoTien AS DECIMAL(18, 2), @Loai AS VARCHAR(15), @TrangThai AS VARCHAR(10), @PhienBan AS BINARY(8), @SoDu AS DECIMAL(18, 2);
+        SELECT @KyThuatVienId = KyThuatVienId
+        FROM dbo.YeuCauVi
         WHERE Id = @YeuCauId;
         IF @KyThuatVienId IS NULL
             THROW 51004, 'REQUEST_NOT_FOUND', 1;
+        -- Luôn khóa ví trước yêu cầu để đồng bộ thứ tự khóa với luồng tạo yêu cầu rút.
+        SELECT @SoDu = SoDu
+        FROM dbo.KyThuatVien WITH (UPDLOCK, HOLDLOCK)
+        WHERE Id = @KyThuatVienId;
+        SELECT @KyThuatVienId = KyThuatVienId, @SoTien = SoTien, @Loai = Loai, @TrangThai = TrangThai, @PhienBan = PhienBan
+        FROM dbo.YeuCauVi WITH (UPDLOCK, HOLDLOCK)
+        WHERE Id = @YeuCauId;
         IF @PhienBanDuKien IS NULL OR @PhienBan <> @PhienBanDuKien OR @TrangThai <> 'Pending'
             THROW 51009, 'VERSION_CONFLICT', 1;
         IF @QuyetDinh = 'Approved'
             BEGIN
                 IF @Loai = 'Withdrawal'
                     BEGIN
-                        IF (SELECT SoDu
-                            FROM dbo.KyThuatVien WITH (UPDLOCK, HOLDLOCK)
-                            WHERE Id = @KyThuatVienId) < @SoTien
-                            THROW 51009, 'INSUFFICIENT_BALANCE', 1;
+                        IF @SoDu < (SELECT COALESCE(SUM(SoTien), 0)
+                                    FROM dbo.YeuCauVi WITH (UPDLOCK, HOLDLOCK)
+                                    WHERE KyThuatVienId = @KyThuatVienId
+                                      AND Loai = 'Withdrawal'
+                                      AND TrangThai = 'Pending')
+                            THROW 51009, 'INSUFFICIENT_RESERVED_BALANCE', 1;
                         IF EXISTS (SELECT 1
                                    FROM dbo.LenhDieuPhoi WITH (UPDLOCK, HOLDLOCK)
                                    WHERE KyThuatVienId = @KyThuatVienId AND DangHoatDong = 1)
@@ -1329,6 +1363,7 @@ BEGIN
 END
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_14_GiaoDich.sql
 -- Cập nhật yêu cầu hỗ trợ và lịch sử xử lý.
 CREATE OR ALTER PROCEDURE dbo.sp_XuLyHoTro
     @YeuCauHoTroId INT,
@@ -1387,6 +1422,151 @@ BEGIN
 END
 GO
 
+-- HomeFix / 06_trigger: sinh bởi npm run sql:build.
+-- Chạy trong CSDL HomeFix theo thứ tự ở CSDL_HomeFix_Modules.sql.
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_02_ThuTucVaTrigger.sql
+-- Cập nhật số dư sau khi ghi giao dịch ví.
+CREATE OR ALTER TRIGGER dbo.trg_Vi_GhiSo
+    ON dbo.GiaoDichVi
+    AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    WITH ChenhLechVi
+    AS (SELECT KyThuatVienId, SUM(SoTien) AS SoTien
+        FROM inserted
+        GROUP BY KyThuatVienId)
+    UPDATE k
+    SET SoDu = k.SoDu + d.SoTien
+    FROM dbo.KyThuatVien AS k
+         INNER JOIN ChenhLechVi AS d ON d.KyThuatVienId = k.Id;
+END
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_02_ThuTucVaTrigger.sql
+-- Ngăn sửa và xóa giao dịch ví.
+CREATE OR ALTER TRIGGER dbo.trg_Vi_BatBien
+    ON dbo.GiaoDichVi
+    INSTEAD OF UPDATE, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    THROW 51009, 'LEDGER_IMMUTABLE', 1;
+END
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_02_ThuTucVaTrigger.sql
+-- Ngăn sửa và xóa khoản thanh toán.
+CREATE OR ALTER TRIGGER dbo.trg_ThanhToan_BatBien
+    ON dbo.ThanhToan
+    INSTEAD OF UPDATE, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    THROW 51009, 'PAYMENT_IMMUTABLE', 1;
+END
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_02_ThuTucVaTrigger.sql
+-- Ghi nhật ký khi trạng thái đơn thay đổi.
+CREATE OR ALTER TRIGGER dbo.trg_DonHang_GhiNhatKy
+    ON dbo.DonHang
+    AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO dbo.NhatKy (ThaoTac, DoiTuong, DoiTuongId, ChiTiet)
+    SELECT 'OrderStatus', 'DonHang', i.Id, CONCAT(d.TrangThai, ' -> ', i.TrangThai)
+    FROM inserted AS i
+         INNER JOIN deleted AS d ON d.Id = i.Id
+    WHERE i.TrangThai <> d.TrangThai;
+END
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_05_ThanhToanNganHang.sql
+-- Kiểm tra điều kiện đánh giá dịch vụ.
+CREATE OR ALTER TRIGGER dbo.trg_DanhGia_DieuKien
+    ON dbo.DanhGia
+    AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (SELECT 1
+               FROM inserted AS i
+                    INNER JOIN dbo.DonHang AS d ON d.Id = i.DonHangId
+                    LEFT OUTER JOIN dbo.ThanhToan AS p ON p.DonHangId = d.Id
+                    LEFT OUTER JOIN dbo.PhieuNghiemThu AS a ON a.Id = p.NghiemThuId
+               WHERE i.KhachHangId <> d.KhachHangId OR d.TrangThai <> 'HoanThanh' OR p.Id IS NULL OR i.KyThuatVienId <> a.KyThuatVienId)
+        THROW 51009, 'REVIEW_NOT_ELIGIBLE', 1;
+END
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_09_DeXuatChinhSach.sql
+-- Gửi thông báo cho giám đốc khi có đề xuất chính sách mới.
+CREATE OR ALTER TRIGGER dbo.trg_DeXuatChinhSach_ThongBaoGiamDoc
+ON dbo.DeXuatChinhSach
+AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT dbo.ThongBao (NguoiDungId, TieuDe, NoiDungThongBao)
+    SELECT
+        gd.Id,
+        N'Đề xuất chính sách mới cần duyệt',
+        CONCAT(i.MaDeXuat, N' · ', i.TieuDe, N' — ', i.BoPhan)
+    FROM inserted i
+    CROSS JOIN dbo.NguoiDung gd
+    WHERE gd.VaiTro = 'GD'
+      AND gd.DangHoatDong = 1;
+END;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_13_ChiMucVaToanVen.sql
+-- Kiểm tra vai trò khách hàng của đơn.
+CREATE OR ALTER TRIGGER dbo.trg_DonHang_KhachHang
+    ON dbo.DonHang
+    AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (SELECT 1
+               FROM inserted AS i
+                    INNER JOIN dbo.NguoiDung AS u ON u.Id = i.KhachHangId
+               WHERE u.VaiTro <> 'KH')
+        THROW 51009, 'CUSTOMER_ROLE_REQUIRED', 1;
+END
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_13_ChiMucVaToanVen.sql
+-- Kiểm tra thanh toán khớp nghiệm thu.
+CREATE OR ALTER TRIGGER dbo.trg_ThanhToan_NghiemThu
+    ON dbo.ThanhToan
+    AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (SELECT 1
+               FROM inserted AS i
+                    INNER JOIN dbo.PhieuNghiemThu AS a ON a.Id = i.NghiemThuId
+               WHERE a.DonHangId <> i.DonHangId OR a.TrangThai <> 'Approved' OR a.TongTien <> i.SoTien OR (i.PhuongThuc = 'COD' AND i.NguoiThuTienId <> a.KyThuatVienId))
+        THROW 51009, 'PAYMENT_ACCEPTANCE_MISMATCH', 1;
+END
+GO
+
+-- HomeFix / 07_security: sinh bởi npm run sql:build.
+-- Chạy trong CSDL HomeFix theo thứ tự ở CSDL_HomeFix_Modules.sql.
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_15_PhanQuyen.sql
 -- Vai trò và quyền truy cập dữ liệu.
 -- Phân quyền khách hàng.
 IF DATABASE_PRINCIPAL_ID(N'HomeFix_KH') IS NULL
@@ -1479,11 +1659,20 @@ GRANT SELECT ON OBJECT::dbo.NhatKy TO HomeFix_ADMIN;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.DichVu TO HomeFix_ADMIN;
 GO
 
+-- Nguồn: SRC/database/CSDL_HomeFix_15_PhanQuyen.sql
 GRANT EXECUTE ON OBJECT::dbo.sp_BaoCaoTongHop TO HomeFix_KT;
 GRANT EXECUTE ON OBJECT::dbo.sp_BaoCaoTongHop TO HomeFix_CSKH;
 GRANT EXECUTE ON OBJECT::dbo.sp_BaoCaoTongHop TO HomeFix_DPV;
 GO
 
+-- HomeFix / 08_seed: sinh bởi npm run sql:build.
+-- Chạy trong CSDL HomeFix theo thứ tự ở CSDL_HomeFix_Modules.sql.
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+GO
+
+-- Nguồn: SRC/database/sample-data.sql
 -- Dữ liệu mẫu phục vụ vận hành.
 SET IDENTITY_INSERT dbo.[NguoiDung] ON;
 INSERT INTO dbo.[NguoiDung] ([Id], [HoTen], [SoDienThoai], [Email], [CCCD], [MatKhauBam], [VaiTro], [DiaChiMacDinh], [DangHoatDong], [PhienBanXacThuc], [NgayTao], [DuongDanAnhDaiDien], [KhoaDenNgay])
@@ -1595,33 +1784,149 @@ GO
 IF NOT EXISTS (SELECT 1 FROM dbo.PhienBanCSDL WHERE PhienBan = 6)
     INSERT dbo.PhienBanCSDL(PhienBan) VALUES(6);
 GO
--- Kiểm tra toàn bộ ràng buộc dữ liệu.
+
+-- HomeFix / 09_data_migration: sinh bởi npm run sql:build.
+-- Chạy trong CSDL HomeFix theo thứ tự ở CSDL_HomeFix_Modules.sql.
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_09_DeXuatChinhSach.sql
+-- Xóa các đề xuất demo đã từng được seed, để màn hình giám đốc chỉ nhận hồ sơ thật.
+DELETE FROM dbo.DeXuatChinhSach
+WHERE MaDeXuat IN ('CS-10222', 'CS-10223', 'CS-10224')
+  AND TrangThai = 'Pending';
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_09_DeXuatChinhSach.sql
+-- Bổ sung thông báo cho các đề xuất đã có để lịch sử cũ cũng hiển thị.
+INSERT dbo.ThongBao (NguoiDungId, TieuDe, NoiDungThongBao)
+SELECT
+    gd.Id,
+    N'Đề xuất chính sách mới cần duyệt',
+    CONCAT(p.MaDeXuat, N' · ', p.TieuDe, N' — ', p.BoPhan)
+FROM dbo.DeXuatChinhSach p
+CROSS JOIN dbo.NguoiDung gd
+WHERE gd.VaiTro = 'GD'
+  AND gd.DangHoatDong = 1
+  AND NOT EXISTS (
+      SELECT 1
+      FROM dbo.ThongBao t
+      WHERE t.NguoiDungId = gd.Id
+        AND t.TieuDe = N'Đề xuất chính sách mới cần duyệt'
+        AND t.NoiDungThongBao LIKE CONCAT(p.MaDeXuat, N' ·%')
+  );
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_09_DeXuatChinhSach.sql
+-- Khôi phục thông báo cho các yêu cầu hỗ trợ cũ chưa từng được đưa vào mục Thông báo.
+INSERT dbo.ThongBao (NguoiDungId, DonHangId, TieuDe, NoiDungThongBao, NgayTao)
+SELECT
+    t.KhachHangId,
+    t.DonHangId,
+    N'Đã tiếp nhận yêu cầu hỗ trợ',
+    CONCAT(N'Yêu cầu ', CASE WHEN t.Loai = 'Complaint' THEN N'khiếu nại' ELSE N'bảo hành' END, N': ', t.MoTa),
+    t.NgayTao
+FROM dbo.YeuCauHoTro t
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM dbo.ThongBao n
+    WHERE n.NguoiDungId = t.KhachHangId
+      AND n.DonHangId = t.DonHangId
+      AND n.TieuDe = N'Đã tiếp nhận yêu cầu hỗ trợ'
+      AND n.NoiDungThongBao = CONCAT(N'Yêu cầu ', CASE WHEN t.Loai = 'Complaint' THEN N'khiếu nại' ELSE N'bảo hành' END, N': ', t.MoTa)
+);
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_09_DeXuatChinhSach.sql
+INSERT dbo.ThongBao (NguoiDungId, DonHangId, TieuDe, NoiDungThongBao, NgayTao)
+SELECT
+    cs.Id,
+    t.DonHangId,
+    CASE WHEN t.Loai = 'Complaint' THEN N'Khách hàng gửi khiếu nại mới' ELSE N'Khách hàng gửi yêu cầu bảo hành mới' END,
+    t.MoTa,
+    t.NgayTao
+FROM dbo.YeuCauHoTro t
+CROSS JOIN dbo.NguoiDung cs
+WHERE cs.VaiTro = 'CSKH'
+  AND cs.DangHoatDong = 1
+  AND NOT EXISTS (
+      SELECT 1
+      FROM dbo.ThongBao n
+      WHERE n.NguoiDungId = cs.Id
+        AND n.DonHangId = t.DonHangId
+        AND n.TieuDe = CASE WHEN t.Loai = 'Complaint' THEN N'Khách hàng gửi khiếu nại mới' ELSE N'Khách hàng gửi yêu cầu bảo hành mới' END
+        AND n.NoiDungThongBao = t.MoTa
+  );
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_09_DeXuatChinhSach.sql
+-- Bổ sung thông báo cho các đơn đang chờ điều phối.
+INSERT dbo.ThongBao (NguoiDungId, DonHangId, TieuDe, NoiDungThongBao, NgayTao)
+SELECT dpv.Id, d.Id, N'Có đơn dịch vụ mới cần điều phối', CONCAT(N'Mã đơn #', d.Id), d.NgayTao
+FROM dbo.DonHang d
+CROSS JOIN dbo.NguoiDung dpv
+WHERE d.TrangThai IN ('ChoTiepNhan', 'ChoPhanCong')
+  AND dpv.VaiTro = 'DPV'
+  AND dpv.DangHoatDong = 1
+  AND NOT EXISTS (
+      SELECT 1 FROM dbo.ThongBao n
+      WHERE n.NguoiDungId = dpv.Id
+        AND n.DonHangId = d.Id
+        AND n.TieuDe = N'Có đơn dịch vụ mới cần điều phối'
+  );
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_09_DeXuatChinhSach.sql
+-- Bổ sung thông báo cho lời mời nhận việc còn hiệu lực của KTV.
+INSERT dbo.ThongBao (NguoiDungId, DonHangId, TieuDe, NoiDungThongBao, NgayTao)
+SELECT a.KyThuatVienId, a.DonHangId, N'Bạn có lệnh mới', CONCAT(N'Vui lòng phản hồi đơn #', a.DonHangId, N' trước thời hạn.'), a.NgayTao
+FROM dbo.LenhDieuPhoi a
+WHERE a.DangHoatDong = 1
+  AND a.TrangThai = 'Pending'
+  AND a.NgayHetHan > SYSUTCDATETIME()
+  AND NOT EXISTS (
+      SELECT 1 FROM dbo.ThongBao n
+      WHERE n.NguoiDungId = a.KyThuatVienId
+        AND n.DonHangId = a.DonHangId
+        AND n.TieuDe = N'Bạn có lệnh mới'
+  );
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_09_DeXuatChinhSach.sql
+-- Bổ sung thông báo cho hồ sơ KTV đang chờ quản trị viên.
+INSERT dbo.ThongBao (NguoiDungId, TieuDe, NoiDungThongBao, NgayTao)
+SELECT a.Id, N'Có hồ sơ kỹ thuật viên mới cần duyệt', CONCAT(N'Hồ sơ #', h.Id, N' của tài khoản #', h.NguoiDungId, N' đang chờ duyệt.'), h.NgayTao
+FROM dbo.HoSoKTV h
+CROSS JOIN dbo.NguoiDung a
+WHERE h.TrangThai = 'Pending'
+  AND a.VaiTro = 'ADMIN'
+  AND a.DangHoatDong = 1
+  AND NOT EXISTS (
+      SELECT 1 FROM dbo.ThongBao n
+      WHERE n.NguoiDungId = a.Id
+        AND n.TieuDe = N'Có hồ sơ kỹ thuật viên mới cần duyệt'
+        AND n.NoiDungThongBao LIKE CONCAT(N'Hồ sơ #', h.Id, N' %')
+  );
+GO
+
+-- Nguồn: SRC/database/CSDL_HomeFix_09_DeXuatChinhSach.sql
+-- Bổ sung thông báo cho yêu cầu ví đang chờ kế toán.
+INSERT dbo.ThongBao (NguoiDungId, TieuDe, NoiDungThongBao, NgayTao)
+SELECT kt.Id, N'Yêu cầu ví mới cần xử lý', CONCAT(N'Yêu cầu ví #', w.Id, N': ', CASE WHEN w.Loai = 'Withdrawal' THEN N'Rút ' ELSE N'Nạp ' END, CONVERT(nvarchar(30), w.SoTien), N' đ — ', w.GhiChu), w.NgayTao
+FROM dbo.YeuCauVi w
+CROSS JOIN dbo.NguoiDung kt
+WHERE w.TrangThai = 'Pending'
+  AND kt.VaiTro = 'KT'
+  AND kt.DangHoatDong = 1
+  AND NOT EXISTS (
+      SELECT 1 FROM dbo.ThongBao n
+      WHERE n.NguoiDungId = kt.Id
+        AND n.TieuDe = N'Yêu cầu ví mới cần xử lý'
+        AND n.NoiDungThongBao LIKE CONCAT(N'Yêu cầu ví #', w.Id, N':%')
+  );
+GO
+
 DBCC CHECKCONSTRAINTS WITH ALL_CONSTRAINTS;
-GO
--- Tach chu ky cua KTV khoi chu ky khach hang tren phieu nghiem thu.
-IF COL_LENGTH('dbo.PhieuNghiemThu', 'ChuKyKTVId') IS NULL
-    ALTER TABLE dbo.PhieuNghiemThu ADD ChuKyKTVId INT NULL;
-GO
-
-IF NOT EXISTS (
-    SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_NghiemThu_ChuKyKTV'
-)
-    ALTER TABLE dbo.PhieuNghiemThu
-        ADD CONSTRAINT FK_NghiemThu_ChuKyKTV FOREIGN KEY (ChuKyKTVId) REFERENCES dbo.TepDinhKem (Id);
-GO
-
-DECLARE @LenhSQL AS NVARCHAR(MAX) = '';
-
-SELECT @LenhSQL = @LenhSQL + 'ALTER TABLE dbo.TepDinhKem DROP CONSTRAINT ' + QUOTENAME(name) + ';'
-FROM sys.check_constraints
-WHERE parent_object_id = OBJECT_ID('dbo.TepDinhKem')
-  AND parent_column_id = COLUMNPROPERTY(OBJECT_ID('dbo.TepDinhKem'), 'MucDich', 'ColumnId');
-
-EXECUTE sp_executesql @LenhSQL;
-GO
-
-ALTER TABLE dbo.TepDinhKem
-    ADD CONSTRAINT CK_TepDinhKem_MucDich CHECK (
-        MucDich IN ('OrderFault', 'MaterialEvidence', 'AcceptancePhoto', 'CustomerSignature', 'TechnicianSignature', 'WalletProof', 'TechnicianDocument', 'PaymentProof', 'Avatar')
-    );
 GO

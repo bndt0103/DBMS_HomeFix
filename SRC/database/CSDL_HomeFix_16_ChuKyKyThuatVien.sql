@@ -15,7 +15,8 @@ DECLARE @LenhSQL AS NVARCHAR(MAX) = '';
 SELECT @LenhSQL = @LenhSQL + 'ALTER TABLE dbo.TepDinhKem DROP CONSTRAINT ' + QUOTENAME(name) + ';'
 FROM sys.check_constraints
 WHERE parent_object_id = OBJECT_ID('dbo.TepDinhKem')
-  AND parent_column_id = COLUMNPROPERTY(OBJECT_ID('dbo.TepDinhKem'), 'MucDich', 'ColumnId');
+  AND (parent_column_id = COLUMNPROPERTY(OBJECT_ID('dbo.TepDinhKem'), 'MucDich', 'ColumnId')
+       OR name = 'CK_TepDinhKem_MucDich');
 
 EXECUTE sp_executesql @LenhSQL;
 GO

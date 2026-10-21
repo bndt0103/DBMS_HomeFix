@@ -10,41 +10,7 @@ if (
     'Chỉ xuất bộ dữ liệu mẫu từ HomeFix_DBMS_Nhom08 hoặc HomeFix_DBMS_Nhom08_TiengViet.',
   );
 }
-const files = [
-  'CSDL_HomeFix_01_BangVaRangBuoc.sql',
-  'CSDL_HomeFix_02_ThuTucVaTrigger.sql',
-  'CSDL_HomeFix_03_PhiHuyDon.sql',
-  'CSDL_HomeFix_04_XacThucOTP.sql',
-  'CSDL_HomeFix_05_ThanhToanNganHang.sql',
-  'CSDL_HomeFix_06_DanhMucDichVu.sql',
-  'CSDL_HomeFix_07_AnhDaiDien.sql',
-  'CSDL_HomeFix_08_KhoaTaiKhoan.sql',
-  'CSDL_HomeFix_09_DeXuatChinhSach.sql',
-  'CSDL_HomeFix_10_HoSoKyThuatVien.sql',
-  'CSDL_HomeFix_11_ViTriKhachHang.sql',
-  'CSDL_HomeFix_12_HamVaView.sql',
-  'CSDL_HomeFix_13_ChiMucVaToanVen.sql',
-  'CSDL_HomeFix_14_GiaoDich.sql',
-  'CSDL_HomeFix_15_PhanQuyen.sql',
-  'CSDL_HomeFix_16_ChuKyKyThuatVien.sql',
-];
-let source = `-- Khởi tạo cơ sở dữ liệu HomeFix bằng SQLCMD.
-:on error exit
-:setvar TenCSDL "HomeFix_DBMS_Nhom08_Import"
-
--- Tạo cơ sở dữ liệu mới.
-USE master;
-GO
-
-IF DB_ID(N'$(TenCSDL)') IS NOT NULL
-    THROW 51009, 'DATABASE_ALREADY_EXISTS_CHOOSE_NEW_NAME', 1;
-CREATE DATABASE [$(TenCSDL)];
-GO
-
-USE [$(TenCSDL)];
-GO
-`;
-for (const file of files) source += '\n' + fs.readFileSync('database/' + file, 'utf8');
+let source = '';
 const literal = (value) => {
   if (value === null) return 'NULL';
   if (value instanceof Date) return "'" + value.toISOString() + "'";
@@ -71,7 +37,7 @@ for (const name of ['NguoiDung', 'KyThuatVien', 'DichVu', 'CauHinh', 'GiaoDichVi
 }
 source +=
   'IF NOT EXISTS (SELECT 1 FROM dbo.PhienBanCSDL WHERE PhienBan = 6)\n    INSERT dbo.PhienBanCSDL(PhienBan) VALUES(6);\nGO\n\n-- Kiểm tra toàn bộ ràng buộc dữ liệu.\nDBCC CHECKCONSTRAINTS WITH ALL_CONSTRAINTS;\nGO\n';
-fs.mkdirSync('../SQL', { recursive: true });
-fs.writeFileSync('../SQL/CSDL_HomeFix.sql', source);
+fs.writeFileSync(new URL('../database/sample-data.sql', import.meta.url), source);
+await import('./build-sql.js');
 await close();
 console.log('Đã xuất script khôi phục đầy đủ lược đồ, phân quyền và dữ liệu mẫu.');

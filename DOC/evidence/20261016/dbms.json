@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Minimum object counts required by DBMS330284",
+    "status": "PASS"
+  },
+  {
+    "name": "Functions and views calculate actual ledger and commission",
+    "status": "PASS"
+  },
+  {
+    "name": "SQL roles allow reports and deny credentials and foreign business operations",
+    "status": "PASS"
+  },
+  {
+    "name": "Standalone SQL transaction rolls back all writes after a history failure",
+    "status": "PASS"
+  },
+  {
+    "name": "Multirow ledger trigger accumulates all rows and rejects negative balance atomically",
+    "status": "PASS"
+  },
+  {
+    "name": "Two direct SQL sessions cannot approve the same wallet request twice",
+    "status": "PASS"
+  }
+]

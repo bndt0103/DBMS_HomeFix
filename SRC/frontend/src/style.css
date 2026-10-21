@@ -3169,6 +3169,7 @@ tr:last-child td {
 .executive-operation-card,
 .executive-table-card,
 .executive-policy-card {
+  min-width: 0;
   padding: 17px;
   border: 1px solid #d9e3e9;
   border-radius: 10px;
@@ -3368,7 +3369,7 @@ tr:last-child td {
   }
   .executive-main-grid,
   .executive-bottom-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 620px) {

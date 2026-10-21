@@ -14,5 +14,5 @@ EXECUTE sp_executesql @LenhSQL;
 GO
 
 ALTER TABLE dbo.TepDinhKem
-    ADD CONSTRAINT CK_TepDinhKem_MucDich CHECK (MucDich IN ('OrderFault', 'MaterialEvidence', 'AcceptancePhoto', 'CustomerSignature', 'WalletProof', 'TechnicianDocument', 'PaymentProof', 'Avatar'));
+    ADD CONSTRAINT CK_TepDinhKem_MucDich CHECK (MucDich IN ('OrderFault', 'MaterialEvidence', 'AcceptancePhoto', 'CustomerSignature', 'TechnicianSignature', 'WalletProof', 'TechnicianDocument', 'PaymentProof', 'Avatar'));
 GO

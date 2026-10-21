@@ -178,7 +178,19 @@ test('AI Chat UI: Mở chat, gửi tin và đăng xuất', async (t) => {
       assert.ok(replyContent.length > 20);
     });
 
-    await t.test('5. Đăng xuất và xác nhận nút AI Chat biến mất', async () => {
+    await t.test('5. Chat mobile và nút đặt dịch vụ dẫn đến danh mục thật', async () => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      const box = await page.locator('.ai-chat-window').boundingBox();
+      assert.ok(box.x >= 0 && box.x + box.width <= 391 && box.y >= 0);
+      await page.locator('.ai-chat-textarea').fill('Đặt dịch vụ ngay');
+      await page.locator('.ai-chat-send-btn').click();
+      await page.waitForURL('**/services');
+      assert.equal(await page.locator('.ai-chat-window').count(), 0);
+      await page.locator('a[href^="/book/"]').first().waitFor();
+      await page.setViewportSize({ width: 1280, height: 800 });
+    });
+
+    await t.test('6. Đăng xuất và xác nhận nút AI Chat biến mất', async () => {
       const logoutBtn = page.getByRole('button', { name: 'Đăng xuất' }).first();
       await logoutBtn.click();
       await page.locator('.auth-form').waitFor({ timeout: 8000 });

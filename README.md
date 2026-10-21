@@ -24,7 +24,9 @@
 | [SQL/CSDL_HomeFix.sql](SQL/CSDL_HomeFix.sql) | Script tạo toàn bộ CSDL, quyền và dữ liệu mẫu |
 | [SQL/CSDL_HomeFix_MinhHoa.sql](SQL/CSDL_HomeFix_MinhHoa.sql) | Truy vấn minh họa trên CSDL đã khởi tạo |
 | [SQL/README.md](SQL/README.md) | Đối chiếu đường gọi API với thủ tục/hàm/view |
+| [SQL/modules](SQL/modules) / [Hướng dẫn vấn đáp](SQL/HUONG_DAN_VAN_DAP.md) | SQL chia theo schema, index, function, view, sp, transaction, trigger, security, backup/recovery |
 | [Đối chiếu yêu cầu](DOC/DOI_CHIEU_YEU_CAU.md) | Ánh xạ yêu cầu học phần với sản phẩm |
+| [Hướng dẫn CHM](HELP/HomeFix_HuongDan.chm) / [HTML](HELP/html/index.html) | Cài đặt, xử lý lỗi và thao tác của 7 vai trò; mục lục CHM tiếng Việt không dấu |
 | `SRC/backend`, `SRC/frontend` | Mã nguồn API và giao diện |
 | `SRC/database` | Script SQL thành phần theo thứ tự thực thi |
 | `SRC/scripts`, `SRC/tests` | Khởi tạo CSDL và kiểm thử |
@@ -184,6 +186,8 @@ Chạy trong `SRC`:
 | `npm.cmd run test:isolated` | API, SQL, transaction, quyền và đồng thời trên CSDL tạm |
 | `npm.cmd run test:all` | Build, kiểm thử API/SQL và giao diện Edge |
 | `npm.cmd run test:sql-usage` | Các kiểm thử trên và ghi nhận sáu thủ tục được gọi qua API bằng Extended Events |
+| `npm.cmd run sql:build` / `sql:check` | Sinh/kiểm tra đồng bộ bộ SQL tổng và bộ chia file từ nguồn chuẩn |
+| `npm.cmd run test:sql-bundle` | Kiểm tra hai bộ cài SQL, chạy lại migration và sao lưu/phục hồi thực tế trên CSDL tạm |
 | `npm.cmd run format:check` | Định dạng mã nguồn |
 
 Các lệnh kiểm thử tách biệt tạo và dọn CSDL tạm. Tài khoản SQL cần quyền tạo/xóa CSDL; `test:sql-usage` cần thêm quyền quản lý/đọc Extended Events. Đặt `EDGE_PATH` nếu Edge nằm ngoài đường dẫn mặc định.

@@ -43,16 +43,24 @@ try {
   api = spawn(process.execPath, ['backend/src/server.js'], { env, windowsHide: true });
   api.stdout.on('data', (data) => log.write(data));
   api.stderr.on('data', (data) => log.write(data));
-  let ready = false;
-  for (let attempt = 0; attempt < 60; attempt++) {
+  let ready = false,
+    startupError;
+  api.once('error', (error) => {
+    startupError = error;
+  });
+  const startupDeadline = Date.now() + 60000;
+  while (Date.now() < startupDeadline) {
+    if (startupError) throw startupError;
     try {
-      ready = (await fetch(env.TEST_BASE_URL + '/health')).ok;
+      ready = (await fetch(env.TEST_BASE_URL + '/health', { signal: AbortSignal.timeout(2000) }))
+        .ok;
     } catch {}
     if (ready) break;
     if (api.exitCode !== null) throw new Error('Máy chủ kiểm thử đã dừng.');
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  if (!ready) throw new Error('Máy chủ không sẵn sàng sau 15 giây.');
+  if (!ready)
+    throw new Error('Máy chủ không sẵn sàng sau 60 giây; xem test-results/full-test.log.');
   const tests = fs
     .readdirSync('tests')
     .filter((name) => name.endsWith('.test.js'))
@@ -79,9 +87,10 @@ try {
   }
   console.log('Hoàn tất kiểm thử trên CSDL tách biệt.');
 } finally {
-  if (api && api.exitCode === null) {
+  if (api?.pid && api.exitCode === null && api.signalCode === null) {
+    const stopped = new Promise((resolve) => api.once('exit', resolve));
     api.kill();
-    await new Promise((resolve) => api.once('exit', resolve));
+    await stopped;
   }
   log.end();
   // Only the unique database allocated by this invocation is removed.

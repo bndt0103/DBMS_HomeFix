@@ -20,7 +20,10 @@
     "test:all": "npm run build && node scripts/run-tests.js --ui",
     "test:sql-usage": "npm run build && node scripts/run-tests.js --ui --sql-usage",
     "db:export": "node scripts/export-database.js",
-    "db:metadata": "node scripts/export-metadata.js"
+    "db:metadata": "node scripts/export-metadata.js",
+    "sql:build": "node scripts/build-sql.js",
+    "sql:check": "node scripts/build-sql.js --check",
+    "test:sql-bundle": "node --test tests/sql-bundle.test.js"
   },
   "engines": {
     "node": ">=22.12"

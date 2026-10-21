@@ -105,7 +105,8 @@ WHERE parent_object_id = OBJECT_ID('dbo.TepDinhKem') AND (parent_column_id = COL
 EXECUTE sp_executesql @LenhSQL;
 
 ALTER TABLE dbo.TepDinhKem
-    ADD CONSTRAINT CK_TepDinhKem_MucDich CHECK (MucDich IN ('OrderFault', 'MaterialEvidence', 'AcceptancePhoto', 'CustomerSignature', 'WalletProof', 'TechnicianDocument', 'PaymentProof'));
+    -- Giữ đủ mục đích hiện hành khi migration chạy lại trên dữ liệu đã nâng cấp.
+    ADD CONSTRAINT CK_TepDinhKem_MucDich CHECK (MucDich IN ('OrderFault', 'MaterialEvidence', 'AcceptancePhoto', 'CustomerSignature', 'TechnicianSignature', 'WalletProof', 'TechnicianDocument', 'PaymentProof', 'Avatar'));
 
 SET @LenhSQL = '';
 

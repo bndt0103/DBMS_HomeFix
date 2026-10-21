@@ -4,6 +4,42 @@
 
 Các script thành phần nằm trong `SRC/database`, có tiền tố `CSDL_HomeFix` và số thứ tự thực thi. `npm run db:init` áp dụng chúng vào CSDL được cấu hình trong `SRC/backend/.env`.
 
+## Bộ SQL chia theo chức năng
+
+Mở [hướng dẫn vấn đáp](HUONG_DAN_VAN_DAP.md) để tra nhanh đối tượng, luồng nghiệp vụ và câu hỏi thường gặp.
+
+| File | Nội dung |
+| --- | --- |
+| [00_schema.sql](modules/00_schema.sql) | Bảng, khóa, ràng buộc và các cột nâng cấp |
+| [01_index.sql](modules/01_index.sql) | 20 lệnh tạo index tường minh; index của PK/UNIQUE vẫn đi cùng ràng buộc bảng |
+| [02_function.sql](modules/02_function.sql) | 5 hàm tính toán/tra cứu |
+| [03_view.sql](modules/03_view.sql) | 6 view tổng hợp |
+| [04_sp.sql](modules/04_sp.sql) | 2 thủ tục tra cứu/báo cáo |
+| [05_transaction.sql](modules/05_transaction.sql) | 5 thủ tục nghiệp vụ có transaction, savepoint và xử lý lỗi |
+| [06_trigger.sql](modules/06_trigger.sql) | 8 trigger toàn vẹn, sổ ví, lịch sử và thông báo |
+| [07_security.sql](modules/07_security.sql) | 7 role, user minh họa, GRANT/DENY/REVOKE |
+| [08_seed.sql](modules/08_seed.sql) | Dữ liệu mẫu đã có trong bộ cài |
+| [09_data_migration.sql](modules/09_data_migration.sql) | Đồng bộ thông báo và dọn các đề xuất mẫu cũ |
+| [10_backup_recovery.sql](modules/10_backup_recovery.sql) | Chạy riêng: sao lưu FULL/DIFF/LOG và phục hồi sang CSDL mới |
+
+[CSDL_HomeFix_Modules.sql](CSDL_HomeFix_Modules.sql) gọi lần lượt các file 00–09. Từ thư mục `SQL`, chạy:
+
+```powershell
+sqlcmd -S "localhost\SQLEXPRESS" -E -C -b -f 65001 -i CSDL_HomeFix_Modules.sql
+```
+
+Trong SSMS, bật **Query → SQLCMD Mode**, sửa `TenCSDL` thành tên chưa tồn tại và `ThuMucSQL` thành đường dẫn tuyệt đối đến thư mục `SQL`. Chỉ chọn **một** bộ cài tổng hoặc chia file. Không chạy bộ cài tạo mới lên CSDL đang dùng. Khi nâng cấp CSDL đang dùng, chạy `npm.cmd run db:init` từ `SRC`.
+
+Nguồn chuẩn là `SRC/database/CSDL_HomeFix_*.sql` và `sample-data.sql`. Các file trong `SQL/modules` và bộ cài tổng được sinh đồng thời để tránh lệch phiên bản; mỗi đoạn ghi rõ file nguồn. Từ `SRC`:
+
+```powershell
+npm.cmd run sql:build
+npm.cmd run sql:check
+npm.cmd run test:sql-bundle
+```
+
+Kiểm thử bộ SQL dùng `sqlcmd` thật trên CSDL tạm: so sánh định nghĩa đối tượng/chỉ mục, kiểm tra dữ liệu mẫu, chặn cài đè, chạy lại migration khi đã có avatar/chữ ký, và sao lưu/phục hồi thực tế. Máy kiểm thử cần `sqlcmd`, quyền tạo/xóa CSDL và BACKUP/RESTORE. Tệp backup thử nghiệm được xóa theo đúng tên CSDL ngẫu nhiên của lượt chạy; không dọn backup dự án.
+
 ## Đối chiếu yêu cầu SQL
 
 Theo mục 3 và 4 của hướng dẫn DBMS330284, ứng dụng phải gọi được thủ tục/hàm và dùng view hoặc thủ tục cho truy vấn báo cáo. Hướng dẫn không yêu cầu chuyển mọi câu SQL thành thủ tục.
@@ -14,7 +50,7 @@ Theo mục 3 và 4 của hướng dẫn DBMS330284, ứng dụng phải gọi đ
 | Thủ tục | 5 | 7 |
 | Hàm | 5 | 5 |
 | View | 5 | 6 |
-| Trigger | 5 | 7 |
+| Trigger | 5 | 8 |
 | Index | 5, có ít nhất 1 index ngoài khóa chính | 33 index ngoài khóa chính |
 | Nghiệp vụ có transaction | 5 | 5 thủ tục giao dịch |
 | Role/Login | 4 | 7 role và 7 user không có login |
@@ -50,12 +86,14 @@ Trong SSMS, chọn CSDL HomeFix rồi chạy [CSDL_HomeFix_MinhHoa.sql](CSDL_Hom
 Kịch bản sao lưu và phục hồi dữ liệu được xây dựng chi tiết trong [CSDL_HomeFix_SaoLuuPhucHoi.sql](CSDL_HomeFix_SaoLuuPhucHoi.sql):
 - **Cấu hình**: Chuyển CSDL sang `RECOVERY FULL` hỗ trợ khôi phục đến từng thời điểm (Point-in-Time).
 - **Chiến lược sao lưu**:
-  - Full Backup (`.bak`): Sao lưu toàn phần định kỳ với nén (`COMPRESSION`).
+  - Full Backup (`.bak`): Sao lưu toàn phần với `CHECKSUM`, tên tệp riêng cho từng lần chạy; không bắt buộc nén để tương thích SQL Server Express.
   - Differential Backup (`.bak`): Sao lưu vi sai các thay đổi sau bản Full.
   - Transaction Log Backup (`.trn`): Sao lưu nhật ký giao dịch định kỳ.
-- **Kiểm tra tính toàn vẹn**: Câu lệnh `RESTORE VERIFYONLY` và `RESTORE HEADERONLY`.
-- **Kịch bản phục hồi sự cố (Disaster Recovery)**: Trình tự khôi phục kết hợp `NORECOVERY` và `RECOVERY`, cùng cú pháp khôi phục theo mốc thời gian `STOPAT`.
+- **Kiểm tra tính toàn vẹn**: `RESTORE VERIFYONLY ... WITH CHECKSUM`; sau khi phục hồi thực tế chạy `DBCC CHECKDB`.
+- **Phục hồi thực hành**: Đặt `ThucHienPhucHoi=1` để khôi phục FULL → DIFF → LOG vào CSDL mới có hậu tố `_Restore`, với `MOVE`, `NORECOVERY` và `RECOVERY`. Script từ chối ghi đè CSDL đích có sẵn. `STOPAT` là ví dụ bổ sung để giải thích phục hồi theo thời điểm.
 - **Thủ tục tự động**: `sp_SaoLuuHeThong` hỗ trợ sao lưu qua tham số `@LoaiSaoLuu ('FULL', 'DIFF', 'LOG')`.
+
+Chọn `TenCSDL` chính xác trong file trước khi chạy; không tự dò rồi đổi sang một CSDL khác. Thủ tục sao lưu được cài riêng nên không nằm trong 7 thủ tục của bộ cài nghiệp vụ. Script thay recovery model của CSDL nguồn thành FULL; thư mục backup nằm trên **máy SQL Server** và cần quyền ghi của dịch vụ SQL Server.
 
 Chạy từ `SRC` để kiểm tra ứng dụng và ghi nhận thực thi thủ tục:
 

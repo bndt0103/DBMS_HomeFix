@@ -13,3 +13,8 @@ Thumbs.db
 ~$*
 *.tmp
 *.bak
+
+# Local report backups and Python caches
+/DOC/archive/
+**/__pycache__/
+*.pyc

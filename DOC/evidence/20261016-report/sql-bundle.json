@@ -1,0 +1,26 @@
+[
+  {
+    "variant": "full",
+    "status": "PASS",
+    "objects": 26,
+    "users": 9,
+    "migrationReplay": "PASS"
+  },
+  {
+    "backupRecovery": "PASS",
+    "chain": [
+      "FULL",
+      "DIFF",
+      "LOG"
+    ],
+    "restoredState": "ONLINE",
+    "checkdb": "PASS"
+  },
+  {
+    "variant": "modules",
+    "status": "PASS",
+    "objects": 26,
+    "users": 9,
+    "migrationReplay": "PASS"
+  }
+]

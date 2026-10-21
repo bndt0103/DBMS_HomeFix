@@ -16,17 +16,18 @@ try {
     kh: ['/', '/services', '/orders', '/support', '/profile', '/applications', '/notifications'],
     ktv: ['/', '/orders', '/wallet'],
     dpv: ['/', '/orders', '/reports'],
-    cskh: ['/', '/support'],
-    kt: ['/', '/finance', '/reports'],
+    cskh: ['/', '/support', '/reports?view=quality', '/reports?view=performance'],
+    kt: ['/', '/finance', '/finance?tab=wallet', '/finance?tab=bank', '/reports'],
     admin: [
       '/',
       '/admin/users',
+      '/admin/orders',
       '/admin/services',
       '/admin/settings',
       '/admin/audit',
       '/applications',
     ],
-    gd: ['/', '/reports'],
+    gd: ['/', '/?tab=policies', '/reports', '/reports?view=quality', '/reports?view=performance'],
   })) {
     const context = await browser.newContext({
         viewport: { width: 1440, height: 1000 },
@@ -45,44 +46,58 @@ try {
     await page.getByLabel('Mật khẩu', { exact: true }).fill('HomeFix@123');
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
     await page.locator('.app-shell').waitFor();
-    for (const pathname of paths) {
-      // Navigation through the SPA preserves the in-memory access token.
-      await page.evaluate((p) => {
-        history.pushState({}, '', p);
-        dispatchEvent(new PopStateEvent('popstate'));
-      }, pathname);
-      await page.waitForTimeout(650);
-      await page
-        .locator('.loading')
-        .waitFor({ state: 'hidden' })
-        .catch(() => {});
-      assert.equal(
-        await page.locator('[role=alert]').count(),
-        0,
-        role + ' ' + pathname + ': ' + (await page.locator('main').innerText()),
-      );
-      assert.ok(await page.locator('main').innerText(), role + ' ' + pathname + ' blank');
-      assert.ok(
-        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
-        role + ' ' + pathname + ' desktop overflow',
-      );
-      if (
-        pathname === '/' ||
-        pathname === '/finance' ||
-        pathname === '/reports' ||
-        pathname === '/admin/users'
-      )
-        await page.screenshot({
-          path:
-            folder +
-            '/' +
-            role +
-            '-' +
-            (pathname.slice(1).replaceAll('/', '-') || 'home') +
-            '-desktop.png',
-          fullPage: false,
+    for (const viewport of [
+      { width: 1440, height: 1000 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      const viewportName = viewport.width === 390 ? 'mobile' : 'desktop';
+      for (const pathname of [...new Set([...paths, '/profile', '/notifications'])]) {
+        // Navigation through the SPA preserves the in-memory access token.
+        await page.evaluate((p) => {
+          history.pushState({}, '', p);
+          dispatchEvent(new PopStateEvent('popstate'));
+        }, pathname);
+        await page.waitForTimeout(650);
+        await page
+          .locator('.loading')
+          .waitFor({ state: 'hidden' })
+          .catch(() => {});
+        assert.equal(
+          await page.locator('[role=alert]').count(),
+          0,
+          role + ' ' + pathname + ': ' + (await page.locator('main').innerText()),
+        );
+        assert.ok(await page.locator('main').innerText(), role + ' ' + pathname + ' blank');
+        assert.ok(
+          await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+          role + ' ' + pathname + ' ' + viewportName + ' overflow',
+        );
+        if (
+          pathname === '/' ||
+          pathname === '/finance' ||
+          pathname === '/reports' ||
+          pathname === '/admin/users'
+        )
+          await page.screenshot({
+            path:
+              folder +
+              '/' +
+              role +
+              '-' +
+              (pathname.slice(1).replaceAll('/', '-') || 'home') +
+              '-' +
+              viewportName +
+              '.png',
+            fullPage: false,
+          });
+        cases.push({
+          role,
+          path: pathname,
+          viewport: `${viewport.width}x${viewport.height}`,
+          status: 'PASS',
         });
-      cases.push({ role, path: pathname, viewport: '1440x1000', status: 'PASS' });
+      }
     }
     await context.close();
   }
@@ -92,6 +107,15 @@ try {
     cases.length,
     'pages; no JS/API errors or horizontal page overflow.',
   );
+} catch (error) {
+  faults.push(error.message);
+  for (const [index, context] of browser.contexts().entries()) {
+    await context
+      .pages()[0]
+      ?.screenshot({ path: folder + `/failure-smoke-${index}.png`, fullPage: true })
+      .catch(() => {});
+  }
+  throw error;
 } finally {
   await browser.close();
   fs.writeFileSync(

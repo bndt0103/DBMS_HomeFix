@@ -1,3 +1,4 @@
+import { sqlSources } from './sql-sources.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -38,22 +39,7 @@ if (!v.id) {
   );
   for (const batch of text.split(/^GO\s*$/m).filter((x) => x.trim())) await q(batch);
 }
-for (const filename of [
-  'CSDL_HomeFix_02_ThuTucVaTrigger.sql',
-  'CSDL_HomeFix_03_PhiHuyDon.sql',
-  'CSDL_HomeFix_04_XacThucOTP.sql',
-  'CSDL_HomeFix_05_ThanhToanNganHang.sql',
-  'CSDL_HomeFix_07_AnhDaiDien.sql',
-  'CSDL_HomeFix_08_KhoaTaiKhoan.sql',
-  'CSDL_HomeFix_09_DeXuatChinhSach.sql',
-  'CSDL_HomeFix_10_HoSoKyThuatVien.sql',
-  'CSDL_HomeFix_11_ViTriKhachHang.sql',
-  'CSDL_HomeFix_12_HamVaView.sql',
-  'CSDL_HomeFix_13_ChiMucVaToanVen.sql',
-  'CSDL_HomeFix_14_GiaoDich.sql',
-  'CSDL_HomeFix_15_PhanQuyen.sql',
-  'CSDL_HomeFix_16_ChuKyKyThuatVien.sql',
-])
+for (const filename of sqlSources.filter((name) => !/_0[16]_/.test(name)))
   for (const batch of fs
     .readFileSync(path.join(root, 'database', filename), 'utf8')
     .split(/^GO\s*$/m)

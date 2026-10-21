@@ -588,7 +588,14 @@ ORDER BY
   day`,
       params,
     );
-    ok(res, { ...orders, ...money, ...commission, ...quality, trend });
+    const commissionTrend = await q(
+      `SELECT CONVERT(varchar(10), DATEADD(hour,7,NgayXacNhan),23) day,
+        SUM(TienHoaHong) amount FROM dbo.DoiSoat
+        WHERE TrangThai='Confirmed' AND NgayXacNhan>=@from AND NgayXacNhan<@to
+        GROUP BY CONVERT(varchar(10), DATEADD(hour,7,NgayXacNhan),23) ORDER BY day`,
+      params,
+    );
+    ok(res, { ...orders, ...money, ...commission, ...quality, trend, commissionTrend });
   }),
 );
 adminRouter.get(
@@ -603,6 +610,8 @@ adminRouter.get(
   n.HoTen,
   k.NhomTayNghe,
   k.TrangThaiSanSang,
+  n.DangHoatDong,
+  n.KhoaDenNgay,
   (
     SELECT
       COUNT(*)

@@ -127,7 +127,7 @@ function AIChatWidget({ userId }) {
       query.toLowerCase().includes('đi đến trang đặt dịch vụ')
     ) {
       setOpen(false);
-      navigate('/booking');
+      navigate('/services');
       return;
     }
 

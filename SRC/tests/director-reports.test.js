@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { q, close } from '../backend/src/db.js';
 const base = process.env.TEST_BASE_URL || 'http://localhost:3000/api';
 const tokens = {};
-async function request(role, path, body) {
+async function request(role, path, body, method = body ? 'PATCH' : 'GET') {
   const r = await fetch(base + path, {
-    method: body ? 'PATCH' : 'GET',
+    method,
     headers: {
       Authorization: 'Bearer ' + tokens[role],
       ...(body ? { 'Content-Type': 'application/json' } : {}),
@@ -28,6 +28,78 @@ try {
       assert.equal(r.status, 200);
       tokens[role] = (await r.json()).data.accessToken;
     }
+    await t.test(
+      'summary exposes actual settled commissions instead of a fixed percentage of receipts',
+      async () => {
+        const result = await request('GD', '/reports/summary');
+        assert.equal(result.status, 200);
+        const [expected] = await q(
+          "SELECT COALESCE(SUM(TienHoaHong),0) amount FROM dbo.DoiSoat WHERE TrangThai='Confirmed'",
+        );
+        assert.equal(
+          result.data.commissionTrend.reduce((sum, row) => sum + Number(row.amount), 0),
+          Number(expected.amount),
+        );
+        assert.equal(Number(result.data.commissionRevenue), Number(expected.amount));
+        assert.deepEqual(
+          (
+            await request(
+              'GD',
+              '/reports/summary?from=2099-01-01T00:00:00Z&to=2099-02-01T00:00:00Z',
+            )
+          ).data.commissionTrend,
+          [],
+        );
+      },
+    );
+    await t.test(
+      'policy decisions change real pending records, enforce permissions and reject stale versions',
+      async () => {
+        const proposalCode = 'TEST-' + Date.now();
+        const [proposal] = await q(
+          `INSERT dbo.DeXuatChinhSach(MaDeXuat,TieuDe,BoPhan,NhomDichVu,TacDong,LyDo)
+        VALUES(@MaDeXuat,N'Đề xuất kiểm thử',N'Vận hành',N'Điện lạnh',N'Kiểm chứng lưu quyết định',N'Kiểm thử hồi quy');
+        SELECT * FROM dbo.DeXuatChinhSach WHERE MaDeXuat=@MaDeXuat;`,
+          { proposalCode },
+        );
+        try {
+          assert.ok(
+            (await request('GD', '/director/policy-proposals')).data.some(
+              (row) => row.id === proposal.id,
+            ),
+          );
+          const endpoint = `/director/policy-proposals/${proposal.id}/decision`;
+          const body = { decision: 'Approved' };
+          // Version is serialized by the API, so use its canonical token.
+          body.expectedVersion = (await request('GD', '/director/policy-proposals')).data.find(
+            (row) => row.id === proposal.id,
+          ).version;
+          assert.equal((await request('CSKH', endpoint, body, 'POST')).status, 403);
+          assert.equal(
+            (await request('GD', endpoint, { ...body, decision: 'Rejected' }, 'POST')).status,
+            422,
+          );
+          assert.equal((await request('GD', endpoint, body, 'POST')).status, 200);
+          assert.equal((await request('GD', endpoint, body, 'POST')).status, 409);
+          assert.ok(
+            !(await request('GD', '/director/policy-proposals')).data.some(
+              (row) => row.id === proposal.id,
+            ),
+          );
+          assert.equal(
+            (
+              await q('SELECT TrangThai FROM dbo.DeXuatChinhSach WHERE Id=@Id', { id: proposal.id })
+            )[0].status,
+            'Approved',
+          );
+        } finally {
+          await q(
+            'DELETE dbo.ThongBao WHERE NoiDungThongBao LIKE @pattern; DELETE dbo.DeXuatChinhSach WHERE Id=@Id;',
+            { id: proposal.id, pattern: proposalCode + '%' },
+          );
+        }
+      },
+    );
     await t.test('quality served customers and completed orders match paid orders', async () => {
       const result = await request('GD', '/reports/quality');
       assert.equal(result.status, 200, JSON.stringify(result));

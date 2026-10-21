@@ -40,6 +40,7 @@ import {
   date,
   code,
   labels,
+  orderStatusLabels,
   roleNames,
   groups,
   Modal,
@@ -95,9 +96,6 @@ function AdminOrders() {
         title="Đơn sửa chữa & Bảo trì"
         text="Quản lý và tra cứu toàn bộ đơn dịch vụ trên hệ thống."
       >
-        <Link className="btn primary" to="/services">
-          <Plus size={17} /> Khởi tạo đơn mới
-        </Link>
         <button className="btn" onClick={exportCsv}>
           <Download size={16} /> Xuất CSV
         </button>
@@ -106,7 +104,7 @@ function AdminOrders() {
         <Field label="Trạng thái">
           <select value={filter.status} onChange={(e) => set('status', e.target.value)}>
             <option value="">Tất cả</option>
-            {Object.entries(labels).map(([k, v]) => (
+            {Object.entries(orderStatusLabels).map(([k, v]) => (
               <option key={k} value={k}>
                 {v}
               </option>

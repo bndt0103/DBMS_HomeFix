@@ -14,7 +14,7 @@ import {
 import { api } from './api';
 export const AppContext = createContext(null);
 export const useApp = () => useContext(AppContext);
-export const labels = {
+export const orderStatusLabels = {
   ChoTiepNhan: 'Chờ tiếp nhận',
   ChoDuyetSoBo: 'Chờ duyệt báo giá',
   ChoPhanCong: 'Chờ phân công',
@@ -26,6 +26,9 @@ export const labels = {
   ChoNghiemThu: 'Chờ nghiệm thu',
   HoanThanh: 'Hoàn thành',
   Huy: 'Đã hủy',
+};
+export const labels = {
+  ...orderStatusLabels,
   AwaitingTransfer: 'Chờ chuyển khoản',
   PendingReview: 'Chờ xác minh tiền',
   Pending: 'Chờ xử lý',

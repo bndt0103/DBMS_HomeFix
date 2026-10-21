@@ -50,6 +50,7 @@ import {
   groups,
   roleNames,
   labels,
+  orderStatusLabels,
 } from './shared';
 const icons = [Snowflake, Sparkles, Refrigerator, WashingMachine, PlugZap, Droplets];
 function ServiceCards({ services }) {
@@ -533,19 +534,20 @@ function FinanceKpi({ label, value, detail, tone }) {
   );
 }
 function ExecutiveDashboard() {
-  const { toast } = useApp(),
-    summary = useData('/reports/summary', 15000),
-    technicians = useData('/reports/technicians', 15000);
+  const summary = useData('/reports/summary', 15000),
+    technicians = useData('/reports/technicians', 15000),
+    policies = useData('/director/policy-proposals', 15000);
   const techs = technicians.data || [],
     topTechs = [...techs]
       .sort((a, b) => Number(b.completedOrders || 0) - Number(a.completedOrders || 0))
       .slice(0, 5),
-    activeTechs = techs.filter((tech) => tech.availability === 'SanSang').length,
-    averageRating = techs.length
-      ? techs.reduce((total, tech) => total + Number(tech.averageRating || 0), 0) /
-        techs.filter((tech) => tech.averageRating).length
-      : 0;
-  const monthData = executiveMonths(summary.data?.trend || []),
+    activeTechs = techs.filter(
+      (tech) =>
+        tech.availability === 'SanSang' &&
+        tech.isActive &&
+        (!tech.lockedUntil || new Date(tech.lockedUntil) <= new Date()),
+    ).length;
+  const monthData = executiveMonths(summary.data?.trend || [], summary.data?.commissionTrend || []),
     maximum = Math.max(1, ...monthData.flatMap((item) => [item.revenue, item.profit]));
   return (
     <div className="executive-dashboard">
@@ -554,21 +556,21 @@ function ExecutiveDashboard() {
           <div className="breadcrumb-text">
             HomeFix <span>›</span> Tổng quan điều hành
           </div>
-          <h1>Executive Dashboard - Chỉ số KPI & Doanh thu</h1>
+          <h1>Tổng quan điều hành & doanh thu</h1>
           <p>Hệ thống báo cáo vận hành và phân tích xu hướng dịch vụ của nền tảng.</p>
         </div>
       </div>
-      <ErrorBox error={summary.error || technicians.error} />
+      <ErrorBox error={summary.error || technicians.error || policies.error} />
       <section className="executive-kpis">
         <ExecutiveKpi
-          label="Tổng doanh thu tháng"
+          label="Tổng giá trị đã thanh toán"
           value={money(summary.data?.gmv)}
-          note={`${summary.data?.paidOrders || 0} đơn đã thanh toán`}
+          note={`${summary.data?.paidOrders || 0} đơn đã thanh toán · toàn kỳ`}
           icon={TrendingUp}
           tone="green"
         />
         <ExecutiveKpi
-          label="Lợi nhuận ròng"
+          label="Doanh thu hoa hồng"
           value={money(summary.data?.commissionRevenue)}
           note="Hoa hồng đã đối soát"
           icon={Wallet}
@@ -597,17 +599,17 @@ function ExecutiveDashboard() {
         <div className="executive-chart-card">
           <div className="executive-card-head">
             <div>
-              <h2>Xu hướng doanh thu & lợi nhuận 6 tháng</h2>
-              <p>Biểu đồ tổng hợp dòng tiền thực tế theo thời gian thực</p>
+              <h2>Giá trị thanh toán & hoa hồng 6 tháng</h2>
+              <p>Theo ngày thanh toán và ngày xác nhận đối soát</p>
             </div>
             <div className="executive-legend">
               <span>
                 <i className="revenue-line" />
-                Doanh thu
+                Thanh toán
               </span>
               <span>
                 <i className="profit-line" />
-                Lợi nhuận
+                Hoa hồng
               </span>
             </div>
           </div>
@@ -622,12 +624,6 @@ function ExecutiveDashboard() {
             tone="teal"
           />
           <ExecutiveSignal
-            icon={TrendingUp}
-            label={`${activeTechs} KTV hoạt động tích cực`}
-            text="Theo trạng thái sẵn sàng hiện tại"
-            tone="blue"
-          />
-          <ExecutiveSignal
             icon={ShieldCheck}
             label={`Tỷ lệ hoàn thành ${summary.data?.totalOrders ? Math.round((summary.data.completedOrders / summary.data.totalOrders) * 100) : 0}%`}
             text="Dựa trên toàn bộ đơn phát sinh"
@@ -639,10 +635,10 @@ function ExecutiveDashboard() {
         <div className="executive-table-card">
           <div className="executive-card-head">
             <div>
-              <h2>Top 5 Kỹ thuật viên xuất sắc trong tháng</h2>
-              <p>Bảng xếp hạng theo đơn hoàn thành và chất lượng dịch vụ</p>
+              <h2>Top 5 kỹ thuật viên theo đơn đã thanh toán</h2>
+              <p>Tổng hợp toàn kỳ, kèm điểm đánh giá từ khách hàng</p>
             </div>
-            <Link to="/reports?tab=quality" className="text-link">
+            <Link to="/reports?view=performance" className="text-link">
               Xem toàn bộ KTV <ArrowRight size={15} />
             </Link>
           </div>
@@ -653,7 +649,7 @@ function ExecutiveDashboard() {
                   <th>Hạng</th>
                   <th>Mã KTV</th>
                   <th>Họ và tên</th>
-                  <th>Đơn hoàn thành</th>
+                  <th>Đơn đã thanh toán</th>
                   <th>Đánh giá</th>
                   <th>Trạng thái</th>
                 </tr>
@@ -672,7 +668,12 @@ function ExecutiveDashboard() {
                         {tech.averageRating ? Number(tech.averageRating).toFixed(2) : '—'}{' '}
                         <Star size={13} />
                       </td>
-                      <td>{labels[tech.availability]}</td>
+                      <td>
+                        {!tech.isActive ||
+                        (tech.lockedUntil && new Date(tech.lockedUntil) > new Date())
+                          ? 'Đã khóa'
+                          : labels[tech.availability]}
+                      </td>
                     </tr>
                   ))
                 ) : (
@@ -688,30 +689,30 @@ function ExecutiveDashboard() {
         </div>
         <div className="executive-policy-card">
           <h2>Chính sách chờ phê duyệt</h2>
-          <ExecutivePolicy
-            title="Điều chỉnh chính sách chiết khấu 18% → 15%"
-            text="Yêu cầu bộ phận vận hành xem xét hiệu quả."
-          />
-          <ExecutivePolicy
-            title="Cập nhật bảng giá sản phẩm vệ sinh thiết bị"
-            text="Đề xuất thay đổi đơn giá dịch vụ định kỳ."
-          />
-          <ExecutivePolicy
-            title="Chương trình ưu đãi Khách hàng mới tháng 10"
-            text="Đề xuất từ bộ phận Marketing."
-          />
+          {policies.loading && !policies.data ? (
+            <Loading />
+          ) : policies.data?.length ? (
+            policies.data
+              .slice(0, 3)
+              .map((proposal) => (
+                <ExecutivePolicy
+                  key={proposal.id}
+                  title={proposal.title}
+                  text={`${proposal.proposalCode} · ${proposal.department}`}
+                />
+              ))
+          ) : !policies.error ? (
+            <p>Chưa có đề xuất chính sách chờ duyệt.</p>
+          ) : null}
         </div>
       </section>
       <div className="executive-actions">
         <Link className="btn" to="/reports">
-          <FileText size={17} /> Xuất báo cáo tổng
+          <FileText size={17} /> Mở báo cáo tổng hợp
         </Link>
-        <button
-          className="btn primary"
-          onClick={() => toast('Đã ghi nhận phê duyệt báo cáo kỳ hiện tại.')}
-        >
-          <CheckCircle2 size={17} /> Phê duyệt báo cáo tài chính
-        </button>
+        <Link className="btn primary" to="/reports?view=finance">
+          <Wallet size={17} /> Xem báo cáo dòng tiền
+        </Link>
       </div>
     </div>
   );
@@ -750,7 +751,7 @@ function ExecutivePolicy({ title, text }) {
     </article>
   );
 }
-function executiveMonths(trend) {
+function executiveMonths(trend, commissionTrend) {
   const months = Array.from({ length: 6 }, (_, index) => {
     const date = new Date();
     date.setDate(1);
@@ -767,8 +768,11 @@ function executiveMonths(trend) {
       target = months.find((entry) => entry.key === month);
     if (target) {
       target.revenue += Number(item.amount || 0);
-      target.profit += Number(item.amount || 0) * 0.15;
     }
+  }
+  for (const item of commissionTrend) {
+    const target = months.find((entry) => entry.key === String(item.day || '').slice(0, 7));
+    if (target) target.profit += Number(item.amount || 0);
   }
   return months;
 }
@@ -780,7 +784,7 @@ function ExecutiveChart({ rows, maximum }) {
       <svg
         viewBox="0 0 480 190"
         preserveAspectRatio="none"
-        aria-label="Biểu đồ doanh thu và lợi nhuận"
+        aria-label="Biểu đồ giá trị thanh toán và hoa hồng đã đối soát"
       >
         <path className="chart-grid" d="M20 35H460M20 78H460M20 121H460M20 164H460" />
         <polyline className="chart-revenue" points={points('revenue')} />
@@ -1302,13 +1306,11 @@ export function Orders() {
             }}
           >
             <option value="">Tất cả trạng thái</option>
-            {Object.entries(labels)
-              .slice(0, 11)
-              .map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
+            {Object.entries(orderStatusLabels).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
           </select>
         </Field>
         <span>Trang {page}</span>

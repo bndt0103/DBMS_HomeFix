@@ -1,0 +1,171 @@
+{
+  "executedAt": "2026-10-15T18:06:28.564Z",
+  "orderId": 13,
+  "steps": [
+    "KH đặt dịch vụ",
+    "Lập báo giá sơ bộ",
+    "Đồng ý báo giá",
+    "Phân công kỹ thuật viên",
+    "Chấp nhận đơn",
+    "KH cập nhật GPS hai lần; bản đồ KTV tự đổi điểm đến; từ chối quyền giữ vị trí cũ",
+    "Bắt đầu di chuyển",
+    "Xác nhận đã đến nơi",
+    "Bắt đầu xử lý",
+    "Đề xuất vật tư",
+    "Đồng ý thay vật tư",
+    "Hoàn thành · Lập phiếu nghiệm thu",
+    "Xác nhận nghiệm thu",
+    "Hai chữ ký KH/KTV hiển thị riêng sau nghiệm thu",
+    "Xác nhận đã thu COD",
+    "KT đối soát hoa hồng",
+    "Đánh giá dịch vụ"
+  ],
+  "faults": [],
+  "reportCaptures": [
+    {
+      "filename": "report-01.png",
+      "label": "Đặt dịch vụ — dữ liệu nhập",
+      "url": "http://127.0.0.1:53895/book/1"
+    },
+    {
+      "filename": "report-02.png",
+      "label": "Đặt dịch vụ — kết quả",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-03.png",
+      "label": "Lập báo giá sơ bộ — dữ liệu trước khi gửi",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-04.png",
+      "label": "Lập báo giá sơ bộ — kết quả",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-05.png",
+      "label": "Đồng ý báo giá — dữ liệu trước khi gửi",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-06.png",
+      "label": "Đồng ý báo giá — kết quả",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-07.png",
+      "label": "Phân công kỹ thuật viên — dữ liệu trước khi gửi",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-08.png",
+      "label": "Phân công kỹ thuật viên — kết quả",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-09.png",
+      "label": "Chấp nhận đơn — dữ liệu trước khi gửi",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-10.png",
+      "label": "Chấp nhận đơn — kết quả",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-11.png",
+      "label": "Bắt đầu di chuyển — dữ liệu trước khi gửi",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-12.png",
+      "label": "Bắt đầu di chuyển — kết quả",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-13.png",
+      "label": "Xác nhận đã đến nơi — dữ liệu trước khi gửi",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-14.png",
+      "label": "Xác nhận đã đến nơi — kết quả",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-15.png",
+      "label": "Bắt đầu xử lý — dữ liệu trước khi gửi",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-16.png",
+      "label": "Bắt đầu xử lý — kết quả",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-17.png",
+      "label": "Đề xuất vật tư — dữ liệu trước khi gửi",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-18.png",
+      "label": "Đề xuất vật tư — kết quả",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-19.png",
+      "label": "Đồng ý thay vật tư — dữ liệu trước khi gửi",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-20.png",
+      "label": "Đồng ý thay vật tư — kết quả",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-21.png",
+      "label": "Hoàn thành · Lập phiếu nghiệm thu — dữ liệu trước khi gửi",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-22.png",
+      "label": "Hoàn thành · Lập phiếu nghiệm thu — kết quả",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-23.png",
+      "label": "Xác nhận nghiệm thu — dữ liệu trước khi gửi",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-24.png",
+      "label": "Xác nhận nghiệm thu — kết quả",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-25.png",
+      "label": "Xác nhận đã thu COD — dữ liệu trước khi gửi",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-26.png",
+      "label": "Xác nhận đã thu COD — kết quả",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-27.png",
+      "label": "Kế toán — kết quả đối soát",
+      "url": "http://127.0.0.1:53895/finance?tab=wallet"
+    },
+    {
+      "filename": "report-28.png",
+      "label": "Đánh giá dịch vụ — dữ liệu trước khi gửi",
+      "url": "http://127.0.0.1:53895/orders/13"
+    },
+    {
+      "filename": "report-29.png",
+      "label": "Đánh giá dịch vụ — kết quả",
+      "url": "http://127.0.0.1:53895/orders/13"
+    }
+  ]
+}

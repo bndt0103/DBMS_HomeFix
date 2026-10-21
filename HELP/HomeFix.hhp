@@ -1,0 +1,44 @@
+[OPTIONS]
+Compatibility=1.1 or later
+Compiled file=HomeFix_HuongDan.chm
+Contents file=contents.hhc
+Index file=index.hhk
+Default topic=html/index.html
+Default Window=main
+Display compile progress=No
+Full-text search=Yes
+Language=0x409 English (United States)
+Title=HomeFix - Huong dan su dung
+Error log file=compile.log
+
+[WINDOWS]
+main="HomeFix - Huong dan su dung","contents.hhc","index.hhk","html/index.html","html/index.html",,,,,0x63520,270,0x104e,[20,20,1380,900],,,,,,,0
+
+[FILES]
+html\admin.html
+html\backup.html
+html\caidat.html
+html\cauhinh.html
+html\cskh.html
+html\dangnhap.html
+html\dpv.html
+html\gd.html
+html\images\01-login-desktop.png
+html\images\admin-admin-users-desktop.png
+html\images\cskh-home-desktop.png
+html\images\dpv-home-desktop.png
+html\images\gd-home-desktop.png
+html\images\kh-home-desktop.png
+html\images\kt-finance-desktop.png
+html\images\ktv-home-desktop.png
+html\images\report-24.png
+html\index.html
+html\kh.html
+html\kiemthu.html
+html\kt.html
+html\ktv.html
+html\loi.html
+html\nghiemthu.html
+html\quytrinh.html
+html\style.css
+html\vi.html

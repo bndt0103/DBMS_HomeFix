@@ -1,0 +1,32 @@
+{
+  "database": "HomeFix_DBMS_AutoTest_020a2eb1dafc",
+  "checkedAt": "2026-10-15T17:34:34.929Z",
+  "mechanism": "Extended Events: sqlserver.module_end",
+  "workflow": "tests/api.test.js -> HTTP API -> SQL Server",
+  "procedures": [
+    {
+      "procedureName": "sp_BaoCaoTongHop",
+      "executionCount": 1
+    },
+    {
+      "procedureName": "sp_ChuyenTrangThaiDon",
+      "executionCount": 38
+    },
+    {
+      "procedureName": "sp_DoiSoatCOD",
+      "executionCount": 1
+    },
+    {
+      "procedureName": "sp_DuyetYeuCauVi",
+      "executionCount": 2
+    },
+    {
+      "procedureName": "sp_TaoDonHang",
+      "executionCount": 8
+    },
+    {
+      "procedureName": "sp_XuLyHoTro",
+      "executionCount": 1
+    }
+  ]
+}

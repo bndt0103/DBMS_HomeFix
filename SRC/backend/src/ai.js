@@ -49,9 +49,9 @@ Quy tắc và kiến thức nền tảng của HomeFix:
    - Gia dụng khác: Bình nóng lạnh, bếp từ, lò vi sóng, hút mùi.
 3. Quy trình làm việc 5 bước minh bạch:
    - Bước 1: Khách hàng chọn dịch vụ, mô tả tình trạng và đặt lịch hẹn (tự do từ 08:00 đến 17:59).
-   - Bước 2: Điều phối viên tiếp nhận đơn hàng và phân công kỹ thuật viên có chuyên môn phù hợp.
-   - Bước 3: Kỹ thuật viên đến khảo sát thực tế và lập Báo giá sơ bộ trên hệ thống.
-   - Bước 4: Khách hàng kiểm tra và BẤM DUYỆT báo giá thì kỹ thuật viên mới được thi công.
+   - Bước 2: Điều phối viên tiếp nhận và lập báo giá sơ bộ từ mô tả của khách.
+   - Bước 3: Khách hàng kiểm tra và BẤM DUYỆT báo giá, sau đó điều phối viên mới phân công kỹ thuật viên phù hợp.
+   - Bước 4: Kỹ thuật viên nhận đơn, đến kiểm tra và xử lý; nếu cần vật tư thì gửi đề xuất riêng để khách duyệt trước.
    - Bước 5: Hai bên nghiệm thu chất lượng, thanh toán (Tiền mặt COD hoặc chuyển khoản) và phiếu bảo hành điện tử được kích hoạt.
 4. Giá cả: Báo giá sơ bộ được hiển thị để khách xem và duyệt trước khi thi công. Nếu phát sinh hạng mục/vật tư mới, khách cần được gửi đề xuất riêng để xem và duyệt; không khẳng định giá cuối cùng trước khi có đủ thông tin.
 5. Giới hạn tư vấn: Chỉ đưa hướng dẫn sơ bộ, không khẳng định chắc chắn nguyên nhân khi chưa kiểm tra trực tiếp. Không hướng dẫn khách tự sửa phần điện đang có nguy cơ giật/cháy, bình nóng lạnh rò điện hoặc thiết bị nguy hiểm; hướng dẫn ngắt nguồn/khóa van an toàn và gọi kỹ thuật viên.
@@ -167,7 +167,7 @@ Nếu nhà bạn đang có hiện tượng tóe lửa, bốc mùi khét hoặc A
       reply: `💰 **Chính sách Giá cả tại HomeFix:**
 
 1. **Tuyệt đối minh bạch:** Mọi chi phí đều hiển thị rõ ràng trên hệ thống.
-2. **Khảo sát & Báo giá trước:** Thợ đến khảo sát thực tế và gửi **Phiếu báo giá sơ bộ** trực tiếp trên app.
+2. **Báo giá trước:** Điều phối viên gửi **Phiếu báo giá sơ bộ** dựa trên mô tả của bạn. Sau khi bạn duyệt, điều phối viên mới phân công thợ.
 3. **Khách duyệt mới làm:** Bạn có quyền xem xét từng hạng mục (công thợ, linh kiện). Nếu bạn đồng ý duyệt thì thợ mới bắt đầu thi công.
 4. **Phát sinh minh bạch:** Nếu cần thêm vật tư hoặc hạng mục, thợ cần gửi đề xuất để bạn xem và duyệt trên ứng dụng trước khi thực hiện.
 
@@ -195,7 +195,7 @@ Nếu nhà bạn đang có hiện tượng tóe lửa, bốc mùi khét hoặc A
 2. Nhập địa chỉ nhà và mô tả ngắn gọn hiện tượng hỏng hóc.
 3. **Chọn lịch hẹn:** Bạn có thể để trống nếu cần thợ đến sớm nhất, hoặc chọn giờ hẹn tự do trong khung **08:00 – 17:59** (đặt trước tối thiểu 30 phút).
 4. Đính kèm 1–5 ảnh chụp thiết bị nếu có (giúp thợ chuẩn bị sẵn linh kiện phù hợp).
-5. Bấm **"Gửi yêu cầu"** ➔ Điều phối viên HomeFix sẽ tiếp nhận và phân công kỹ thuật viên phù hợp đến phục vụ bạn!`,
+5. Bấm **"Gửi yêu cầu"** ➔ Điều phối viên gửi báo giá sơ bộ. Bạn duyệt báo giá rồi điều phối viên mới phân công kỹ thuật viên phù hợp!`,
       suggestions: [
         'Đi đến trang Đặt dịch vụ',
         'Xem danh sách đơn đã đặt',
