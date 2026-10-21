@@ -1,5 +1,7 @@
 # Cơ sở dữ liệu HomeFix
 
+> Ôn vấn đáp 22/10/2026: [hướng dẫn chi tiết cho người mới học SQL](ON_TAP_VAN_DAP_CHI_TIET.md), [toàn bộ cột và ràng buộc](PHU_LUC_CAU_TRUC_VAN_DAP.md), [11 script demo đã kiểm chứng](demo_van_dap/KET_QUA_KIEM_CHUNG.md). Database ôn tập đã tạo trên máy; xem lưu ý trước khi chạy lại bộ cài hoặc restore.
+
 `CSDL_HomeFix.sql` tạo đầy đủ cấu trúc, thủ tục, hàm, view, trigger, phân quyền và dữ liệu mẫu. Chạy bằng SQLCMD Mode trong SSMS hoặc `sqlcmd`. Biến `TenCSDL` mặc định là `HomeFix_DBMS_Nhom08_Import`; script từ chối ghi đè CSDL đã tồn tại.
 
 Các script thành phần nằm trong `SRC/database`, có tiền tố `CSDL_HomeFix` và số thứ tự thực thi. `npm run db:init` áp dụng chúng vào CSDL được cấu hình trong `SRC/backend/.env`.

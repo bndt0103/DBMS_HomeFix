@@ -1,5 +1,7 @@
 # Tra cứu SQL khi trình bày HomeFix
 
+> Ôn vấn đáp 22/10/2026: [hướng dẫn chi tiết cho người mới học SQL](ON_TAP_VAN_DAP_CHI_TIET.md), [toàn bộ cột và ràng buộc](PHU_LUC_CAU_TRUC_VAN_DAP.md), [11 script demo đã kiểm chứng](demo_van_dap/KET_QUA_KIEM_CHUNG.md). Database ôn tập đã tạo trên máy; xem lưu ý trước khi chạy lại bộ cài hoặc restore.
+
 ## 1. Mở file nào khi cô hỏi?
 
 | Nội dung | File nên mở | Ví dụ giải thích |
