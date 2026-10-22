@@ -1,4 +1,3 @@
-node_modules/
 **/node_modules/
 **/.env
 **/.env.*
@@ -6,15 +5,11 @@ node_modules/
 **/dist/
 **/uploads/
 **/test-results/
+**/screenshots/
 *.log
-.DS_Store
-Thumbs.db
-
-~$*
-*.tmp
 *.bak
-
-# Local report backups and Python caches
-/DOC/archive/
-**/__pycache__/
-*.pyc
+*.trn
+*.mdf
+*.ldf
+Thumbs.db
+.DS_Store

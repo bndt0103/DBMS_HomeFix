@@ -1,7 +1,0 @@
-{
-  "base": "http://127.0.0.1:55435/api",
-  "orderId": 9,
-  "bankAccountId": 1,
-  "passed": true,
-  "at": "2026-10-15T17:34:45.564Z"
-}

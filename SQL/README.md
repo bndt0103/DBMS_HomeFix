@@ -1,110 +1,178 @@
-# Cơ sở dữ liệu HomeFix
+# HomeFix: cài đặt và đọc hiểu SQL
 
-> Ôn vấn đáp 22/10/2026: [hướng dẫn chi tiết cho người mới học SQL](ON_TAP_VAN_DAP_CHI_TIET.md), [toàn bộ cột và ràng buộc](PHU_LUC_CAU_TRUC_VAN_DAP.md), [11 script demo đã kiểm chứng](demo_van_dap/KET_QUA_KIEM_CHUNG.md). Database ôn tập đã tạo trên máy; xem lưu ý trước khi chạy lại bộ cài hoặc restore.
+## 1. Chạy đúng database
 
-`CSDL_HomeFix.sql` tạo đầy đủ cấu trúc, thủ tục, hàm, view, trigger, phân quyền và dữ liệu mẫu. Chạy bằng SQLCMD Mode trong SSMS hoặc `sqlcmd`. Biến `TenCSDL` mặc định là `HomeFix_DBMS_Nhom08_Import`; script từ chối ghi đè CSDL đã tồn tại.
+Trên máy được bàn giao, chọn database **HomeFix_DBMS_Clean_20261022** trước khi chạy ví dụ. Bộ cài dùng tên mặc định khác để hỗ trợ cài mới trên máy khác.
 
-Các script thành phần nằm trong `SRC/database`, có tiền tố `CSDL_HomeFix` và số thứ tự thực thi. `npm run db:init` áp dụng chúng vào CSDL được cấu hình trong `SRC/backend/.env`.
+Mở `CSDL_HomeFix.sql` trong SSMS, chọn Windows Authentication và tài khoản quản trị SQL Server. Bật **Query → SQLCMD Mode**, đọc phần đầu file, đổi biến `TenCSDL` nếu cần rồi chạy toàn bộ bằng F5. Bộ cài tạo database mới và từ chối tên đã tồn tại; không tự xóa dữ liệu cũ. Tên mặc định là `HomeFix_DBMS_Nhom08`. Nếu tên này đang được ứng dụng cũ sử dụng, chọn tên khác và cập nhật `DB_NAME` của backend theo hướng dẫn ở README chính.
 
-## Bộ SQL chia theo chức năng
+Sau khi cài, chọn đúng database ở danh sách phía trên cửa sổ truy vấn. Không chạy lại seed lên database đã có tài khoản. `seed_data.sql` là bản seed riêng cho database đã tạo cấu trúc nhưng chưa có dữ liệu; nội dung giống module `08_seed.sql`.
 
-Mở [hướng dẫn vấn đáp](HUONG_DAN_VAN_DAP.md) để tra nhanh đối tượng, luồng nghiệp vụ và câu hỏi thường gặp.
+| Module | Nội dung và cách hiểu |
+|---|---|
+| `00_schema.sql` | 28 bảng, khóa chính/ngoại, UNIQUE, CHECK, DEFAULT, cột tính toán, ROWVERSION |
+| `01_index.sql` | Tra cứu nhanh và UNIQUE có điều kiện, ví dụ mỗi thợ chỉ có một phân công còn hiệu lực |
+| `02_function.sql` | 2 hàm trả một giá trị và 4 hàm trả bảng, chỉ đọc/tính toán |
+| `03_view.sql` | 34 view; định nghĩa cột được đọc, che mật khẩu khỏi các view nghiệp vụ |
+| `04_sp.sql` | 19 thủ tục tài khoản, danh mục, OTP, tệp và cấu hình |
+| `05_transaction.sql` | 26 thủ tục đặt đơn, điều phối, nghiệm thu, thanh toán, ví, hỗ trợ, báo cáo |
+| `06_trigger.sql` | 7 trigger bảo vệ trạng thái/chứng từ, vật tư, chữ ký và đánh giá |
+| `07_security.sql` | 7 role nghiệp vụ, user kiểm chứng quyền và role xác thực nội bộ |
+| `08_seed.sql` | Dữ liệu khởi tạo sạch, không có giao dịch giả |
+| `09_data_migration.sql` | Ghi chú chuyển đổi, không chạy lệnh chuyển giao dịch cũ vào bản sạch |
+| `10_backup_recovery.sql` | Thủ tục sao lưu và các lệnh phục hồi có chú thích |
 
-| File | Nội dung |
-| --- | --- |
-| [00_schema.sql](modules/00_schema.sql) | Bảng, khóa, ràng buộc và các cột nâng cấp |
-| [01_index.sql](modules/01_index.sql) | 20 lệnh tạo index tường minh; index của PK/UNIQUE vẫn đi cùng ràng buộc bảng |
-| [02_function.sql](modules/02_function.sql) | 5 hàm tính toán/tra cứu |
-| [03_view.sql](modules/03_view.sql) | 6 view tổng hợp |
-| [04_sp.sql](modules/04_sp.sql) | 2 thủ tục tra cứu/báo cáo |
-| [05_transaction.sql](modules/05_transaction.sql) | 5 thủ tục nghiệp vụ có transaction, savepoint và xử lý lỗi |
-| [06_trigger.sql](modules/06_trigger.sql) | 8 trigger toàn vẹn, sổ ví, lịch sử và thông báo |
-| [07_security.sql](modules/07_security.sql) | 7 role, user minh họa, GRANT/DENY/REVOKE |
-| [08_seed.sql](modules/08_seed.sql) | Dữ liệu mẫu đã có trong bộ cài |
-| [09_data_migration.sql](modules/09_data_migration.sql) | Đồng bộ thông báo và dọn các đề xuất mẫu cũ |
-| [10_backup_recovery.sql](modules/10_backup_recovery.sql) | Chạy riêng: sao lưu FULL/DIFF/LOG và phục hồi sang CSDL mới |
+Thứ tự cài được bộ cài tổng hợp xử lý. Nếu mở từng module, phải chạy schema → index → function → view → thủ tục → trigger → security → seed. Backup module chỉ tạo thủ tục; chưa sao lưu ngay.
 
-[CSDL_HomeFix_Modules.sql](CSDL_HomeFix_Modules.sql) gọi lần lượt các file 00–09. Từ thư mục `SQL`, chạy:
+## 2. Tài khoản và dữ liệu ban đầu
 
-```powershell
-sqlcmd -S "localhost\SQLEXPRESS" -E -C -b -f 65001 -i CSDL_HomeFix_Modules.sql
+Mật khẩu cả bảy tài khoản là **`123456`**, chỉ dùng cho bản học tập. Trong bảng chỉ lưu chuỗi băm bcrypt; giao diện đăng nhập nhận mật khẩu rõ rồi backend dùng bcrypt để đối chiếu.
+
+| Số điện thoại | Vai trò | Công việc |
+|---|---|---|
+| `0900000001` | KH | Đặt đơn, duyệt giá/vật tư, ký nghiệm thu, hỗ trợ và đánh giá |
+| `0900000002` | KTV | Nhận việc, cập nhật tiến độ, lập vật tư/nghiệm thu và yêu cầu ví |
+| `0900000003` | DPV | Báo giá sơ bộ và phân công thợ |
+| `0900000004` | CSKH | Xử lý phiếu hỗ trợ và trao đổi với khách |
+| `0900000005` | KT | Xác nhận chuyển khoản, duyệt ví và đối soát |
+| `0900000006` | GD | Xem báo cáo tổng hợp |
+| `0900000007` | ADMIN | Tài khoản, vai trò, khóa/mở khóa, duyệt hồ sơ thợ và danh mục |
+
+Seed có 5 nhóm Điện/Nước/Điện lạnh/Đồ gỗ/Khóa, mỗi nhóm một dịch vụ. Thợ có số dư **0**; tài khoản ngân hàng là mô phỏng, không chuyển tiền thật. Không có đơn, lịch sử đơn, thanh toán, giao dịch ví, OTP hoặc nhật ký được chèn sẵn.
+
+```sql
+SELECT Id, HoTen, SoDienThoai, VaiTro FROM dbo.vw_NguoiDung;
+SELECT Id, TenDanhMuc, Ten, PhiKiemTra, TienCong FROM dbo.vw_DichVuCongKhai;
+SELECT Id, SoDu, SoDuSoCai, ChenhLech FROM dbo.vw_ViKyThuatVien;
+SELECT TongDon, DonHoanThanh, DonHuy FROM dbo.fn_ThongKeDon(NULL, NULL);
+SELECT dbo.fn_HoaHong(200000, 15) AS HoaHong; -- 30000; 15 là 15%
 ```
 
-Trong SSMS, bật **Query → SQLCMD Mode**, sửa `TenCSDL` thành tên chưa tồn tại và `ThuMucSQL` thành đường dẫn tuyệt đối đến thư mục `SQL`. Chỉ chọn **một** bộ cài tổng hoặc chia file. Không chạy bộ cài tạo mới lên CSDL đang dùng. Khi nâng cấp CSDL đang dùng, chạy `npm.cmd run db:init` từ `SRC`.
+## 3. Cách giải thích những thành phần chính
 
-Nguồn chuẩn là `SRC/database/CSDL_HomeFix_*.sql` và `sample-data.sql`. Các file trong `SQL/modules` và bộ cài tổng được sinh đồng thời để tránh lệch phiên bản; mỗi đoạn ghi rõ file nguồn. Từ `SRC`:
+**PK** định danh một dòng, **FK** bắt buộc dòng được tham chiếu tồn tại. `DonHang.KhachHangId` tham chiếu người dùng; thủ tục kiểm tra thêm người đó có vai trò KH. FK không tự kiểm tra được vai trò. Không dùng xóa dây chuyền cho chứng từ để tránh mất lịch sử.
 
-```powershell
-npm.cmd run sql:build
-npm.cmd run sql:check
-npm.cmd run test:sql-bundle
+**CHECK** kiểm tra điều kiện trên dòng: số dư không âm, điểm 1–5, tỷ lệ hoa hồng 0–100, số lượng vật tư dương. **UNIQUE** chống trùng số điện thoại, một thanh toán cho mỗi đơn, một đánh giá cho mỗi đơn. UNIQUE lọc chỉ xét các dòng thỏa điều kiện, ví dụ `DangHoatDong = 1` của lệnh điều phối. Vì vậy lịch sử điều phối cũ được giữ nhưng không thể phân hai đơn đồng thời cho cùng một thợ.
+
+**DEFAULT** chỉ cấp giá trị khi INSERT bỏ qua cột; không tự cập nhật thời gian khi UPDATE. **Cột tính toán** lấy `SoLuong * DonGia` hoặc cộng các khoản tiền; backend không gửi tổng tiền tùy ý. Tiền dùng DECIMAL để tính chính xác theo thang số thập phân.
+
+**ROWVERSION** là 8 byte tự thay đổi khi UPDATE, không phải ngày giờ. Khi mở form, web nhận `PhienBan`; khi lưu gửi lại `PhienBanDuKien`. Thủ tục khóa dòng bằng `UPDLOCK, HOLDLOCK`, so phiên bản, kiểm tra trạng thái rồi ghi. Phiên bản cũ bị từ chối để tránh người sau ghi đè quyết định của người trước.
+
+**View** đóng gói một câu SELECT; **hàm scalar** trả một giá trị, ví dụ hoa hồng; **TVF** trả bảng, dùng trong FROM. `fn_SoDuVi` cộng sổ cái, `fn_DiemDanhGia` tính trung bình, `fn_HanBaoHanh` tìm hạn bảo hành từ vật tư nghiệm thu, `fn_ThongKeDon` thống kê theo ngày. `fn_TongTienDonHang` ưu tiên tiền nghiệm thu, nếu chưa có thì lấy báo giá và vật tư đã duyệt.
+
+**Stored Procedure** nhận tham số có kiểu, kiểm tra người thực hiện/quyền sở hữu, trạng thái và dữ liệu rồi mới ghi. Ví dụ `sp_TaoBaoGiaSoBo` chỉ nhận DPV/ADMIN, đơn phải ở `ChoTiepNhan`, giá hợp lệ và phiên bản phải khớp. SP ghi báo giá, chuyển đơn sang `ChoDuyetSoBo` và lưu lịch sử trong cùng giao dịch.
+
+**Transaction** bảo đảm nhiều thao tác cùng thành công hoặc cùng hủy. SP tự BEGIN/COMMIT nếu chưa có giao dịch; nếu bên ngoài đã mở thì chỉ SAVE TRANSACTION. Trong CATCH, `XACT_STATE() = 1` còn quay về savepoint được; `-1` là giao dịch không còn khả năng COMMIT, bên sở hữu giao dịch phải ROLLBACK toàn bộ. `XACT_ABORT ON` làm các lỗi ghi dữ liệu nghiêm trọng hủy khả năng COMMIT, không được cố COMMIT tiếp.
+
+**Trigger** tự chạy khi bảng bị tác động. `inserted`/`deleted` chứa nhiều dòng, vì vậy code dùng EXISTS/JOIN, không gán tùy tiện một dòng vào biến. Trigger chặn chuyển trạng thái sai, thanh toán lệch nghiệm thu, sửa/xóa sổ cái hoặc thanh toán, sửa chi tiết vật tư đã duyệt, đánh giá sai chủ đơn và chữ ký sai người/đơn. Trigger kiểm tra quy tắc; SP vẫn chịu trách nhiệm lưu lịch sử và điều phối nghiệp vụ.
+
+## 4. Demo luồng SQL và tự hoàn tác
+
+Chạy **nguyên khối** bên dưới trong database vừa cài. Mọi thay đổi nằm trong một giao dịch ngoài và cuối cùng ROLLBACK, nên dữ liệu khởi tạo vẫn sạch. Các Id được tra từ view, không giả định luôn bằng 1/2/3.
+
+```sql
+SET XACT_ABORT ON;
+BEGIN TRY
+    BEGIN TRANSACTION;
+    DECLARE @KH INT, @DPV INT, @KTV INT, @DV INT, @Don INT, @BaoGia INT, @Lenh INT;
+    DECLARE @PB BINARY(8), @Dau NVARCHAR(100) = N'Demo SSMS ' + CONVERT(NVARCHAR(36), NEWID());
+    SELECT @KH = Id FROM dbo.vw_NguoiDung WHERE SoDienThoai = '0900000001';
+    SELECT @KTV = Id FROM dbo.vw_NguoiDung WHERE SoDienThoai = '0900000002';
+    SELECT @DPV = Id FROM dbo.vw_NguoiDung WHERE SoDienThoai = '0900000003';
+    SELECT TOP (1) @DV = Id FROM dbo.vw_DichVuCongKhai ORDER BY Id;
+    EXEC dbo.sp_TaoDonHang @NguoiThucHienId = @KH, @DichVuId = @DV,
+        @DiaChi = N'01 Võ Văn Ngân, Thành phố Hồ Chí Minh', @MoTa = @Dau;
+    SELECT @Don = Id, @PB = PhienBan FROM dbo.vw_DonHangTongHop WHERE KhachHangId = @KH AND MoTa = @Dau;
+    EXEC dbo.sp_TaoBaoGiaSoBo @NguoiThucHienId = @DPV, @DonHangId = @Don,
+        @PhiKiemTra = 50000, @TienCong = 200000, @TyLeHoaHong = 15,
+        @ChanDoan = N'Kiểm tra và sửa công tắc bị hỏng', @PhienBanDuKien = @PB;
+    SELECT @BaoGia = Id, @PB = PhienBan FROM dbo.vw_BaoGiaSoBo WHERE DonHangId = @Don;
+    EXEC dbo.sp_KhachDuyetBaoGiaSoBo @NguoiThucHienId = @KH, @BaoGiaId = @BaoGia,
+        @QuyetDinh = 'Approved', @PhienBanDuKien = @PB;
+    SELECT @PB = PhienBan FROM dbo.vw_DonHangTongHop WHERE Id = @Don;
+    EXEC dbo.sp_TaoLenhDieuPhoi @NguoiThucHienId = @DPV, @DonHangId = @Don,
+        @KyThuatVienId = @KTV, @PhienBanDuKien = @PB;
+    SELECT @Lenh = Id, @PB = PhienBan FROM dbo.vw_LenhDieuPhoi WHERE DonHangId = @Don AND DangHoatDong = 1;
+    EXEC dbo.sp_KTVPhanHoiDieuPhoi @NguoiThucHienId = @KTV, @LenhDieuPhoiId = @Lenh,
+        @QuyetDinh = 'Accepted', @PhienBanDuKien = @PB;
+    SELECT @PB = PhienBan FROM dbo.vw_DonHangTongHop WHERE Id = @Don;
+    EXEC dbo.sp_ChuyenTrangThaiDon @NguoiThucHienId = @KTV, @DonHangId = @Don,
+        @TrangThaiTiepTheo = 'DangDiChuyen', @PhienBanDuKien = @PB;
+    SELECT @PB = PhienBan FROM dbo.vw_DonHangTongHop WHERE Id = @Don;
+    EXEC dbo.sp_ChuyenTrangThaiDon @NguoiThucHienId = @KTV, @DonHangId = @Don,
+        @TrangThaiTiepTheo = 'DaDenNoi', @PhienBanDuKien = @PB;
+    SELECT @PB = PhienBan FROM dbo.vw_DonHangTongHop WHERE Id = @Don;
+    EXEC dbo.sp_ChuyenTrangThaiDon @NguoiThucHienId = @KTV, @DonHangId = @Don,
+        @TrangThaiTiepTheo = 'DangXuLy', @PhienBanDuKien = @PB;
+    SELECT Id, TrangThai, TenKhachHang, TenKyThuatVien, TongTien FROM dbo.vw_DonHangTongHop WHERE Id = @Don;
+    SELECT TrangThaiTruoc, TrangThaiSau, NguoiThucHienId, LyDo FROM dbo.vw_LichSuDonHang WHERE DonHangId = @Don ORDER BY Id;
+    ROLLBACK TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    SELECT ERROR_NUMBER() AS MaLoi, ERROR_MESSAGE() AS NoiDung;
+END CATCH;
 ```
 
-Kiểm thử bộ SQL dùng `sqlcmd` thật trên CSDL tạm: so sánh định nghĩa đối tượng/chỉ mục, kiểm tra dữ liệu mẫu, chặn cài đè, chạy lại migration khi đã có avatar/chữ ký, và sao lưu/phục hồi thực tế. Máy kiểm thử cần `sqlcmd`, quyền tạo/xóa CSDL và BACKUP/RESTORE. Tệp backup thử nghiệm được xóa theo đúng tên CSDL ngẫu nhiên của lượt chạy; không dọn backup dự án.
+Nếu thợ đang có đơn, thủ tục phân công sẽ báo lỗi thay vì phá dữ liệu. Dùng database seed mới để luyện. ROLLBACK không thu hồi số IDENTITY đã cấp nên Id có thể nhảy số; đây là hành vi bình thường, không phải mất đơn đã lưu. Muốn tiếp tục luồng từ trình duyệt, thực hiện lại các bước bằng giao diện để lưu thật: KTV lập vật tư → KH duyệt → KTV tạo và ký nghiệm thu → KH ký, chọn COD/BANK → ghi nhận tiền thực thu → KT đối soát. Chữ ký/chứng từ phải là tệp upload thật, đúng chủ sở hữu và đơn hàng; không tự INSERT metadata để giả lập tệp còn thiếu.
 
-## Đối chiếu yêu cầu SQL
+COD trừ hoa hồng từ ví KTV khi KT đối soát, vì vậy cần KTV gửi yêu cầu nạp ví và KT duyệt trước. BANK do KT xác nhận đúng số tiền/tham chiếu; đối soát ghi khoản được nhận theo quy tắc trong `sp_DoiSoatCOD`. Mỗi tham chiếu sổ cái là duy nhất, ngăn ghi tiền hai lần. Dùng view ví để so `SoDu` với `SoDuSoCai`; `ChenhLech` phải bằng 0.
 
-Theo mục 3 và 4 của hướng dẫn DBMS330284, ứng dụng phải gọi được thủ tục/hàm và dùng view hoặc thủ tục cho truy vấn báo cáo. Hướng dẫn không yêu cầu chuyển mọi câu SQL thành thủ tục.
+## 5. Demo lỗi trigger, quyền và cách đọc lỗi
 
-| Đối tượng | Tối thiểu | HomeFix |
-| --- | ---: | ---: |
-| Bảng | 8 | 30 |
-| Thủ tục | 5 | 7 |
-| Hàm | 5 | 5 |
-| View | 5 | 6 |
-| Trigger | 5 | 8 |
-| Index | 5, có ít nhất 1 index ngoài khóa chính | 33 index ngoài khóa chính |
-| Nghiệp vụ có transaction | 5 | 5 thủ tục giao dịch |
-| Role/Login | 4 | 7 role và 7 user không có login |
+Đây là thao tác **DBA trong SSMS để chứng minh trigger**, không phải SQL chạy từ backend. Đơn vừa tạo chưa có báo giá/phân công/thanh toán nên không thể nhảy thẳng tới hoàn thành. Giao dịch sẽ hủy; CATCH hiển thị lỗi dự kiến.
 
-Số lượng trên mô tả cấu trúc hiện tại; không thay thế việc đánh giá thiết kế, chuẩn hóa và minh chứng hiệu năng theo rubric.
-
-## Đường gọi từ website đến SQL Server
-
-| Thao tác trên website | Mã backend | Đối tượng SQL |
-| --- | --- | --- |
-| Khách hàng đặt dịch vụ | `orders.js`, `POST /api/orders` | `sp_TaoDonHang` → `vw_DonHangTongHop` |
-| Chuyển tiến độ đơn, duyệt báo giá, nghiệm thu hoặc hủy đơn | `common.js`, hàm `transition` dùng chung | `sp_ChuyenTrangThaiDon` → trigger `trg_DonHang_GhiNhatKy` |
-| Kế toán xác nhận đối soát | `finance.js` | `sp_DoiSoatCOD` → ghi sổ ví → trigger `trg_Vi_GhiSo` |
-| Kế toán duyệt yêu cầu nạp/rút ví | `finance.js` | `sp_DuyetYeuCauVi` → trigger `trg_Vi_GhiSo` |
-| CSKH cập nhật xử lý hỗ trợ | `support.js` | `sp_XuLyHoTro` |
-| Xem báo cáo tổng hợp | `admin.js`, `GET /api/reports/summary` | `sp_BaoCaoTongHop` → `fn_ThongKeDon` |
-| Điều phối xem kỹ thuật viên | `orders.js` | `CROSS APPLY fn_DiemDanhGia` |
-
-Các file backend nằm trong `SRC/backend/src`. Định nghĩa hàm/view nằm trong `CSDL_HomeFix_12_HamVaView.sql`; năm thủ tục giao dịch nằm trong `CSDL_HomeFix_14_GiaoDich.sql`.
-
-Backend còn có truy vấn trực tiếp vào bảng. `sp_DonHangCuaKhach`, `fn_HanBaoHanh` và các view ngoài `vw_DonHangTongHop` chưa được gọi trực tiếp từ backend. `fn_SoDuVi` được dùng trong `vw_ViKyThuatVien`; `fn_HoaHong` được dùng trong `vw_DoanhThuNgay`. Không nên trình bày các đối tượng này là đã được mọi màn hình sử dụng.
-
-## Transaction và minh họa lỗi
-
-Năm thủ tục `sp_TaoDonHang`, `sp_ChuyenTrangThaiDon`, `sp_DoiSoatCOD`, `sp_DuyetYeuCauVi`, `sp_XuLyHoTro` đều có `BEGIN TRANSACTION`, `COMMIT`, `ROLLBACK`, `TRY...CATCH`. Khi được gọi trong transaction của backend, thủ tục dùng savepoint; `db.js` chịu trách nhiệm commit hoặc rollback giao dịch bao ngoài. Kiểm soát đồng thời sử dụng khóa, `ROWVERSION` và kiểm tra trạng thái nghiệp vụ.
-
-`SRC/tests/dbms.test.js` kiểm tra rollback khi lỗi ghi lịch sử, trigger ví với nhiều dòng và hai phiên SQL cùng duyệt một yêu cầu ví. Các kiểm thử API/UI chạy quy trình đặt đơn, xử lý, thanh toán, đối soát và hỗ trợ.
-
-Trong SSMS, chọn CSDL HomeFix rồi chạy [CSDL_HomeFix_MinhHoa.sql](CSDL_HomeFix_MinhHoa.sql). Script chỉ đọc dữ liệu, liệt kê đối tượng và chạy các hàm/view/thủ tục tra cứu; kết quả đơn hàng, doanh thu hoặc bảo hành có thể rỗng nếu chưa có nghiệp vụ tương ứng.
-
-## Sao lưu và Phục hồi (Backup & Recovery)
-
-Kịch bản sao lưu và phục hồi dữ liệu được xây dựng chi tiết trong [CSDL_HomeFix_SaoLuuPhucHoi.sql](CSDL_HomeFix_SaoLuuPhucHoi.sql):
-- **Cấu hình**: Chuyển CSDL sang `RECOVERY FULL` hỗ trợ khôi phục đến từng thời điểm (Point-in-Time).
-- **Chiến lược sao lưu**:
-  - Full Backup (`.bak`): Sao lưu toàn phần với `CHECKSUM`, tên tệp riêng cho từng lần chạy; không bắt buộc nén để tương thích SQL Server Express.
-  - Differential Backup (`.bak`): Sao lưu vi sai các thay đổi sau bản Full.
-  - Transaction Log Backup (`.trn`): Sao lưu nhật ký giao dịch định kỳ.
-- **Kiểm tra tính toàn vẹn**: `RESTORE VERIFYONLY ... WITH CHECKSUM`; sau khi phục hồi thực tế chạy `DBCC CHECKDB`.
-- **Phục hồi thực hành**: Đặt `ThucHienPhucHoi=1` để khôi phục FULL → DIFF → LOG vào CSDL mới có hậu tố `_Restore`, với `MOVE`, `NORECOVERY` và `RECOVERY`. Script từ chối ghi đè CSDL đích có sẵn. `STOPAT` là ví dụ bổ sung để giải thích phục hồi theo thời điểm.
-- **Thủ tục tự động**: `sp_SaoLuuHeThong` hỗ trợ sao lưu qua tham số `@LoaiSaoLuu ('FULL', 'DIFF', 'LOG')`.
-
-Chọn `TenCSDL` chính xác trong file trước khi chạy; không tự dò rồi đổi sang một CSDL khác. Thủ tục sao lưu được cài riêng nên không nằm trong 7 thủ tục của bộ cài nghiệp vụ. Script thay recovery model của CSDL nguồn thành FULL; thư mục backup nằm trên **máy SQL Server** và cần quyền ghi của dịch vụ SQL Server.
-
-Chạy từ `SRC` để kiểm tra ứng dụng và ghi nhận thực thi thủ tục:
-
-```powershell
-npm.cmd run test:sql-usage
+```sql
+SET XACT_ABORT ON;
+BEGIN TRY
+    BEGIN TRANSACTION;
+    DECLARE @KH INT, @DV INT, @Don INT, @Dau NVARCHAR(100) = CONVERT(NVARCHAR(36), NEWID());
+    SELECT @KH = Id FROM dbo.vw_NguoiDung WHERE SoDienThoai = '0900000001';
+    SELECT TOP (1) @DV = Id FROM dbo.vw_DichVuCongKhai ORDER BY Id;
+    EXEC dbo.sp_TaoDonHang @NguoiThucHienId = @KH, @DichVuId = @DV, @DiaChi = N'Địa chỉ demo', @MoTa = @Dau;
+    SELECT @Don = Id FROM dbo.vw_DonHangTongHop WHERE MoTa = @Dau AND KhachHangId = @KH;
+    UPDATE dbo.DonHang SET TrangThai = 'HoanThanh' WHERE Id = @Don; -- dự kiến lỗi 51009
+    ROLLBACK TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    SELECT ERROR_NUMBER() AS MaLoi, ERROR_MESSAGE() AS GiaiThich;
+END CATCH;
 ```
 
-Lệnh tạo CSDL kiểm thử riêng, ghi sự kiện `sqlserver.module_end` bằng Extended Events trong lúc chạy `tests/api.test.js`, lưu `test-results/sql-usage.json`, sau đó chạy các kiểm thử SQL còn lại và Edge. Sáu thủ tục trong bảng đường gọi phải có số lần thực thi lớn hơn 0. Bài kiểm thử API không gọi trực tiếp sáu thủ tục này: chúng được thực thi qua backend khi gửi yêu cầu HTTP. Phiên ghi sự kiện chỉ lọc CSDL kiểm thử, không thu thập nội dung câu lệnh, và được xóa cùng CSDL tạm khi kết thúc. Tài khoản chạy cần quyền tạo/xóa CSDL kiểm thử, quản lý phiên Extended Events và đọc dữ liệu phiên.
+```sql
+EXECUTE AS USER = 'hf_KH';
+SELECT Id, HoTen, VaiTro FROM dbo.vw_NguoiDung; -- được đọc cột công khai
+BEGIN TRY
+    SELECT Id FROM dbo.NguoiDung; -- lỗi 229: role không được đọc bảng gốc
+END TRY
+BEGIN CATCH
+    SELECT ERROR_NUMBER() AS MaLoi, ERROR_MESSAGE() AS GiaiThich;
+END CATCH;
+REVERT; -- bắt buộc trả lại quyền ban đầu
+```
 
-Việc đọc sự kiện sử dụng [ring buffer của Extended Events](https://learn.microsoft.com/en-us/sql/relational-databases/extended-events/targets-for-extended-events-in-sql-server). Cách kiểm tra này ghi nhận sự kiện trong lượt chạy; bộ đếm `sys.dm_exec_procedure_stats` chỉ phản ánh thủ tục còn trong cache theo [tài liệu Microsoft](https://learn.microsoft.com/en-us/sql/relational-databases/system-dynamic-management-views/sys-dm-exec-procedure-stats-transact-sql).
+Bảy role `HomeFix_KH/KTV/DPV/CSKH/KT/GD/ADMIN` chỉ được EXECUTE các SP phù hợp, SELECT các view/TVF cần dùng; không có GRANT CRUD bảng. Có DENY cột `MatKhauBam` và cấm sửa/xóa `GiaoDichVi`. Role thứ tám `HomeFix_UngDung` chỉ phục vụ bước đăng nhập/OTP trước khi có JWT, được đọc view xác thực có hash; đây không phải vai trò nhân viên thứ tám. `hf_*` là user WITHOUT LOGIN để ứng dụng/demo mượn quyền; không phải bảy tài khoản web có mật khẩu.
 
-Kết quả khác được lưu trong `SRC/test-results/full-test.log`, `object-counts.json`, `dbms.json`, `ui-results.json` và `screenshots/`.
+Backend kiểm tra JWT và lọc đơn theo chủ sở hữu; mỗi request đăng nhập đặt Id vào SESSION_CONTEXT và chạy trong ngữ cảnh role tương ứng. SP đối chiếu Id tham số với ngữ cảnh đó và vai trò thực tế, chặn giả mạo actor. Quyền role SQL giới hạn loại đối tượng, không tự lọc từng dòng theo khách hàng. Không cấp tài khoản SQL hoặc quyền IMPERSONATE cho người dùng web. Ownership chain cho phép View/SP cùng chủ dbo truy cập bảng nội bộ dù caller bị cấm đọc/ghi trực tiếp.
+
+Mã lỗi 51003 là thiếu quyền; 51004 là không tìm thấy; 51009 là dữ liệu/trạng thái/phiên bản không hợp lệ; 229 là SQL Server từ chối quyền đối tượng. Khi web báo dữ liệu đã thay đổi, tải lại trang rồi lấy phiên bản mới; không bỏ điều kiện phiên bản. FK lỗi 547: kiểm tra Id được tham chiếu có tồn tại. UNIQUE lỗi 2601/2627: kiểm tra dữ liệu trùng. Luôn đọc dòng `ERROR_MESSAGE()` trước khi sửa SQL.
+
+## 6. Backup và phục hồi
+
+Mở `modules/10_backup_recovery.sql`, đọc ví dụ cuối file và chạy từng khối sau khi đổi tên/đường dẫn. Chạy bằng tài khoản quản trị SQL Server, không phải role ADMIN của web. Có thể lấy thư mục mặc định bằng:
+
+```sql
+SELECT SERVERPROPERTY('InstanceDefaultBackupPath') AS ThuMucBackup;
+SELECT name, recovery_model_desc FROM sys.databases WHERE name = DB_NAME();
+-- Đổi đường dẫn cho đúng máy chủ, dùng tên file mới mỗi lần.
+EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Full_Lan1.bak', @Loai = 'FULL';
+RESTORE HEADERONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_Lan1.bak';
+RESTORE VERIFYONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_Lan1.bak' WITH FILE = 1, CHECKSUM;
+```
+
+FULL là bản đầy đủ; DIFF chứa phần thay đổi từ FULL thường gần nhất; LOG lưu phần nhật ký và cần recovery model FULL cùng chuỗi backup hợp lệ. COPY_ONLY FULL dùng làm bản độc lập, không tạo nền mới cho DIFF. Thủ tục dùng NOINIT nên nếu trùng tên file sẽ thêm backup set: xem Position bằng HEADERONLY và chọn đúng `FILE`, không mặc định bản mới nhất luôn là 1.
+
+**BACKUP/RESTORE bị SQL Server cấm chạy trong BEGIN TRANSACTION.** Vì vậy SP sao lưu dùng TRY/CATCH và kiểm tra quyền, không mở giao dịch CRUD. Khôi phục từ `master` sang **tên database mới**, dùng `MOVE` theo logical name từ FILELISTONLY; phục hồi FULL → DIFF → LOG, NORECOVERY cho các bước trung gian và RECOVERY ở bước cuối. Không dùng WITH REPLACE để ghi đè bản đang chạy. Sau phục hồi, chạy `DBCC CHECKDB` và đọc lại view người dùng/đơn/ví để kiểm chứng. VERIFYONLY chỉ kiểm tra bản sao đọc được, không thay thế việc phục hồi thử.
+
+Sai đường dẫn/thiếu quyền thư mục thường báo 3201 hoặc OS error 3/5: thư mục phải có trên **máy SQL Server**, service account SQL có quyền ghi. Lỗi LOG 4214: chưa có FULL đầu tiên. Lỗi 4305/3117: thiếu/sai thứ tự chuỗi backup. Hướng dẫn đầy đủ có sẵn ở cuối module, gồm các lệnh RESTORE không tự chạy khi cài.

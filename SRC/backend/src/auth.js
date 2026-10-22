@@ -1,728 +1,194 @@
-import { Router } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { rateLimit } from 'express-rate-limit';
-import { config } from './config.js';
-import { q, one, transaction } from './db.js';
-import { z, str, id, ok, wrap, fail, roles, versionSchema, checkVersion, audit } from './common.js';
-import {
-  otpFields,
-  issueOtp,
-  withOtp,
-  accountBinding,
-  registrationBinding,
-  otpEmailDeliverable,
-} from './otp.js';
+import { Router } from "express";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { createHash, randomInt, randomUUID } from "node:crypto";
+import nodemailer from "nodemailer";
+import { exec, first, withDatabaseRole } from "./db.js";
+import { config } from "./config.js";
+import { ok, fail, wrap } from "./common.js";
+
 export const authRouter = Router();
-const phone = z.string().regex(/^0\d{9}$/, 'Số điện thoại gồm 10 chữ số, bắt đầu bằng 0.');
-const email = z
-  .email()
-  .max(200)
-  .transform((s) => s.toLowerCase())
-  .nullable()
-  .optional();
-const password = z
-  .string()
-  .min(8, 'Mật khẩu ít nhất 8 ký tự.')
-  .refine((s) => Buffer.byteLength(s, 'utf8') <= 72, 'Mật khẩu tối đa 72 byte UTF-8.');
-export const userColumns =
-  'Id,HoTen,SoDienThoai,Email,VaiTro,DiaChiMacDinh,DuongDanAnhDaiDien,DangHoatDong,KhoaDenNgay,PhienBanXacThuc,NgayTao,PhienBan';
-export const profile = (u) => {
-  const { tokenVersion, ...safe } = u;
-  return safe;
+export const profileRouter = Router();
+const passwordHash = async (value) => {
+  if (
+    typeof value !== "string" ||
+    value.length < 6 ||
+    Buffer.byteLength(value, "utf8") > 72
+  )
+    fail(400, "Mật khẩu từ 6 ký tự và không quá 72 byte.");
+  return bcrypt.hash(value, 10);
 };
-export async function auth(req, res, next) {
-  try {
-    const raw = req.get('Authorization');
-    if (!raw?.startsWith('Bearer ')) fail(401, 'UNAUTHENTICATED', 'Vui lòng đăng nhập.');
-    let token;
-    try {
-      token = jwt.verify(raw.slice(7), config.secret, { algorithms: ['HS256'], issuer: 'homefix' });
-    } catch {
-      fail(401, 'SESSION_EXPIRED', 'Phiên đã hết hạn. Vui lòng đăng nhập lại.');
-    }
-    const u = await one(`SELECT ${userColumns} FROM dbo.NguoiDung WHERE Id=@Id`, {
-      id: Number(token.sub),
-    });
-    if (!u || u.tokenVersion !== token.tokenVersion)
-      fail(401, 'SESSION_REVOKED', 'Phiên đăng nhập đã bị thu hồi.');
-    if (u.lockedUntil && new Date(u.lockedUntil) > new Date())
-      fail(403, 'ACCOUNT_LOCKED', 'Tài khoản đang bị khóa tạm thời.');
-    if (!u.isActive) fail(403, 'ACCOUNT_DISABLED', 'Tài khoản đang bị khóa.');
-    req.user = u;
-    next();
-  } catch (e) {
-    next(e);
-  }
-}
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 60,
-  standardHeaders: 'draft-8',
-  legacyHeaders: false,
-  message: {
-    error: { code: 'RATE_LIMITED', message: 'Bạn thử quá nhiều lần. Vui lòng đợi 15 phút.' },
-  },
-});
-const requiredEmail = z
-  .email()
-  .max(200)
-  .transform((s) => s.toLowerCase());
-const registration = { fullName: str(2, 120), phone, email: requiredEmail, password };
-const sendLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 10,
-  standardHeaders: 'draft-8',
-  legacyHeaders: false,
-  message: {
-    error: {
-      code: 'OTP_RATE_LIMITED',
-      message: 'Bạn gửi quá nhiều yêu cầu OTP. Vui lòng thử lại sau 15 phút.',
-    },
-  },
-});
+const otpHash = (id, code) =>
+  createHash("sha256")
+    .update(id + ":" + String(code) + ":" + config.jwtSecret)
+    .digest("hex");
+const publicUser = ({ MatKhauBam, ...user }) => user;
+const internal = (callback) => withDatabaseRole(null, callback);
+
 authRouter.post(
-  '/auth/register/otp',
-  sendLimiter,
+  "/login",
   wrap(async (req, res) => {
-    const b = z.strictObject(registration).parse(req.body);
-    if (!otpEmailDeliverable(b.email))
-      fail(
-        422,
-        'OTP_EMAIL_UNDELIVERABLE',
-        'Email này không nhận được OTP. Hãy dùng Gmail/email thật; tài khoản demo .local không nhận email.',
-      );
-    if (
-      await one(
-        'SELECT Id FROM dbo.NguoiDung WHERE SoDienThoai=@SoDienThoai OR (Email=@Email AND @Email IS NOT NULL)',
-        { phone: b.phone, email: b.email },
-      )
-    )
-      fail(
-        409,
-        'ACCOUNT_EXISTS',
-        'Số điện thoại hoặc email đã được đăng ký. Bạn có thể dùng Quên mật khẩu.',
-      );
-    ok(
-      res,
-      await issueOtp({
-        purpose: 'register',
-        destination: b.email,
-        binding: registrationBinding(b),
+    const user = await internal(() =>
+      first("vw_XacThucDangNhap", {
+        SoDienThoai: String(req.body.SoDienThoai || ""),
       }),
     );
-  }),
-);
-authRouter.post(
-  '/auth/register',
-  limiter,
-  wrap(async (req, res) => {
-    const b = z.strictObject({ ...registration, ...otpFields }).parse(req.body);
-    const hash = await bcrypt.hash(b.password, 12);
-    const u = await withOtp(b, 'register', registrationBinding(b), null, async (t) => {
-      const row = await one(
-        `INSERT dbo.NguoiDung(HoTen,SoDienThoai,Email,MatKhauBam,VaiTro) OUTPUT INSERTED.Id VALUES(@HoTen,@SoDienThoai,@Email,@hash,'KH')`,
-        { ...b, hash },
-        t,
-      );
-      await audit(t, null, 'Register', 'NguoiDung', row.id);
-      return one(`SELECT ${userColumns} FROM dbo.NguoiDung WHERE Id=@Id`, row, t);
-    });
-    ok(res, profile(u), 201);
-  }),
-);
-authRouter.post(
-  '/auth/login',
-  limiter,
-  wrap(async (req, res) => {
-    const b = z.strictObject({ identifier: str(3, 200), password: str(1, 200) }).parse(req.body);
-    const u = await one('SELECT * FROM dbo.NguoiDung WHERE SoDienThoai=@login OR Email=@login', {
-      login: b.identifier.toLowerCase(),
-    });
     if (
-      !u ||
-      Buffer.byteLength(b.password, 'utf8') > 72 ||
-      !(await bcrypt.compare(b.password, u.passwordHash))
+      !user?.DangHoatDong ||
+      !(await bcrypt.compare(String(req.body.MatKhau || ""), user.MatKhauBam))
     )
-      fail(401, 'INVALID_CREDENTIALS', 'Số điện thoại/email hoặc mật khẩu không đúng.');
-    if (u.lockedUntil && new Date(u.lockedUntil) > new Date())
-      fail(403, 'ACCOUNT_LOCKED', 'Tài khoản đã bị khóa tạm thời. Vui lòng liên hệ quản trị viên.');
-    if (!u.isActive) fail(403, 'ACCOUNT_DISABLED', 'Tài khoản đang bị khóa.');
-    const accessToken = jwt.sign({ role: u.role, tokenVersion: u.tokenVersion }, config.secret, {
-      subject: String(u.id),
-      expiresIn: '15m',
-      issuer: 'homefix',
-      algorithm: 'HS256',
-    });
-    const { passwordHash, cccd, ...safe } = u;
-    ok(res, { accessToken, expiresIn: 900, user: profile(safe) });
-  }),
-);
-const recovery = { identifier: requiredEmail };
-function recoveryDestination(b) {
-  return b.identifier;
-}
-async function recoveryUser(b, t) {
-  const destination = recoveryDestination(b);
-  return one(
-    'SELECT * FROM dbo.NguoiDung WHERE Email=@DiaChiNhan AND DangHoatDong=1',
-    { destination },
-    t,
-  );
-}
-authRouter.post(
-  '/auth/forgot-password/otp',
-  sendLimiter,
-  wrap(async (req, res) => {
-    const b = z.strictObject(recovery).parse(req.body),
-      destination = recoveryDestination(b),
-      u = await recoveryUser(b);
-    if (u && !otpEmailDeliverable(u.email))
       fail(
-        422,
-        'OTP_EMAIL_UNDELIVERABLE',
-        'Tài khoản demo .local không nhận OTP. Hãy dùng mật khẩu demo hoặc email thật.',
+        401,
+        "Số điện thoại hoặc mật khẩu không đúng.",
+        "INVALID_CREDENTIALS",
       );
-    ok(
-      res,
-      await issueOtp({
-        purpose: 'reset',
-        destination,
-        binding: u ? accountBinding(u) : 'unknown',
-        deliver: Boolean(u),
-      }),
+    const token = jwt.sign(
+      { sub: String(user.Id), VaiTro: user.VaiTro },
+      config.jwtSecret,
+      { expiresIn: "8h", issuer: "homefix-dbms" },
     );
-  }),
-);
-authRouter.post(
-  '/auth/reset-password',
-  limiter,
-  wrap(async (req, res) => {
-    const b = z.strictObject({ ...recovery, ...otpFields, newPassword: password }).parse(req.body),
-      u = await recoveryUser(b);
-    const hash = await bcrypt.hash(b.newPassword, 12);
-    await withOtp(b, 'reset', u ? accountBinding(u) : 'unknown', null, async (t) => {
-      const current = await recoveryUser(b, t);
-      if (!current || !u || accountBinding(current) !== accountBinding(u))
-        fail(422, 'INVALID_OTP', 'Thông tin tài khoản đã thay đổi. Vui lòng yêu cầu mã mới.');
-      await q(
-        'UPDATE dbo.NguoiDung SET MatKhauBam=@hash,PhienBanXacThuc=PhienBanXacThuc+1 WHERE Id=@Id',
-        { id: current.id, hash },
-        t,
-      );
-      await audit(t, current, 'ResetPassword', 'NguoiDung', current.id);
-    });
-    ok(res, { loginRequired: true });
-  }),
-);
-authRouter.use(auth);
-authRouter.post(
-  '/admin/security/otp',
-  sendLimiter,
-  roles('ADMIN'),
-  wrap(async (req, res) => {
-    const destination = req.user.email;
-    if (!destination)
-      fail(
-        422,
-        'EMAIL_REQUIRED',
-        'Tài khoản quản trị chưa có email. Vui lòng cập nhật email trước khi yêu cầu mã OTP.',
-      );
-    if (!otpEmailDeliverable(destination))
-      fail(
-        422,
-        'OTP_EMAIL_UNDELIVERABLE',
-        'Email quản trị hiện tại là địa chỉ demo hoặc không nhận được thư. Hãy vào Hồ sơ, đổi sang email thật rồi yêu cầu OTP lại.',
-      );
-    ok(
-      res,
-      await issueOtp({ purpose: 'admin-security', destination, binding: accountBinding(req.user) }),
-    );
-  }),
-);
-authRouter.post(
-  '/users/:id/temporary-lock',
-  roles('ADMIN'),
-  wrap(async (req, res) => {
-    const uid = id(req.params.id),
-      b = z
-        .strictObject({
-          duration: z.coerce.number().int().min(1).max(365),
-          unit: z.enum(['day', 'week', 'month', 'year']),
-          reason: str(5, 1000),
-          ...otpFields,
-        })
-        .parse(req.body);
-    const datePart = { day: 'day', week: 'week', month: 'month', year: 'year' }[b.unit];
-    const locked = await withOtp(
-      b,
-      'admin-security',
-      accountBinding(req.user),
-      req.user,
-      async (t) => {
-        const current = await one('SELECT * FROM dbo.NguoiDung WHERE Id=@Id', { id: uid }, t);
-        if (!current) fail(404, 'NOT_FOUND', 'Không tìm thấy tài khoản.');
-        if (current.id === req.user.id)
-          fail(409, 'CANNOT_LOCK_SELF', 'Không thể tự khóa tài khoản quản trị đang đăng nhập.');
-        if (
-          current.role === 'ADMIN' &&
-          (
-            await one(
-              `SELECT
-  COUNT(*) n
-FROM
-  dbo.NguoiDung
-WHERE
-VaiTro = 'ADMIN'
-AND DangHoatDong = 1
-AND Id <> @Id
-AND (
-  KhoaDenNgay IS NULL
-  OR KhoaDenNgay <= SYSUTCDATETIME()
-)`,
-              { id: uid },
-              t,
-            )
-          ).n < 1
-        )
-          fail(409, 'LAST_ADMIN', 'Không thể khóa quản trị viên hoạt động cuối cùng.');
-        if (
-          current.role === 'KTV' &&
-          (await one(
-            'SELECT Id FROM dbo.LenhDieuPhoi WHERE KyThuatVienId=@Id AND DangHoatDong=1',
-            { id: uid },
-            t,
-          ))
-        )
-          fail(
-            409,
-            'ACTIVE_ASSIGNMENT',
-            'Kỹ thuật viên đang có ca, cần hoàn tất hoặc điều phối lại.',
-          );
-        await q(
-          `UPDATE dbo.NguoiDung SET KhoaDenNgay=DATEADD(${datePart},@duration,SYSUTCDATETIME()),PhienBanXacThuc=PhienBanXacThuc+1 WHERE Id=@Id`,
-          { id: uid, duration: b.duration },
-          t,
-        );
-        await audit(
-          t,
-          req.user,
-          'TemporaryLockUser',
-          'NguoiDung',
-          uid,
-          `${b.duration} ${b.unit}: ${b.reason}`,
-        );
-        return one(`SELECT ${userColumns} FROM dbo.NguoiDung WHERE Id=@Id`, { id: uid }, t);
-      },
-    );
-    ok(res, profile(locked));
-  }),
-);
-authRouter.post(
-  '/users/:id/unlock',
-  roles('ADMIN'),
-  wrap(async (req, res) => {
-    const uid = id(req.params.id),
-      b = z.strictObject({ ...otpFields }).parse(req.body);
-    const unlocked = await withOtp(
-      b,
-      'admin-security',
-      accountBinding(req.user),
-      req.user,
-      async (t) => {
-        const current = await one('SELECT * FROM dbo.NguoiDung WHERE Id=@Id', { id: uid }, t);
-        if (!current) fail(404, 'NOT_FOUND', 'Không tìm thấy tài khoản.');
-        await q(
-          'UPDATE dbo.NguoiDung SET KhoaDenNgay=NULL,PhienBanXacThuc=PhienBanXacThuc+1 WHERE Id=@Id',
-          { id: uid },
-          t,
-        );
-        await audit(t, req.user, 'UnlockUser', 'NguoiDung', uid);
-        return one(`SELECT ${userColumns} FROM dbo.NguoiDung WHERE Id=@Id`, { id: uid }, t);
-      },
-    );
-    ok(res, profile(unlocked));
-  }),
-);
-authRouter.post(
-  '/users/:id/permanent-lock',
-  roles('ADMIN'),
-  wrap(async (req, res) => {
-    const uid = id(req.params.id),
-      b = z.strictObject({ reason: str(5, 1000), ...otpFields }).parse(req.body);
-    const locked = await withOtp(
-      b,
-      'admin-security',
-      accountBinding(req.user),
-      req.user,
-      async (t) => {
-        const current = await one('SELECT * FROM dbo.NguoiDung WHERE Id=@Id', { id: uid }, t);
-        if (!current) fail(404, 'NOT_FOUND', 'Không tìm thấy tài khoản.');
-        if (current.id === req.user.id)
-          fail(409, 'CANNOT_LOCK_SELF', 'Không thể tự khóa vĩnh viễn tài khoản quản trị.');
-        if (!current.isActive) fail(409, 'ALREADY_DISABLED', 'Tài khoản đã bị khóa vĩnh viễn.');
-        if (
-          current.role === 'ADMIN' &&
-          (
-            await one(
-              `SELECT COUNT(*) n FROM dbo.NguoiDung
-WHERE VaiTro='ADMIN' AND DangHoatDong=1 AND Id<>@Id
-  AND (KhoaDenNgay IS NULL OR KhoaDenNgay<=SYSUTCDATETIME())`,
-              { id: uid },
-              t,
-            )
-          ).n < 1
-        )
-          fail(409, 'LAST_ADMIN', 'Không thể khóa quản trị viên hoạt động cuối cùng.');
-        if (
-          current.role === 'KTV' &&
-          (await one(
-            'SELECT Id FROM dbo.LenhDieuPhoi WHERE KyThuatVienId=@Id AND DangHoatDong=1',
-            { id: uid },
-            t,
-          ))
-        )
-          fail(
-            409,
-            'ACTIVE_ASSIGNMENT',
-            'Kỹ thuật viên đang có ca, cần hoàn tất hoặc điều phối lại trước khi khóa.',
-          );
-        await q(
-          'UPDATE dbo.NguoiDung SET DangHoatDong=0,KhoaDenNgay=NULL,PhienBanXacThuc=PhienBanXacThuc+1 WHERE Id=@Id',
-          { id: uid },
-          t,
-        );
-        await audit(t, req.user, 'PermanentLockUser', 'NguoiDung', uid, b.reason);
-        return one(`SELECT ${userColumns} FROM dbo.NguoiDung WHERE Id=@Id`, { id: uid }, t);
-      },
-    );
-    ok(res, profile(locked));
-  }),
-);
-authRouter.post(
-  '/users/:id/permanent-unlock',
-  roles('ADMIN'),
-  wrap(async (req, res) => {
-    const uid = id(req.params.id),
-      b = z.strictObject({ ...otpFields }).parse(req.body);
-    const unlocked = await withOtp(
-      b,
-      'admin-security',
-      accountBinding(req.user),
-      req.user,
-      async (t) => {
-        const current = await one('SELECT * FROM dbo.NguoiDung WHERE Id=@Id', { id: uid }, t);
-        if (!current) fail(404, 'NOT_FOUND', 'Không tìm thấy tài khoản.');
-        if (current.isActive)
-          fail(409, 'ACCOUNT_NOT_PERMANENTLY_LOCKED', 'Tài khoản không bị khóa vĩnh viễn.');
-        await q(
-          'UPDATE dbo.NguoiDung SET DangHoatDong=1,KhoaDenNgay=NULL,PhienBanXacThuc=PhienBanXacThuc+1 WHERE Id=@Id',
-          { id: uid },
-          t,
-        );
-        await audit(t, req.user, 'PermanentUnlockUser', 'NguoiDung', uid);
-        return one(`SELECT ${userColumns} FROM dbo.NguoiDung WHERE Id=@Id`, { id: uid }, t);
-      },
-    );
-    ok(res, profile(unlocked));
-  }),
-);
-authRouter.post(
-  '/users/me/password/otp',
-  sendLimiter,
-  wrap(async (req, res) => {
-    const b = z.strictObject({ currentPassword: str(1, 200) }).parse(req.body);
-    const u = await one('SELECT * FROM dbo.NguoiDung WHERE Id=@Id', { id: req.user.id });
-    if (
-      Buffer.byteLength(b.currentPassword) > 72 ||
-      !(await bcrypt.compare(b.currentPassword, u.passwordHash))
-    )
-      fail(422, 'WRONG_PASSWORD', 'Mật khẩu hiện tại không đúng.');
-    const destination = u.email;
-    if (!destination)
-      fail(
-        422,
-        'EMAIL_REQUIRED',
-        'Tài khoản chưa có email. Vui lòng cập nhật email trong hồ sơ trước.',
-      );
-    if (!otpEmailDeliverable(destination))
-      fail(
-        422,
-        'OTP_EMAIL_UNDELIVERABLE',
-        'Tài khoản demo .local không nhận OTP. Hãy dùng email thật.',
-      );
-    ok(res, await issueOtp({ purpose: 'change', destination, binding: accountBinding(u) }));
-  }),
-);
-authRouter.get(
-  '/auth/me',
-  wrap(async (req, res) => ok(res, profile(req.user))),
-);
-authRouter.post(
-  '/auth/logout',
-  wrap(async (req, res) => {
-    await transaction(req.user, (t) =>
-      q(
-        'UPDATE dbo.NguoiDung SET PhienBanXacThuc=PhienBanXacThuc+1 WHERE Id=@Id',
-        { id: req.user.id },
-        t,
-      ),
-    );
-    ok(res, { loggedOut: true });
-  }),
-);
-authRouter.get(
-  '/users/me',
-  wrap(async (req, res) => ok(res, profile(req.user))),
-);
-authRouter.patch(
-  '/users/me',
-  wrap(async (req, res) => {
-    const b = z
-      .strictObject({
-        fullName: str(2, 120),
-        email,
-        defaultAddress: str(0, 500).nullable().optional(),
-        currentPassword: str(1, 200).optional(),
-        expectedVersion: versionSchema,
-      })
-      .parse(req.body);
-    const result = await transaction(req.user, async (t) => {
-      const u = await one('SELECT * FROM dbo.NguoiDung WHERE Id=@Id', { id: req.user.id }, t);
-      checkVersion(u, b.expectedVersion);
-      if (
-        (b.email ?? null) !== (u.email ?? null) &&
-        (!b.currentPassword ||
-          Buffer.byteLength(b.currentPassword) > 72 ||
-          !(await bcrypt.compare(b.currentPassword, u.passwordHash)))
-      )
-        fail(422, 'WRONG_PASSWORD', 'Nhập mật khẩu hiện tại để thay đổi email khôi phục.');
-      await q(
-        'UPDATE dbo.NguoiDung SET HoTen=@HoTen,Email=@Email,DiaChiMacDinh=@DiaChiMacDinh WHERE Id=@Id',
-        { ...b, id: u.id },
-        t,
-      );
-      return one(`SELECT ${userColumns} FROM dbo.NguoiDung WHERE Id=@Id`, { id: u.id }, t);
-    });
-    ok(res, profile(result));
-  }),
-);
-authRouter.post(
-  '/users/me/password',
-  limiter,
-  wrap(async (req, res) => {
-    const b = z
-      .strictObject({ currentPassword: str(1, 200), newPassword: password, ...otpFields })
-      .parse(req.body);
-    const hash = await bcrypt.hash(b.newPassword, 12);
-    await withOtp(b, 'change', accountBinding(req.user), req.user, async (t) => {
-      const u = await one('SELECT * FROM dbo.NguoiDung WHERE Id=@Id', { id: req.user.id }, t);
-      if (accountBinding(u) !== accountBinding(req.user))
-        fail(422, 'INVALID_OTP', 'Thông tin tài khoản đã thay đổi. Vui lòng yêu cầu mã mới.');
-      if (
-        Buffer.byteLength(b.currentPassword) > 72 ||
-        !(await bcrypt.compare(b.currentPassword, u.passwordHash))
-      )
-        fail(422, 'WRONG_PASSWORD', 'Mật khẩu hiện tại không đúng.');
-      await q(
-        'UPDATE dbo.NguoiDung SET MatKhauBam=@hash,PhienBanXacThuc=PhienBanXacThuc+1 WHERE Id=@Id',
-        { hash, id: req.user.id },
-        t,
-      );
-      await audit(t, req.user, 'ChangePassword', 'NguoiDung', req.user.id);
-    });
-    ok(res, { loginRequired: true });
+    ok(res, { token, user: publicUser(user) });
   }),
 );
 
-authRouter.get(
-  '/users',
-  roles('ADMIN'),
-  wrap(async (req, res) => {
-    const { page = 1, pageSize = 15, search, role, status } = req.query;
-    const offset = (Number(page) - 1) * Number(pageSize);
-    let where = '1=1';
-    const params = { offset, limit: Number(pageSize) };
-    if (search) {
-      where += ' AND (HoTen LIKE @search OR SoDienThoai LIKE @search OR Email LIKE @search)';
-      params.search = `%${search}%`;
-    }
-    if (role) {
-      where += ' AND VaiTro=@VaiTro';
-      params.role = role;
-    }
-    if (status) {
-      if (status === 'active') {
-        where += ' AND DangHoatDong=1 AND (KhoaDenNgay IS NULL OR KhoaDenNgay<=SYSUTCDATETIME())';
-      } else if (status === 'inactive') {
-        where += ' AND (DangHoatDong=0 OR KhoaDenNgay>SYSUTCDATETIME())';
-      }
-    }
-    const total = await one(`SELECT COUNT(*) n FROM dbo.NguoiDung WHERE ${where}`, params);
-    const rows = await q(
-      `SELECT ${userColumns}, (SELECT TOP 1 NhomTayNghe FROM dbo.KyThuatVien WHERE Id=dbo.NguoiDung.Id) NhomTayNghe FROM dbo.NguoiDung WHERE ${where} ORDER BY Id DESC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`,
-      params,
-    );
-    ok(res, rows.map(profile), 200, {
-      total: total.n,
-      page: Number(page),
-      pageSize: Number(pageSize),
-    });
-  }),
-);
-authRouter.get(
-  '/users/:id/security-info',
-  roles('ADMIN'),
-  wrap(async (req, res) => {
-    const uid = id(req.params.id);
-    const account = await one(
-      `SELECT ${userColumns},
-  (SELECT TOP 1 NhomTayNghe FROM dbo.KyThuatVien WHERE Id=dbo.NguoiDung.Id) NhomTayNghe,
-  (SELECT COUNT(*) FROM dbo.LenhDieuPhoi WHERE KyThuatVienId=dbo.NguoiDung.Id AND DangHoatDong=1) ActiveAssignmentCount
-FROM dbo.NguoiDung
-WHERE Id=@Id`,
-      { id: uid },
-    );
-    if (!account) fail(404, 'NOT_FOUND', 'Không tìm thấy tài khoản.');
-    const latestSecurityAction = await one(
-      `SELECT TOP 1 a.ThaoTac, a.ChiTiet, a.NgayTao, n.HoTen actorName
-FROM dbo.NhatKy a
-LEFT JOIN dbo.NguoiDung n ON n.Id=a.NguoiThucHienId
-WHERE a.DoiTuong='NguoiDung' AND a.DoiTuongId=@Id
-  AND a.ThaoTac IN ('TemporaryLockUser', 'UnlockUser', 'PermanentLockUser', 'PermanentUnlockUser')
-ORDER BY a.Id DESC`,
-      { id: uid },
-    );
-    ok(res, { ...profile(account), latestSecurityAction });
-  }),
-);
 authRouter.post(
-  '/users',
-  roles('ADMIN'),
+  "/register",
   wrap(async (req, res) => {
-    const b = z
-      .strictObject({
-        fullName: str(2, 120),
-        phone,
-        email,
-        role: z.enum(['KH', 'KTV', 'DPV', 'CSKH', 'KT', 'ADMIN', 'GD']),
-        initialPassword: password,
-        technicianProfile: z
-          .strictObject({ skillGroup: str(1, 60), serviceArea: str(1, 120) })
-          .optional(),
-      })
-      .parse(req.body);
-    if (b.role === 'KTV' && !b.technicianProfile)
-      fail(422, 'PROFILE_REQUIRED', 'Cần chuyên môn và khu vực kỹ thuật viên.');
-    const hash = await bcrypt.hash(b.initialPassword, 12);
-    const u = await transaction(req.user, async (t) => {
-      const u = await one(
-        `INSERT
-  dbo.NguoiDung (
-    HoTen,
-    SoDienThoai,
-    Email,
-    MatKhauBam,
-    VaiTro
-  ) OUTPUT INSERTED.Id
-VALUES
-  (@HoTen, @SoDienThoai, @Email, @hash, @VaiTro)`,
-        { ...b, hash, technicianProfile: null },
-        t,
-      );
-      if (b.role === 'KTV')
-        await q(
-          'INSERT dbo.KyThuatVien(Id,NhomTayNghe,KhuVucPhucVu) VALUES(@Id,@NhomTayNghe,@KhuVucPhucVu)',
-          { id: u.id, ...b.technicianProfile },
-          t,
-        );
-      await audit(t, req.user, 'CreateUser', 'NguoiDung', u.id);
-      return one(`SELECT ${userColumns} FROM dbo.NguoiDung WHERE Id=@Id`, u, t);
-    });
-    ok(res, profile(u), 201);
+    const MatKhauBam = await passwordHash(req.body.MatKhau);
+    const rows = await internal(() =>
+      exec("sp_DangKyKhachHang", { ...req.body, MatKhauBam }),
+    );
+    ok(res, rows[0]);
   }),
 );
-authRouter.patch(
-  '/users/:id',
-  roles('ADMIN'),
+
+authRouter.post(
+  "/otp",
   wrap(async (req, res) => {
-    const uid = id(req.params.id),
-      b = z
-        .strictObject({
-          fullName: str(2, 120),
-          role: z.enum(['KH', 'KTV', 'DPV', 'CSKH', 'KT', 'ADMIN', 'GD']),
-          skillGroup: z.enum(['DienLanh', 'DienNuoc', 'DienGiaDung', 'VeSinh']),
-          isActive: z.boolean(),
-          expectedVersion: versionSchema,
-        })
-        .parse(req.body);
-    const u = await transaction(req.user, async (t) => {
-      const current = await one('SELECT * FROM dbo.NguoiDung WHERE Id=@Id', { id: uid }, t);
-      checkVersion(current, b.expectedVersion);
-      if (current.id === req.user.id && b.role !== current.role)
-        fail(
-          409,
-          'CANNOT_CHANGE_OWN_ROLE',
-          'Không thể tự thay đổi vai trò của tài khoản quản trị đang đăng nhập.',
-        );
-      if (
-        (!b.isActive || b.role !== 'ADMIN') &&
-        current.role === 'ADMIN' &&
-        (
-          await one(
-            "SELECT COUNT(*) n FROM dbo.NguoiDung WHERE VaiTro='ADMIN' AND DangHoatDong=1 AND Id<>@Id",
-            { id: uid },
-            t,
-          )
-        ).n < 1
-      )
-        fail(
-          409,
-          'LAST_ADMIN',
-          'Không thể vô hiệu hóa hoặc đổi vai trò quản trị viên hoạt động cuối cùng.',
-        );
-      if (
-        current.role === 'KTV' &&
-        b.role !== 'KTV' &&
-        (await one(
-          'SELECT Id FROM dbo.LenhDieuPhoi WHERE KyThuatVienId=@Id AND DangHoatDong=1',
-          { id: uid },
-          t,
-        ))
-      )
-        fail(
-          409,
-          'ACTIVE_ASSIGNMENT',
-          'Kỹ thuật viên đang có ca, cần hoàn tất hoặc điều phối lại.',
-        );
-      if (b.role === 'KTV') {
-        const technician = await one('SELECT Id FROM dbo.KyThuatVien WHERE Id=@Id', { id: uid }, t);
-        if (technician)
-          await q(
-            'UPDATE dbo.KyThuatVien SET NhomTayNghe=@NhomTayNghe WHERE Id=@Id',
-            { id: uid, skillGroup: b.skillGroup },
-            t,
-          );
-        else
-          await q(
-            "INSERT dbo.KyThuatVien(Id,NhomTayNghe,KhuVucPhucVu,TrangThaiSanSang) VALUES(@Id,@NhomTayNghe,N'TP.HCM','TamBan')",
-            { id: uid, skillGroup: b.skillGroup },
-            t,
-          );
-      } else if (current.role === 'KTV')
-        await q(
-          "UPDATE dbo.KyThuatVien SET TrangThaiSanSang='TamBan' WHERE Id=@Id",
-          { id: uid },
-          t,
-        );
-      await q(
-        'UPDATE dbo.NguoiDung SET HoTen=@HoTen,VaiTro=@VaiTro,DangHoatDong=@DangHoatDong,PhienBanXacThuc=PhienBanXacThuc+1 WHERE Id=@Id',
-        { ...b, id: uid },
-        t,
+    const { DiaChiNhan, MucDich } = req.body;
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(DiaChiNhan || "") ||
+      !["ResetPassword", "Register"].includes(MucDich)
+    )
+      fail(400, "Email hoặc mục đích OTP không hợp lệ.");
+    const Id = randomUUID();
+    const code = String(randomInt(100000, 1000000));
+    const NgayHetHan = new Date(Date.now() + 5 * 60000);
+    await internal(() =>
+      exec("sp_TaoMaOTP", {
+        Id,
+        MucDich,
+        DiaChiNhan,
+        MaBam: otpHash(Id, code),
+        NgayHetHan,
+      }),
+    );
+    if (process.env.SMTP_HOST) {
+      const mail = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: process.env.SMTP_SECURE === "true",
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
+      });
+      await mail.sendMail({
+        from: process.env.SMTP_FROM,
+        to: DiaChiNhan,
+        subject: "HomeFix: mã xác thực",
+        text: `Mã xác thực: ${code}. Hết hạn sau 5 phút.`,
+      });
+    } else if (process.env.OTP_PROVIDER === "console") {
+      console.log(
+        "OTP phát triển (không dùng trên máy chủ công khai):",
+        Id,
+        code,
       );
-      await audit(t, req.user, 'UpdateUser', 'NguoiDung', uid, `${current.role} -> ${b.role}`);
-      return one(`SELECT ${userColumns} FROM dbo.NguoiDung WHERE Id=@Id`, { id: uid }, t);
+    } else {
+      fail(
+        503,
+        "Chưa cấu hình nhà cung cấp email OTP.",
+        "OTP_DELIVERY_UNAVAILABLE",
+      );
+    }
+    ok(res, { Id, NgayHetHan });
+  }),
+);
+
+authRouter.post(
+  "/reset-password",
+  wrap(async (req, res) => {
+    const MatKhauBam = await passwordHash(req.body.MatKhauMoi);
+    const outcome = await internal(async () => {
+      const challenge = await first("vw_XacThucOTP", { Id: req.body.Id });
+      if (!challenge || challenge.MucDich !== "ResetPassword")
+        fail(400, "Yêu cầu xác thực không hợp lệ.");
+      const result = await exec("sp_XacThucOTP", {
+        Id: req.body.Id,
+        MaBam: otpHash(req.body.Id, req.body.MaOTP),
+      });
+      if (!result[0]?.DaXacThuc)
+        fail(400, "Mã OTP không đúng, hết hạn hoặc đã dùng.", "INVALID_OTP");
+      const user = await first("vw_NguoiDung", { Email: challenge.DiaChiNhan });
+      if (!user) fail(400, "Không có tài khoản phù hợp.");
+      return exec("sp_DoiMatKhau", { NguoiThucHienId: user.Id, MatKhauBam });
     });
-    ok(res, profile(u));
+    ok(res, outcome[0] || { DaCapNhat: true });
+  }),
+);
+
+export async function loadActor(req) {
+  const token = /^Bearer\s+(.+)$/i.exec(req.headers.authorization || "")?.[1];
+  if (!token) fail(401, "Bạn cần đăng nhập.", "UNAUTHENTICATED");
+  let payload;
+  try {
+    payload = jwt.verify(token, config.jwtSecret, { issuer: "homefix-dbms" });
+  } catch {
+    fail(401, "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.", "INVALID_TOKEN");
+  }
+  const user = await first("vw_NguoiDung", { Id: Number(payload.sub) });
+  if (!user?.DangHoatDong || user.VaiTro !== payload.VaiTro)
+    fail(
+      401,
+      "Tài khoản bị khóa hoặc vai trò đã thay đổi. Vui lòng đăng nhập lại.",
+      "SESSION_REVOKED",
+    );
+  return user;
+}
+export const authenticate = wrap(async (req, _res, next) => {
+  req.user = await loadActor(req);
+  next();
+});
+
+profileRouter.get("/me", (req, res) => ok(res, req.user));
+profileRouter.patch(
+  "/profile",
+  wrap(async (req, res) =>
+    ok(
+      res,
+      (
+        await exec("sp_CapNhatThongTinNguoiDung", {
+          ...req.body,
+          NguoiThucHienId: req.user.Id,
+        })
+      )[0],
+    ),
+  ),
+);
+profileRouter.post(
+  "/password",
+  wrap(async (req, res) => {
+    const user = await internal(() =>
+      first("vw_XacThucDangNhap", { Id: req.user.Id }),
+    );
+    if (
+      !(await bcrypt.compare(String(req.body.MatKhauCu || ""), user.MatKhauBam))
+    )
+      fail(400, "Mật khẩu hiện tại không đúng.");
+    ok(
+      res,
+      await exec("sp_DoiMatKhau", {
+        NguoiThucHienId: req.user.Id,
+        MatKhauBam: await passwordHash(req.body.MatKhauMoi),
+      }),
+    );
   }),
 );

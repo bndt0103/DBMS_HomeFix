@@ -1,227 +1,170 @@
-# HomeFix — Quản lý dịch vụ sửa chữa và bảo trì thiết bị tại nhà
+# HomeFix — Đồ án Hệ quản trị cơ sở dữ liệu
 
-Đồ án học phần **Hệ quản trị cơ sở dữ liệu (DBMS330284)**, lớp **261DBMS330284_02**, Nhóm **08**. HomeFix quản lý quy trình đặt dịch vụ, báo giá, điều phối kỹ thuật viên, nghiệm thu, thanh toán, đối soát và hỗ trợ sau dịch vụ.
+Ứng dụng đặt dịch vụ sửa chữa tại nhà dùng **SQL Server + Node.js/Express + React**. Bản tinh gọn ngày 22/10/2026 tập trung vào SQL và quy trình nghiệp vụ để có thể đọc, chạy và giải thích trong SSMS.
 
-Ứng dụng sử dụng **React + Vite**, **Node.js + Express** và **Microsoft SQL Server**. Các nghiệp vụ chính sử dụng thủ tục, hàm, view, trigger và transaction trên CSDL thật.
+## 1. Cấu trúc
 
-## 1. Thông tin nhóm
+```text
+SQL/
+  CSDL_HomeFix.sql          Bộ cài database mới, đầy đủ module
+  seed_data.sql            Seed riêng, chỉ chạy khi các bảng còn trắng
+  README.md                Giải thích SQL và câu lệnh thực hành trong SSMS
+  modules/
+    00_schema.sql          28 bảng và ràng buộc
+    01_index.sql           Index truy vấn và UNIQUE có điều kiện
+    02_function.sql        6 hàm
+    03_view.sql            34 view
+    04_sp.sql              19 SP tài khoản/tiện ích
+    05_transaction.sql     26 SP nghiệp vụ/báo cáo
+    06_trigger.sql         7 trigger
+    07_security.sql        Quyền của các role
+    08_seed.sql            Dữ liệu sạch
+    09_data_migration.sql  Ghi chú phiên bản, không nhập giao dịch cũ
+    10_backup_recovery.sql SP sao lưu và hướng dẫn phục hồi
+SRC/
+  package.json             Lệnh cài, chạy và kiểm thử
+  backend/
+    src/                   API và tầng truy cập SP/View/TVF
+    tools/                 Dựng bộ cài, cài database, tạo môi trường
+    test/core.test.js      Kiểm thử tích hợp cốt lõi trên database riêng
+    .env.example           Mẫu cấu hình, không có bí mật thật
+  frontend/
+    src/                   Giao diện theo vai trò, form và bảng dữ liệu
+```
 
-**GVHD:** ThS. Phan Thị Thể. **Học kỳ:** 1, năm học 2026–2027.
+Thư mục DOC, SLIDES, HELP, bản hướng dẫn vấn đáp cũ và các bộ test/chụp màn hình cũ đã được đưa ra ngoài mã vận hành. Bản sao trước thay đổi trên máy nằm tại `D:\Subject_K5\DBMS\_archives\HomeFix_TruocTaiCauTruc_20261022`.
 
-| Thành viên | MSSV |
-| --- | --- |
-| Nguyễn Quốc Việt | 24110381 |
-| Đỗ Anh Tuấn | 24110369 |
-| Bùi Nguyễn Duy Trung | 24110363 |
-| Lê Tấn Tài | 24110319 |
+## 2. Kiến trúc truy cập dữ liệu
 
-## 2. Thành phần bản nộp
+- Controller backend gọi `exec('sp_...', params)` để ghi hoặc thực hiện nghiệp vụ. Hàm này dùng `request.execute()` và kiểu tham số lấy từ hợp đồng SQL đã sinh; không nhận câu SQL từ HTTP.
+- Đọc dùng `queryView()` hoặc `queryFunction()`. Tên đối tượng có trong danh sách đăng ký; điều kiện lọc được dựng từ các toán tử cho phép và giá trị được tham số hóa.
+- Không có SELECT/INSERT/UPDATE/DELETE bảng trong controller. Các câu SELECT dữ liệu trong `db.js` chỉ nhắm đến view/TVF đã đăng ký. Công cụ cài đặt và kiểm thử quản trị có quyền khác với API vận hành.
+- Mỗi SP ghi kiểm tra vai trò, quyền sở hữu, dữ liệu, trạng thái và phiên bản trước khi cập nhật. Có transaction, savepoint khi nằm trong transaction ngoài, TRY/CATCH và XACT_STATE.
+- Có **46 SP**: 44 SP ghi có giao dịch; `sp_BaoCaoTongHop` chỉ đọc; `sp_SaoLuuHeThong` dành cho DBA và không mở transaction vì SQL Server không cho BACKUP nằm trong transaction. [Quy định BACKUP của Microsoft](https://learn.microsoft.com/en-us/sql/t-sql/statements/backup-transact-sql).
+- Số dư ví được SP duyệt ví/đối soát cập nhật cùng giao dịch ghi sổ cái. View ví đối chiếu số dư với SUM sổ. Trigger sổ cái ngăn UPDATE/DELETE; không có cơ chế cập nhật số dư lần hai bằng trigger.
+- Tỷ lệ hoa hồng lưu theo phần trăm: `15` nghĩa là **15%** của tiền công, không phải `0.15`.
 
-| Đường dẫn | Nội dung |
-| --- | --- |
-| [Báo cáo Word](DOC/Nhom08_BaoCao_HQTCSDL_HomeFix.docx) / [PDF](DOC/Nhom08_BaoCao_HQTCSDL_HomeFix.pdf) | Phân tích, thiết kế, SQL, giao dịch, phân quyền, giao diện và kiểm thử |
-| [Slide PowerPoint](SLIDES/Nhom08_ThuyetTrinh_HQTCSDL_HomeFix.pptx) / [PDF](SLIDES/Nhom08_ThuyetTrinh_HQTCSDL_HomeFix.pdf) | Nội dung trình bày |
-| [SQL/CSDL_HomeFix.sql](SQL/CSDL_HomeFix.sql) | Script tạo toàn bộ CSDL, quyền và dữ liệu mẫu |
-| [SQL/CSDL_HomeFix_MinhHoa.sql](SQL/CSDL_HomeFix_MinhHoa.sql) | Truy vấn minh họa trên CSDL đã khởi tạo |
-| [SQL/README.md](SQL/README.md) | Đối chiếu đường gọi API với thủ tục/hàm/view |
-| [SQL/modules](SQL/modules) / [Hướng dẫn vấn đáp](SQL/HUONG_DAN_VAN_DAP.md) | SQL chia theo schema, index, function, view, sp, transaction, trigger, security, backup/recovery |
-| [Đối chiếu yêu cầu](DOC/DOI_CHIEU_YEU_CAU.md) | Ánh xạ yêu cầu học phần với sản phẩm |
-| [Hướng dẫn CHM](HELP/HomeFix_HuongDan.chm) / [HTML](HELP/html/index.html) | Cài đặt, xử lý lỗi và thao tác của 7 vai trò; mục lục CHM tiếng Việt không dấu |
-| `SRC/backend`, `SRC/frontend` | Mã nguồn API và giao diện |
-| `SRC/database` | Script SQL thành phần theo thứ tự thực thi |
-| `SRC/scripts`, `SRC/tests` | Khởi tạo CSDL và kiểm thử |
-| `DOC/images`, `DOC/evidence` | Hình minh họa và kết quả kiểm chứng |
+Khi thay đổi SQL, sửa module trước rồi chạy `npm.cmd run sql:build`. Lệnh dựng lại bộ cài tổng, seed riêng và `backend/src/db-contract.json` dùng để kiểm tra tên/kiểu tham số. Không sửa riêng file tổng rồi để module lệch nhau.
 
-## 3. Yêu cầu môi trường
+### Phân quyền thực thi
 
-Hướng dẫn này dành cho **Windows**.
+JWT middleware kiểm tra phiên/tài khoản/role ở mỗi request. `DB_IMPERSONATE=true` là cấu hình mặc định: backend mở kết nối riêng cho request, ghi Id người dùng vào SESSION_CONTEXT chỉ đọc, rồi thực thi dưới `hf_KH`, `hf_KTV`, … tương ứng. Kết nối được đóng sau phản hồi để tránh lẫn ngữ cảnh giữa người dùng. SP đối chiếu actor do server cung cấp với ngữ cảnh này.
 
-| Thành phần | Yêu cầu |
-| --- | --- |
-| Node.js | **22.12 trở lên**, kèm npm |
-| SQL Server | Database Engine đang chạy; cấu hình mẫu dùng `localhost\SQLEXPRESS` |
-| ODBC | **ODBC Driver 17 for SQL Server**, 64-bit, khi dùng Windows Authentication |
-| Quyền SQL | Tài khoản kết nối có quyền tạo CSDL và các đối tượng bên trong |
-| Internet | Cần khi cài thư viện bằng npm |
-| SSMS hoặc sqlcmd | Dùng để xem CSDL và thực thi script SQL độc lập |
-| Microsoft Edge | Cần khi chạy kiểm thử giao diện tự động |
+Database có **7 role nghiệp vụ** được nêu trong yêu cầu. Role kỹ thuật bổ sung `HomeFix_UngDung`/user `hf_UngDung` chỉ phục vụ đăng nhập, đăng ký và OTP; chỉ view xác thực nội bộ chứa hash bcrypt. Các view danh sách không trả hash. User WITHOUT LOGIN là ngữ cảnh thực thi bên trong database, không phải 7 tài khoản đăng nhập SQL độc lập.
 
-Kiểm tra Node.js bằng `node --version`, npm bằng `npm.cmd --version`. **SSMS là công cụ quản trị; cài SSMS chưa đồng nghĩa đã cài SQL Server Database Engine.** Mở `services.msc`, kiểm tra `SQL Server (SQLEXPRESS)` đang Running. Nếu dùng instance khác, xem mục 5.
+Các role bị DENY truy cập bảng trực tiếp; được GRANT EXECUTE đúng SP và SELECT đúng view/TVF. SP/view và bảng cùng chủ sở hữu `dbo` để sử dụng ownership chaining. [Microsoft: ownership chaining và context switching](https://learn.microsoft.com/en-us/sql/relational-databases/tutorial-ownership-chains-and-context-switching). Quyền xem từng đơn/tệp còn được backend kiểm tra theo người dùng thực tế; role SQL chỉ đại diện nhóm nghiệp vụ.
 
-## 4. Cài đặt và chạy lần đầu
+Tài khoản kết nối của backend phải có quyền IMPERSONATE các user `hf_*`. Môi trường học tập hiện dùng Windows Authentication của chủ máy; khi triển khai máy chủ nên dùng login kỹ thuật riêng có đúng quyền kết nối/IMPERSONATE các user này, không cấp thông tin kết nối SQL cho người dùng web. Tài khoản cài đặt/backup cần quyền quản trị riêng.
 
-Với `localhost\SQLEXPRESS` và Windows Authentication:
+## 3. Cài từ database trắng
 
-1. Tải, giải nén mã nguồn hoặc clone repository:
+Yêu cầu máy: Node.js từ 22.12, npm, SQL Server/Express đang chạy, `sqlcmd`, ODBC Driver 17 for SQL Server khi dùng Windows Authentication. Backend chọn đúng một driver theo `DB_AUTH`; không nhập đồng thời hai driver.
 
-   ```powershell
-   git clone https://github.com/bndt0103/DBMS_HomeFix.git
-   cd DBMS_HomeFix
-   ```
-
-2. Chạy **`CAI_DAT.bat`** ở thư mục gốc. Script cài thư viện, khởi tạo CSDL và build giao diện.
-3. Khi cài đặt thành công, chạy **`CHAY_HOMEFIX_DBMS.bat`**.
-4. Mở **http://localhost:3000**. Đăng nhập bằng tài khoản tại mục 7.
-
-Lần đầu, script tạo `SRC/backend/.env`, sinh JWT ngẫu nhiên và tạo CSDL `HomeFix_DBMS_Nhom08` nếu chưa có. Dữ liệu và mật khẩu tài khoản đã tồn tại được giữ khi chạy lại khởi tạo.
-
-**Những lần sau chỉ cần chạy `CHAY_HOMEFIX_DBMS.bat`.** Giữ cửa sổ server mở khi sử dụng. Nhấn `Ctrl+C` để dừng.
-
-Có thể thực hiện bằng PowerShell, từ thư mục `SRC`:
+Mở PowerShell trong thư mục dự án:
 
 ```powershell
-npm.cmd ci
+cd SRC
+npm.cmd install
+node backend/tools/setup-environment.js
+```
+
+Mở `backend/.env`, kiểm tra:
+
+```dotenv
+DB_SERVER=localhost\SQLEXPRESS
+DB_NAME=HomeFix_DBMS_Nhom08
+DB_AUTH=windows
+DB_IMPERSONATE=true
+PORT=3000
+```
+
+Công cụ setup chỉ tạo `.env` khi chưa có và sinh JWT_SECRET ngẫu nhiên. Không đưa `.env` lên GitHub. Nếu dùng SQL Authentication, đặt `DB_AUTH=sql`, `DB_USER`, `DB_PASSWORD` của tài khoản kết nối có quyền cần thiết. Cài đặt bằng tài khoản đủ quyền tạo database; không dùng các user WITHOUT LOGIN của nghiệp vụ để cài.
+
+```powershell
+npm.cmd run sql:build
 npm.cmd run db:init
 npm.cmd run build
 npm.cmd start
 ```
 
-Các lệnh dùng `npm.cmd` để hoạt động cả khi PowerShell chặn `npm.ps1`.
+Mở **http://localhost:3000**. Khi phát triển, `npm.cmd run dev` mở API và Vite ở http://localhost:5173.
 
-## 5. Cấu hình instance hoặc tài khoản SQL khác
+**Bộ cài chỉ tạo database mới:** nếu DB_NAME đã tồn tại, chương trình dừng và yêu cầu tên khác. Không tự DROP database hoặc chạy seed để xóa giao dịch. Muốn bắt đầu một lần demo trắng, đổi DB_NAME sang tên mới bắt đầu `HomeFix_`, cài lại và khởi động lại server. `seed_data.sql` từ chối database đã có tài khoản; không chạy seed lần hai sau bộ cài tổng.
 
-Thực hiện trước khi chạy `CAI_DAT.bat` nếu máy không dùng cấu hình mặc định. Từ thư mục gốc:
+Máy được bàn giao đang dùng database **`HomeFix_DBMS_Clean_20261022`**. Cấu hình `.env` cục bộ trỏ đúng database đó; tên này khác tên mặc định của bộ cài để giữ bản trước tái cấu trúc phục vụ khôi phục khi cần.
 
-```powershell
-if (!(Test-Path SRC/backend/.env)) {
-    Copy-Item SRC/backend/.env.example SRC/backend/.env
-}
-node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
-```
+## 4. Seed sạch và đăng nhập
 
-Mở `SRC/backend/.env`, dán chuỗi vừa sinh vào `JWT_SECRET` và sửa kết nối:
+| Số điện thoại | Vai trò | Công việc |
+|---|---|---|
+| 0900000001 | KH | Đặt dịch vụ, duyệt giá/vật tư, ký, chuyển khoản, hỗ trợ, đánh giá |
+| 0900000002 | KTV | Nhận đơn, tiến độ, vật tư, ký nghiệm thu, thu COD, ví |
+| 0900000003 | DPV | Báo giá và điều phối |
+| 0900000004 | CSKH | Xử lý phiếu hỗ trợ và trao đổi |
+| 0900000005 | KT | Duyệt ví, xác minh BANK, đối soát |
+| 0900000006 | GD | Báo cáo |
+| 0900000007 | ADMIN | Tài khoản/role/khóa, danh mục, cấu hình, ngân hàng |
 
-```dotenv
-PORT=3000
-DB_SERVER=localhost\SQLEXPRESS
-DB_NAME=HomeFix_DBMS_Nhom08
-DB_AUTH=windows
-DB_ODBC_DRIVER=ODBC Driver 17 for SQL Server
-DB_ENCRYPT=false
-JWT_SECRET=<chuỗi ngẫu nhiên đã sinh>
-CLIENT_ORIGINS=http://localhost:5173,http://localhost:3000
-```
+Mật khẩu cả 7 tài khoản mẫu: **`123456`**. Database lưu bcrypt hash, không lưu mật khẩu rõ. Tài khoản mẫu dành cho bài học.
 
-- Instance mặc định: đặt `DB_SERVER=localhost`.
-- Named instance: dùng đúng tên kết nối được trong SSMS.
-- Giữ cấu hình riêng nếu `.env` đã tồn tại. `db:init` chỉ tự sinh JWT khi tạo file lần đầu, không thay giá trị `replace-…` trong file có sẵn.
+Seed chỉ thêm: 7 người dùng, hồ sơ KTV số dư 0, 5 danh mục/5 dịch vụ gốc, tài khoản ngân hàng mô phỏng và cấu hình. Không có đơn, lịch sử, vật tư, nghiệm thu, thanh toán, sổ ví, đánh giá, OTP hoặc nhật ký chèn sẵn. Tài khoản ngân hàng `DEMO/000000000000` dùng minh họa, không chuyển tiền thật.
 
-Để dùng SQL Server Authentication:
+## 5. Chạy luồng nghiệp vụ sau khi cài
 
-```dotenv
-DB_AUTH=sql
-DB_USER=<tài khoản SQL>
-DB_PASSWORD=<mật khẩu SQL>
-```
+### Chuẩn bị ví
 
-SQL Server phải cho phép SQL Authentication; tài khoản cần quyền phù hợp. Không bắt buộc dùng `sa`. Với kết nối TCP, kiểm tra TCP/IP và cấu hình mạng của instance. Lưu `.env`, chạy cài đặt theo mục 4. Sau mỗi lần đổi cấu hình, dừng và khởi động lại server.
+1. Đăng nhập KTV → Ví, tải ảnh chứng từ mô phỏng mục đích WalletProof, ghi nhận Id tệp.
+2. Tạo yêu cầu Deposit, ví dụ 500.000, kèm Id chứng từ và ghi chú.
+3. Đăng nhập KT → Tài chính → duyệt yêu cầu. Ví tăng sau khi duyệt; duyệt lặp/phiên bản cũ bị từ chối.
 
-### Email OTP
+Yêu cầu rút tiền được kiểm số dư khả dụng sau khi giữ tiền cho các yêu cầu đang chờ; khi đang có phân công hoạt động không được rút. Không cộng tiền vào ví bằng sửa trực tiếp bảng.
 
-Đăng nhập tài khoản mẫu không cần email. Đăng ký, khôi phục và đổi mật khẩu qua OTP cần cấu hình nhà cung cấp gửi email trong `.env`:
+### Một đơn COD đầy đủ
 
-```dotenv
-OTP_EMAIL_PROVIDER=gmail
-GMAIL_USER=<địa chỉ Gmail gửi thư>
-GMAIL_APP_PASSWORD=<Google App Password>
-```
+1. KH chọn dịch vụ, nhập địa chỉ và mô tả, tạo đơn.
+2. DPV mở đơn, lập báo giá: phí kiểm tra 50.000, tiền công 200.000, tỷ lệ 15.
+3. KH duyệt báo giá. DPV giao KTV mẫu đang sẵn sàng.
+4. KTV nhận phân công, cập nhật Di chuyển → Đến nơi → Đang xử lý.
+5. KTV lập đề xuất vật tư nếu cần; KH duyệt. Hai vật tư giá 50.000 sẽ tính 100.000 tại SQL.
+6. KTV lập nghiệm thu, tải chữ ký với mục đích TechnicianSignature và ký bằng Id tệp đó.
+7. KH tải chữ ký mục đích CustomerSignature, chọn đúng Id rồi ký nghiệm thu, chọn COD.
+8. KTV ghi nhận đã thu tiền COD. Đơn hoàn thành và tạo đối soát Pending.
+9. KT xác nhận đối soát. Hoa hồng là 200.000 × 15% = 30.000, trừ ví thợ; không tính 15% trên tổng tiền gồm vật tư/phí kiểm tra.
+10. KH đánh giá hoặc mở phiếu hỗ trợ; CSKH phản hồi và xử lý phiếu.
 
-Hoặc sử dụng `OTP_EMAIL_PROVIDER=resend`, `RESEND_API_KEY` và `OTP_EMAIL_FROM` theo cấu hình tài khoản Resend. Không đưa `.env`, mật khẩu và khóa dịch vụ thật vào repository.
+### Một đơn BANK
 
-## 6. Khởi tạo bằng file SQL độc lập
+Lặp các bước đến nghiệm thu nhưng KH chọn BANK. KH tải chứng từ mục đích PaymentProof của đúng đơn rồi tạo yêu cầu chuyển khoản, chọn tài khoản nhận tiền và nhập mã tham chiếu. KT xác nhận đúng số tiền thực nhận; chỉ lúc đó mới ghi khoản ThanhToan. Khi đối soát, tiền thuộc thợ bằng tổng thanh toán trừ hoa hồng được cộng vào ví. Chứng từ, mã tham chiếu, phiên bản và trạng thái giúp ngăn dùng lại/ghi nhận hai lần.
 
-1. Mở [CSDL_HomeFix.sql](SQL/CSDL_HomeFix.sql) trong SSMS.
-2. Bật **Query → SQLCMD Mode**.
-3. Kiểm tra `TenCSDL` ở đầu file, mặc định `HomeFix_DBMS_Nhom08_Import`; tên này phải chưa tồn tại.
-4. Thực thi toàn bộ file để tạo cấu trúc, quyền, dữ liệu mẫu và kiểm tra ràng buộc.
+Giao diện Admin chỉ có danh sách tài khoản, tạo tài khoản bằng dropdown vai trò, đổi vai trò và Khóa/Mở khóa. Không có bảng ma trận phân quyền. Hệ thống giữ phiếu hỗ trợ truyền thống của CSKH.
 
-Hoặc chạy từ thư mục gốc:
+## 6. Demo SQL và giải thích lỗi
 
-```powershell
-sqlcmd -S "localhost\SQLEXPRESS" -E -C -b -f 65001 -i "SQL/CSDL_HomeFix.sql"
-```
+Đọc [SQL/README.md](SQL/README.md), mở các module cần giải thích. Tài liệu có câu lệnh SELECT trên view, EXEC tạo đơn/báo giá/điều phối trong giao dịch rồi rollback, ví dụ trigger từ chối dữ liệu sai và EXECUTE AS kiểm quyền. Không cần thư mục vấn đáp/demo riêng.
 
-Để website dùng CSDL vừa tạo, đặt `DB_NAME=HomeFix_DBMS_Nhom08_Import` trong `.env`, cấu hình JWT theo mục 5, rồi chạy `npm.cmd ci`, `npm.cmd run build`, `npm.cmd start` trong `SRC`.
+- `ROWVERSION` là 8 byte tự đổi, không phải ngày giờ; API trả chuỗi 0x… và gửi lại thành PhienBanDuKien.
+- 51003 → quyền không phù hợp; 51004 → không có đối tượng; 51009 → trạng thái/phiên bản/dữ liệu không hợp lệ; 547 → CHECK/FK; 2601/2627 → trùng khóa.
+- Thông báo lỗi từ SQL được API chuyển thành HTTP 400/403/404/409; giao diện hiện nội dung để người dùng tải lại hoặc sửa dữ liệu.
+- `GO` tách batch trong SSMS/sqlcmd; biến khai báo hết phạm vi sau GO.
+- Chỉ chạy CREATE TABLE trong bộ cài database mới. Khi muốn minh họa nghiệp vụ, gọi EXEC; chạy lại CREATE PROCEDURE không có nghĩa nghiệp vụ đã phát sinh.
 
-Script từ chối ghi đè CSDL đã tồn tại. Muốn minh họa trên CSDL hiện có, chọn đúng CSDL trong SSMS và chạy [CSDL_HomeFix_MinhHoa.sql](SQL/CSDL_HomeFix_MinhHoa.sql).
+## 7. Sao lưu và phục hồi
 
-## 7. Tài khoản mẫu
+Mở `SQL/modules/10_backup_recovery.sql`. Sau bộ cài, sp_SaoLuuHeThong đã có trong database. Dùng tài khoản DBA, thư mục trên máy SQL Server có quyền ghi, và các tên file mới cho từng lần chạy. Bài hướng dẫn có FULL → DIFF → LOG, VERIFYONLY, FILELISTONLY, MOVE, NORECOVERY/RECOVERY và CHECKDB; không tự phục hồi đè database đang dùng.
 
-Mật khẩu khi khởi tạo lần đầu: **`HomeFix@123`**.
+BACKUP/RESTORE phải chạy ngoài transaction; đây là ngoại lệ kỹ thuật bắt buộc. Role Admin trên website không được cấp quyền backup từ HTTP. SQL backup không bao gồm ảnh vật lý trong backend/uploads; khi sao lưu ứng dụng cần giữ thư mục uploads riêng.
 
-| Vai trò | Email | Chức năng |
-| --- | --- | --- |
-| Khách hàng | `kh@homefix.local` | Đặt dịch vụ, phê duyệt, thanh toán, đánh giá, hỗ trợ |
-| Kỹ thuật viên | `ktv@homefix.local` | Nhận việc, tiến độ, vật tư, nghiệm thu, ví |
-| Điều phối | `dpv@homefix.local` | Báo giá, phân công, theo dõi đơn |
-| CSKH | `cskh@homefix.local` | Khiếu nại và bảo hành |
-| Kế toán | `kt@homefix.local` | Chuyển khoản, duyệt ví, đối soát |
-| Quản trị | `admin@homefix.local` | Tài khoản, dịch vụ, cấu hình, nhật ký |
-| Giám đốc | `gd@homefix.local` | Báo cáo điều hành và chính sách |
-
-Có thêm `kh2@homefix.local`, `ktv2@homefix.local` để kiểm tra quyền sở hữu và phân công. Mật khẩu đã đổi trên máy được giữ nguyên qua `db:init`.
-
-## 8. Chạy khi phát triển
-
-Sau khi cài thư viện và khởi tạo CSDL, từ `SRC` chạy:
+## 8. Kiểm thử và những tệp không đưa vào Git
 
 ```powershell
-npm.cmd run dev
+npm.cmd run format:check
+npm.cmd test
 ```
 
-Mở **http://localhost:5173**. Vite cập nhật giao diện khi sửa mã và chuyển tiếp `/api` đến Express tại cổng `3000`. Backend tự khởi động lại khi mã thay đổi.
+Kiểm thử tự tạo database tên `HomeFix_Test_<ngẫu nhiên>`, chạy API với database role thật, kiểm tra seed, COD/BANK, số tiền, concurrency, quyền, tài khoản, OTP và trigger. Cuối lượt chạy xóa đúng database thử của lượt đó. Cần tài khoản đủ quyền tạo/xóa database và IMPERSONATE để chạy test. Không chạy các thao tác thử lên database đang dùng.
 
-Để chạy bản build, dùng `npm.cmd run build` rồi `npm.cmd start`. Dừng server đang dùng cổng `3000` trước khi chuyển chế độ. Nếu đổi cổng API, cập nhật `PORT`, `CLIENT_ORIGINS` và proxy trong `SRC/frontend/vite.config.js`.
+`node_modules`, `.env`, `dist`, `uploads`, ảnh chụp và test-results/log được bỏ qua bằng .gitignore. Chỉ giữ bộ kiểm thử cốt lõi ở `backend/test`, không cần các bộ ảnh/log cũ.
 
-## 9. Kiểm tra và kiểm thử
+OTP phát triển có thể dùng `OTP_PROVIDER=console`: mã được in trên terminal cục bộ, không trả qua API. Để gửi email thật, cấu hình SMTP_HOST/PORT/USER/PASSWORD/FROM. Chức năng đổi mật khẩu khi đang đăng nhập kiểm mật khẩu cũ; API reset qua OTP kiểm mã dùng một lần và email tài khoản. Việc kiểm thử không tự khẳng định đã gửi email ra dịch vụ bên ngoài.
 
-- http://localhost:3000 hiển thị trang đăng nhập.
-- http://localhost:3000/api/health trả `data.status = "ok"`.
-- Đăng nhập khách hàng và kiểm tra danh mục dịch vụ.
-
-Chạy trong `SRC`:
-
-| Lệnh | Phạm vi |
-| --- | --- |
-| `npm.cmd run test:isolated` | API, SQL, transaction, quyền và đồng thời trên CSDL tạm |
-| `npm.cmd run test:all` | Build, kiểm thử API/SQL và giao diện Edge |
-| `npm.cmd run test:sql-usage` | Các kiểm thử trên và ghi nhận sáu thủ tục được gọi qua API bằng Extended Events |
-| `npm.cmd run sql:build` / `sql:check` | Sinh/kiểm tra đồng bộ bộ SQL tổng và bộ chia file từ nguồn chuẩn |
-| `npm.cmd run test:sql-bundle` | Kiểm tra hai bộ cài SQL, chạy lại migration và sao lưu/phục hồi thực tế trên CSDL tạm |
-| `npm.cmd run format:check` | Định dạng mã nguồn |
-
-Các lệnh kiểm thử tách biệt tạo và dọn CSDL tạm. Tài khoản SQL cần quyền tạo/xóa CSDL; `test:sql-usage` cần thêm quyền quản lý/đọc Extended Events. Đặt `EDGE_PATH` nếu Edge nằm ngoài đường dẫn mặc định.
-
-Kết quả mới nằm trong `SRC/test-results`. Minh chứng bản nộp nằm tại [DOC/evidence](DOC/evidence). `npm test` và `test:e2e` chỉ dành cho môi trường kiểm thử đã chuẩn bị; ưu tiên các lệnh tách biệt nêu trên.
-
-## 10. Trình tự demo
-
-1. Khách đặt dịch vụ, gửi mô tả và ảnh hiện trạng.
-2. Điều phối lập báo giá; khách duyệt; điều phối phân công kỹ thuật viên đủ điều kiện.
-3. Kỹ thuật viên nhận việc và cập nhật tiến độ đúng thứ tự.
-4. Kỹ thuật viên đề xuất vật tư; khách duyệt; kỹ thuật viên gửi nghiệm thu và khách xác nhận.
-5. Thu COD hoặc gửi chứng từ chuyển khoản; kế toán xác nhận và đối soát.
-6. Khách đánh giá hoặc gửi hỗ trợ; các bộ phận xem báo cáo theo quyền.
-
-Mở `SRC/database/CSDL_HomeFix_14_GiaoDich.sql` để giải thích transaction. Xem [SQL/README.md](SQL/README.md) để đối chiếu API, hàm/view và minh chứng thực thi.
-
-## 11. Xử lý lỗi thường gặp
-
-| Hiện tượng | Cách xử lý |
-| --- | --- |
-| Không tìm thấy Node.js/npm | Cài Node.js phù hợp, mở terminal mới và kiểm tra phiên bản |
-| PowerShell chặn npm | Dùng `npm.cmd` |
-| Không kết nối SQL | Kiểm tra dịch vụ, instance, ODBC, `.env`, quyền; thử cùng kết nối trong SSMS |
-| JWT không hợp lệ | Thay `replace-…` bằng khóa ngẫu nhiên ít nhất 32 ký tự, khởi động lại |
-| Cổng `3000` đang dùng | Dừng phiên HomeFix trước đó |
-| API chạy nhưng thiếu giao diện | Chạy `npm.cmd run build` trong `SRC` |
-| SQLCMD báo CSDL tồn tại | Chọn tên mới để import hoặc dùng CSDL có sẵn qua `.env` |
-| Đăng nhập mẫu thất bại | Kiểm tra đúng CSDL và mật khẩu; `db:init` không đặt lại mật khẩu đã đổi |
-| OTP không gửi được | Kiểm tra nhà cung cấp email; dùng tài khoản mẫu để kiểm tra riêng ứng dụng |
-| Kiểm thử không tìm thấy Edge | Cài Edge hoặc đặt `EDGE_PATH` |
-
-## 12. Phạm vi hệ thống
-
-HomeFix phục vụ học tập và demo nghiệp vụ. Chuyển khoản được kế toán xác nhận bằng chứng từ; vị trí được cập nhật khi người dùng thao tác. Hệ thống chưa tích hợp tự động ngân hàng, gọi video hoặc theo dõi GPS liên tục. Báo cáo được tính từ dữ liệu lưu trong SQL Server.
-
-Mỗi máy tự tạo `.env`, cài thư viện và khởi tạo CSDL. `node_modules`, `dist`, dữ liệu tải lên, khóa riêng và kết quả kiểm thử tạm được loại khỏi Git bằng `.gitignore`.
+Kết quả xác minh ngày 22/10/2026: format và build đạt; 13 nhóm kiểm thử tích hợp cốt lõi đạt trên database tạm; 21 kiểm tra SQL nghiệp vụ và 33 lượt trang của 7 vai trò đã được kiểm chứng. Chuỗi FULL/DIFF/LOG được phục hồi sang database thử riêng và CHECKDB đạt. Database vận hành bàn giao vẫn có 7 tài khoản, 0 đơn, 0 giao dịch ví, 0 OTP và 0 nhật ký.

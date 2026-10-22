@@ -1,48 +1,22 @@
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
-export const backendDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-dotenv.config({ path: path.join(backendDir, '.env'), quiet: true });
+import dotenv from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+export const backendDirectory = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+);
+dotenv.config({ path: path.join(backendDirectory, ".env"), quiet: true });
 export const config = {
+  server: process.env.DB_SERVER || "localhost\\SQLEXPRESS",
+  database: process.env.DB_NAME || "HomeFix_DBMS_Nhom08",
+  sqlAuth: process.env.DB_AUTH === "sql",
+  dbUser: process.env.DB_USER,
+  dbPassword: process.env.DB_PASSWORD,
+  jwtSecret: process.env.JWT_SECRET,
   port: Number(process.env.PORT || 3000),
-  server: process.env.DB_SERVER || 'localhost',
-  database: process.env.DB_NAME || 'HomeFix_DBMS_Nhom08',
-  windows: process.env.DB_AUTH !== 'sql',
-  secret: process.env.JWT_SECRET,
-  uploads: path.join(backendDir, 'uploads'),
-  origins: [
-    ...new Set(
-      (
-        process.env.CLIENT_ORIGINS ||
-        'http://localhost:5173,http://localhost:3000,https://localhost,http://localhost'
-      )
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean),
-    ),
-  ],
+  uploads: process.env.UPLOADS_DIR
+    ? path.resolve(process.env.UPLOADS_DIR)
+    : path.join(backendDirectory, "uploads"),
+  impersonate: process.env.DB_IMPERSONATE !== "false",
 };
-export function dbConfig(database = config.database) {
-  const shared = {
-    server: config.server,
-    database,
-    requestTimeout: 20000,
-    connectionTimeout: 10000,
-    pool: { min: 0, max: 8, idleTimeoutMillis: 30000 },
-    options: {
-      encrypt: process.env.DB_ENCRYPT === 'true',
-      trustServerCertificate: true,
-      useUTC: true,
-      abortTransactionOnError: true,
-    },
-  };
-  if (config.windows) {
-    const escaped = (s) => '{' + s.replaceAll('}', '}}') + '}';
-    return {
-      ...shared,
-      connectionString: `Driver=${escaped(process.env.DB_ODBC_DRIVER || 'ODBC Driver 17 for SQL Server')};Server=${escaped(config.server)};Database=${escaped(database)};Trusted_Connection=Yes;Encrypt=${process.env.DB_ENCRYPT === 'true' ? 'Yes' : 'No'};TrustServerCertificate=Yes;`,
-      options: { ...shared.options, trustedConnection: true },
-    };
-  }
-  return { ...shared, user: process.env.DB_USER, password: process.env.DB_PASSWORD };
-}

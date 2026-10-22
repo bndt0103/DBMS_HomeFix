@@ -1,0 +1,1437 @@
+{
+  "procedures": {
+    "sp_DangKyKhachHang": [
+      {
+        "name": "HoTen",
+        "type": "NVARCHAR(120)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "SoDienThoai",
+        "type": "VARCHAR(15)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "MatKhauBam",
+        "type": "VARCHAR(100)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Email",
+        "type": "NVARCHAR(254)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_TaoTaiKhoanNoiBo": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "HoTen",
+        "type": "NVARCHAR(120)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "SoDienThoai",
+        "type": "VARCHAR(15)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "MatKhauBam",
+        "type": "VARCHAR(100)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "VaiTro",
+        "type": "VARCHAR(5)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Email",
+        "type": "NVARCHAR(254)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_DoiMatKhau": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "MatKhauBam",
+        "type": "VARCHAR(100)",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_CapNhatThongTinNguoiDung": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "HoTen",
+        "type": "NVARCHAR(120)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Email",
+        "type": "NVARCHAR(254)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "DiaChi",
+        "type": "NVARCHAR(400)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_KhoaMoKhoaTaiKhoan": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NguoiDungId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DangHoatDong",
+        "type": "BIT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_DoiVaiTroNguoiDung": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NguoiDungId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "VaiTro",
+        "type": "VARCHAR(5)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_CapNhatTho": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NhomTayNghe",
+        "type": "NVARCHAR(200)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "KhuVucPhucVu",
+        "type": "NVARCHAR(200)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "ViDo",
+        "type": "DECIMAL(10,7)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "KinhDo",
+        "type": "DECIMAL(10,7)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_CapNhatTrangThaiKTV": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "TrangThaiSanSang",
+        "type": "VARCHAR(12)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_GuiHoSoKTV": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NhomTayNghe",
+        "type": "NVARCHAR(200)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "KhuVucPhucVu",
+        "type": "NVARCHAR(200)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "KinhNghiem",
+        "type": "NVARCHAR(2000)",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_DuyetHoSoKTV": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "HoSoId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "QuyetDinh",
+        "type": "VARCHAR(10)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "LyDo",
+        "type": "NVARCHAR(1000)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_TaoMaOTP": [
+      {
+        "name": "Id",
+        "type": "UNIQUEIDENTIFIER",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "MucDich",
+        "type": "VARCHAR(30)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DiaChiNhan",
+        "type": "NVARCHAR(254)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "MaBam",
+        "type": "CHAR(64)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NgayHetHan",
+        "type": "DATETIME2",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_XacThucOTP": [
+      {
+        "name": "Id",
+        "type": "UNIQUEIDENTIFIER",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "MaBam",
+        "type": "CHAR(64)",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_DonDepOTPHetHan": [],
+    "sp_LuuTepDinhKem": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DonHangId",
+        "type": "INT",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "MucDich",
+        "type": "VARCHAR(25)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "KhoaLuuTru",
+        "type": "VARCHAR(100)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "TenTepGoc",
+        "type": "NVARCHAR(255)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "KieuMIME",
+        "type": "VARCHAR(100)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "KichThuoc",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_GhiNhatKyVaThongBao": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "ThaoTac",
+        "type": "NVARCHAR(100)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DoiTuong",
+        "type": "NVARCHAR(100)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DoiTuongId",
+        "type": "INT",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "ChiTiet",
+        "type": "NVARCHAR(2000)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "NguoiNhanId",
+        "type": "INT",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "TieuDe",
+        "type": "NVARCHAR(200)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "NoiDung",
+        "type": "NVARCHAR(2000)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_DanhDauThongBao": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "ThongBaoId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_LuuDichVu": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Id",
+        "type": "INT",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "DanhMucId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Ten",
+        "type": "NVARCHAR(180)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "MoTa",
+        "type": "NVARCHAR(1000)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhiKiemTra",
+        "type": "DECIMAL(18,2)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "TienCong",
+        "type": "DECIMAL(18,2)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "TyLeHoaHong",
+        "type": "DECIMAL(5,2)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DangHoatDong",
+        "type": "BIT",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_LuuDanhMucDichVu": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Id",
+        "type": "INT",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "Ten",
+        "type": "NVARCHAR(100)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Ma",
+        "type": "VARCHAR(30)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DangHoatDong",
+        "type": "BIT",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_LuuCauHinh": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Khoa",
+        "type": "VARCHAR(80)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "GiaTri",
+        "type": "NVARCHAR(1000)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NhanHienThi",
+        "type": "NVARCHAR(150)",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_TaoDonHang": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DichVuId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DiaChi",
+        "type": "NVARCHAR(500)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "MoTa",
+        "type": "NVARCHAR(2000)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NgayHen",
+        "type": "DATETIME2",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_TaoBaoGiaSoBo": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DonHangId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhiKiemTra",
+        "type": "DECIMAL(18,2)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "TienCong",
+        "type": "DECIMAL(18,2)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "TyLeHoaHong",
+        "type": "DECIMAL(5,2)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "ChanDoan",
+        "type": "NVARCHAR(2000)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_KhachDuyetBaoGiaSoBo": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "BaoGiaId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "QuyetDinh",
+        "type": "VARCHAR(20)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "LyDo",
+        "type": "NVARCHAR(1000)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_TaoLenhDieuPhoi": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DonHangId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "KyThuatVienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_KTVPhanHoiDieuPhoi": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "LenhDieuPhoiId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "QuyetDinh",
+        "type": "VARCHAR(20)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "LyDo",
+        "type": "NVARCHAR(1000)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_ChuyenTrangThaiDon": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DonHangId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "TrangThaiTiepTheo",
+        "type": "VARCHAR(30)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "LyDo",
+        "type": "NVARCHAR(1000)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_ThemGhiChuDon": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DonHangId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NoiDung",
+        "type": "NVARCHAR(2000)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NoiBo",
+        "type": "BIT",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_LuuViTriKhachHang": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DonHangId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "ViDo",
+        "type": "DECIMAL(10,7)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "KinhDo",
+        "type": "DECIMAL(10,7)",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_TaoDeXuatVatTu": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DonHangId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "VatTu",
+        "type": "NVARCHAR(MAX)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_ThemChiTietVatTu": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DeXuatVatTuId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Ten",
+        "type": "NVARCHAR(200)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "SoLuong",
+        "type": "DECIMAL(10,2)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DonGia",
+        "type": "DECIMAL(18,2)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "SoThangBaoHanh",
+        "type": "INT",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_KhachDuyetDeXuatVatTu": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DeXuatVatTuId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "QuyetDinh",
+        "type": "VARCHAR(20)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "LyDo",
+        "type": "NVARCHAR(1000)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_TaoPhieuNghiemThu": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DonHangId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NguyenNhan",
+        "type": "NVARCHAR(2000)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhuongAnXuLy",
+        "type": "NVARCHAR(2000)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_KTVKyNghiemThu": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NghiemThuId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "ChuKyId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_KhachHangKyNghiemThu": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NghiemThuId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "ChuKyId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhuongThucThanhToan",
+        "type": "VARCHAR(10)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_XacNhanThanhToanCOD": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DonHangId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_TaoYeuCauThanhToan": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DonHangId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "TaiKhoanNganHangId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "ChungTuId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "MaThamChieu",
+        "type": "NVARCHAR(100)",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_XacNhanThanhToanNganHang": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "YeuCauThanhToanId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "QuyetDinh",
+        "type": "VARCHAR(20)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "SoTienThucNhan",
+        "type": "DECIMAL(18,2)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "MaThamChieu",
+        "type": "NVARCHAR(100)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_DoiSoatCOD": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DoiSoatId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_TaoYeuCauVi": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Loai",
+        "type": "VARCHAR(20)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "SoTien",
+        "type": "DECIMAL(18,2)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "GhiChu",
+        "type": "NVARCHAR(1000)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "ChungTuId",
+        "type": "INT",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_DuyetYeuCauVi": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "YeuCauViId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "QuyetDinh",
+        "type": "VARCHAR(20)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "LyDo",
+        "type": "NVARCHAR(1000)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_LuuTaiKhoanNganHang": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "MaNganHang",
+        "type": "VARCHAR(30)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "TenNganHang",
+        "type": "NVARCHAR(200)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "SoTaiKhoan",
+        "type": "VARCHAR(50)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "ChuTaiKhoan",
+        "type": "NVARCHAR(200)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Id",
+        "type": "INT",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "DangHoatDong",
+        "type": "BIT",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_TaoYeuCauHoTro": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DonHangId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Loai",
+        "type": "VARCHAR(20)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "MoTa",
+        "type": "NVARCHAR(2000)",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_XuLyHoTro": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "YeuCauHoTroId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "TrangThai",
+        "type": "VARCHAR(20)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "KetQuaXuLy",
+        "type": "NVARCHAR(2000)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_ThemTraoDoiHoTro": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "YeuCauHoTroId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NoiDung",
+        "type": "NVARCHAR(2000)",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_TaoDanhGiaDonHang": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DonHangId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Diem",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NhanXet",
+        "type": "NVARCHAR(2000)",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_BaoCaoTongHop": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "TuNgay",
+        "type": "DATE",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "DenNgay",
+        "type": "DATE",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "sp_SaoLuuHeThong": [
+      {
+        "name": "DuongDan",
+        "type": "NVARCHAR(4000)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Loai",
+        "type": "VARCHAR(4)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "BanSaoDocLap",
+        "type": "BIT",
+        "optional": true,
+        "output": false
+      }
+    ]
+  },
+  "views": [
+    "vw_NguoiDung",
+    "vw_KyThuatVien",
+    "vw_DanhMucDichVu",
+    "vw_DichVu",
+    "vw_LichSuDonHang",
+    "vw_LenhDieuPhoi",
+    "vw_BaoGiaSoBo",
+    "vw_DeXuatVatTu",
+    "vw_ChiTietDeXuatVatTu",
+    "vw_PhieuNghiemThu",
+    "vw_ThanhToan",
+    "vw_DoiSoat",
+    "vw_TaiKhoanNganHang",
+    "vw_YeuCauThanhToan",
+    "vw_YeuCauVi",
+    "vw_GiaoDichVi",
+    "vw_HoSoKTV",
+    "vw_YeuCauHoTro",
+    "vw_TraoDoiHoTro",
+    "vw_DanhGia",
+    "vw_GhiChuDon",
+    "vw_ViTriKhachHang",
+    "vw_TepDinhKem",
+    "vw_ThongBao",
+    "vw_NhatKy",
+    "vw_CauHinh",
+    "vw_XacThucDangNhap",
+    "vw_DonHangTongHop",
+    "vw_DichVuCongKhai",
+    "vw_DoanhThuNgay",
+    "vw_ViKyThuatVien",
+    "vw_HieuSuatKyThuatVien",
+    "vw_HoTroCanXuLy",
+    "vw_XacThucOTP"
+  ],
+  "functions": {
+    "fn_SoDuVi": [
+      {
+        "name": "KyThuatVienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "fn_DiemDanhGia": [
+      {
+        "name": "KyThuatVienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "fn_ThongKeDon": [
+      {
+        "name": "TuNgay",
+        "type": "DATE",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "DenNgay",
+        "type": "DATE",
+        "optional": true,
+        "output": false
+      }
+    ],
+    "fn_HanBaoHanh": [
+      {
+        "name": "DonHangId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      }
+    ]
+  }
+}

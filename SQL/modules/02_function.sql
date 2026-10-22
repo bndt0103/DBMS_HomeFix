@@ -1,83 +1,76 @@
--- HomeFix / 02_function: sinh bởi npm run sql:build.
--- Chạy trong CSDL HomeFix theo thứ tự ở CSDL_HomeFix_Modules.sql.
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
-SET XACT_ABORT ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET ARITHABORT ON;
+SET NUMERIC_ROUNDABORT OFF;
 GO
-
--- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
--- Tính hoa hồng từ tiền công và tỷ lệ.
-CREATE OR ALTER FUNCTION dbo.fn_HoaHong
-(
-    @TienCongTinh DECIMAL(18, 2),
-    @TyLe DECIMAL(5, 2)
+/* Hàm chỉ đọc/tính toán; không INSERT/UPDATE/DELETE và không mở transaction. */
+CREATE OR ALTER FUNCTION dbo.fn_HoaHong (
+    @TienCong DECIMAL(18,2), @TyLeHoaHong DECIMAL(5,2)
 )
-RETURNS DECIMAL(18, 2)
+RETURNS DECIMAL(18,2)
 AS
 BEGIN
-    RETURN CASE
-        WHEN @TienCongTinh >= 0 AND @TyLe BETWEEN 0 AND 100
-            THEN CONVERT(DECIMAL(18, 2), ROUND(@TienCongTinh * @TyLe / 100, 2))
-        ELSE NULL
+    RETURN CONVERT(DECIMAL(18,2), ROUND(@TienCong * @TyLeHoaHong / 100, 2));
+END;
+GO
+CREATE OR ALTER FUNCTION dbo.fn_SoDuVi (@KyThuatVienId INT)
+RETURNS TABLE
+AS
+RETURN (
+    SELECT CONVERT(DECIMAL(18,2), COALESCE(SUM(SoTien), 0)) AS SoDu
+    FROM dbo.GiaoDichVi WHERE KyThuatVienId = @KyThuatVienId
+);
+GO
+CREATE OR ALTER FUNCTION dbo.fn_DiemDanhGia (@KyThuatVienId INT)
+RETURNS TABLE
+AS
+RETURN (
+    SELECT CONVERT(DECIMAL(4,2), COALESCE(AVG(CONVERT(DECIMAL(4,2), Diem)), 0)) AS DiemTrungBinh
+    FROM dbo.DanhGia WHERE KyThuatVienId = @KyThuatVienId
+);
+GO
+CREATE OR ALTER FUNCTION dbo.fn_ThongKeDon (@TuNgay DATE = NULL, @DenNgay DATE = NULL)
+RETURNS TABLE
+AS
+RETURN (
+    SELECT COUNT_BIG(*) AS TongDon,
+        COALESCE(SUM(CASE WHEN TrangThai = 'HoanThanh' THEN 1 ELSE 0 END), 0) AS DonHoanThanh,
+        COALESCE(SUM(CASE WHEN TrangThai = 'Huy' THEN 1 ELSE 0 END), 0) AS DonHuy,
+        COALESCE(SUM(CASE WHEN TrangThai NOT IN ('HoanThanh','Huy') THEN 1 ELSE 0 END), 0) AS DonDangXuLy
+    FROM dbo.DonHang
+    WHERE (@TuNgay IS NULL OR NgayTao >= @TuNgay)
+        AND (@DenNgay IS NULL OR NgayTao < DATEADD(DAY, 1, CONVERT(DATETIME2, @DenNgay)))
+);
+GO
+CREATE OR ALTER FUNCTION dbo.fn_HanBaoHanh (@DonHangId INT)
+RETURNS TABLE
+AS
+RETURN (
+    SELECT MAX(CASE WHEN ct.SoThangBaoHanh > 0 THEN DATEADD(MONTH, ct.SoThangBaoHanh, nt.NgayDuyet) END) AS HanBaoHanh
+    FROM dbo.PhieuNghiemThu AS nt
+    LEFT JOIN dbo.ChiTietDeXuatVatTu AS ct ON ct.DeXuatVatTuId = nt.DeXuatVatTuId
+    WHERE nt.DonHangId = @DonHangId AND nt.TrangThai = 'Approved'
+);
+GO
+CREATE OR ALTER FUNCTION dbo.fn_TongTienDonHang (@DonHangId INT)
+RETURNS DECIMAL(18,2)
+AS
+BEGIN
+    DECLARE @TongTien DECIMAL(18,2);
+    SELECT @TongTien = TongTien FROM dbo.PhieuNghiemThu WHERE DonHangId = @DonHangId AND TrangThai <> 'Rejected';
+    IF @TongTien IS NULL
+    BEGIN
+        SELECT @TongTien = bg.TongTien + COALESCE((
+            SELECT SUM(ct.ThanhTien)
+            FROM dbo.DeXuatVatTu AS dx
+            INNER JOIN dbo.ChiTietDeXuatVatTu AS ct ON ct.DeXuatVatTuId = dx.Id
+            WHERE dx.DonHangId = @DonHangId AND dx.DangApDung = 1 AND dx.TrangThai = 'Approved'
+        ), 0)
+        FROM dbo.BaoGiaSoBo AS bg WHERE bg.DonHangId = @DonHangId AND bg.TrangThai = 'Approved';
     END;
-END
-GO
-
--- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
--- Tính số dư từ sổ giao dịch ví.
-CREATE OR ALTER FUNCTION dbo.fn_SoDuVi
-(@KyThuatVienId INT)
-RETURNS TABLE
-AS
-RETURN
-    (SELECT COALESCE(SUM(SoTien), CONVERT(DECIMAL(38, 2), 0)) AS SoDu
-     FROM dbo.GiaoDichVi
-     WHERE KyThuatVienId = @KyThuatVienId)
-GO
-
--- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
--- Tính số lượt và điểm đánh giá trung bình.
-CREATE OR ALTER FUNCTION dbo.fn_DiemDanhGia
-(@KyThuatVienId INT)
-RETURNS TABLE
-AS
-RETURN
-    (SELECT COUNT(*) AS SoDanhGia,
-            AVG(CONVERT(DECIMAL(5, 2), DiemDanhGia)) AS DiemTrungBinh
-     FROM dbo.DanhGia
-     WHERE KyThuatVienId = @KyThuatVienId)
-GO
-
--- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
--- Tra cứu thời hạn bảo hành vật tư.
-CREATE OR ALTER FUNCTION dbo.fn_HanBaoHanh
-(@NghiemThuId INT)
-RETURNS TABLE
-AS
-RETURN
-    (SELECT i.Id AS VatTuId,
-            i.Ten,
-            i.SoThangBaoHanh,
-            DATEADD(month, i.SoThangBaoHanh, a.NgayDuyet) AS NgayHetHan
-     FROM dbo.PhieuNghiemThu AS a
-          INNER JOIN dbo.ChiTietDeXuatVatTu AS i ON i.BaoGiaId = a.DeXuatVatTuId
-     WHERE a.Id = @NghiemThuId
-       AND a.TrangThai = 'Approved'
-       AND i.SoThangBaoHanh > 0)
-GO
-
--- Nguồn: SRC/database/CSDL_HomeFix_12_HamVaView.sql
--- Thống kê đơn hàng theo nhóm dịch vụ.
-CREATE OR ALTER FUNCTION dbo.fn_ThongKeDon
-(@TuNgay DATETIME2, @DenNgay DATETIME2)
-RETURNS TABLE
-AS
-RETURN
-    (SELECT NhomDichVu,
-            COUNT(*) AS TongSoDon,
-            SUM(CASE WHEN TrangThai = 'HoanThanh' THEN 1 ELSE 0 END) AS SoDonHoanThanh,
-            SUM(CASE WHEN TrangThai = 'Huy' THEN 1 ELSE 0 END) AS SoDonHuy
-     FROM dbo.DonHang
-     WHERE NgayTao >= @TuNgay AND NgayTao < @DenNgay
-     GROUP BY NhomDichVu)
+    RETURN COALESCE(@TongTien, 0);
+END;
 GO

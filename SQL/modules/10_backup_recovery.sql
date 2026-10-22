@@ -1,99 +1,99 @@
--- Chạy riêng; không thuộc bộ cài. Xem hướng dẫn trong file.
--- HomeFix: sao lưu FULL -> DIFF -> LOG; tùy chọn phục hồi vào CSDL MỚI.
--- Bật SQLCMD Mode trong SSMS. Chọn đúng TenCSDL trước khi chạy.
--- Tài khoản SQL cần quyền BACKUP/RESTORE; SQL Server service cần quyền ghi thư mục backup.
--- Không dùng COMPRESSION bắt buộc để chạy được cả SQL Server Express.
-:on error exit
-:setvar TenCSDL "HomeFix_DBMS_Nhom08"
-:setvar ThucHienPhucHoi "0"
-
-USE master;
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
 GO
-IF DB_ID(N'$(TenCSDL)') IS NULL
-    THROW 51009, 'SOURCE_DATABASE_NOT_FOUND', 1;
-GO
-USE [$(TenCSDL)];
-GO
-
+/* Sao lưu/phục hồi thuộc quyền DBA, không cho tài khoản ứng dụng chạy từ web.
+   LƯU Ý SQL Server: BACKUP/RESTORE KHÔNG được chạy bên trong BEGIN TRANSACTION.
+   Đây là ngoại lệ kỹ thuật của lệnh quản trị, không phải CRUD ngoài giao dịch.
+   Module chỉ tạo thủ tục và hướng dẫn; cài đặt không tự sao lưu/xóa/phục hồi.
+   Thư mục đích nằm trên MÁY CHỦ SQL Server, service account phải có quyền ghi. */
 CREATE OR ALTER PROCEDURE dbo.sp_SaoLuuHeThong
-    @LoaiSaoLuu VARCHAR(10) = 'FULL',
-    @DuongDanThuMuc NVARCHAR(500) = NULL,
-    @TepSaoLuu NVARCHAR(1000) = NULL OUTPUT
+    @DuongDan NVARCHAR(4000),
+    @Loai VARCHAR(4) = 'FULL',
+    @BanSaoDocLap BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
-    SET @LoaiSaoLuu = UPPER(@LoaiSaoLuu);
-    IF @LoaiSaoLuu IS NULL OR @LoaiSaoLuu NOT IN ('FULL', 'DIFF', 'LOG')
-        THROW 51009, 'INVALID_BACKUP_TYPE', 1;
+    IF ISNULL(IS_SRVROLEMEMBER('sysadmin'), 0) <> 1 AND ISNULL(IS_ROLEMEMBER('db_owner'), 0) <> 1
+        THROW 51003, N'Chỉ quản trị viên SQL Server/db_owner được sao lưu.', 1;
+    IF @@TRANCOUNT > 0 THROW 51009, N'BACKUP không được chạy trong giao dịch đang mở.', 1;
+    IF @Loai NOT IN ('FULL','DIFF','LOG') THROW 51009, N'Loại sao lưu chỉ gồm FULL, DIFF, LOG.', 1;
+    IF NULLIF(LTRIM(RTRIM(@DuongDan)), N'') IS NULL
+        THROW 51009, N'Phải cung cấp đường dẫn tập tin trên máy chủ SQL Server.', 1;
+    IF @BanSaoDocLap = 1 AND @Loai <> 'FULL'
+        THROW 51009, N'Bản sao độc lập COPY_ONLY chỉ dùng với FULL trong bài này.', 1;
     DECLARE @TenCSDL SYSNAME = DB_NAME();
-    IF @TenCSDL NOT LIKE N'HomeFix[_]%'
-        THROW 51009, 'HOMEFIX_DATABASE_REQUIRED', 1;
-    DECLARE @ThuMuc NVARCHAR(500) = NULLIF(RTRIM(@DuongDanThuMuc), N'');
-    IF @ThuMuc IS NULL
-        SET @ThuMuc = CONVERT(NVARCHAR(500), SERVERPROPERTY('InstanceDefaultBackupPath'));
-    IF @ThuMuc IS NULL
-        EXEC master.dbo.xp_instance_regread
-            N'HKEY_LOCAL_MACHINE', N'Software\Microsoft\MSSQLServer\MSSQLServer',
-            N'BackupDirectory', @ThuMuc OUTPUT;
-    IF NULLIF(@ThuMuc, N'') IS NULL
-        THROW 51009, 'BACKUP_DIRECTORY_REQUIRED', 1;
-    -- Mỗi lần gọi tạo tệp mới; không ghi đè chuỗi sao lưu cũ.
-    SET @TepSaoLuu = @ThuMuc + N'\' + @TenCSDL + N'_' + @LoaiSaoLuu
-        + N'_' + REPLACE(CONVERT(NVARCHAR(36), NEWID()), N'-', N'')
-        + CASE WHEN @LoaiSaoLuu='LOG' THEN N'.trn' ELSE N'.bak' END;
-    DECLARE @Lenh NVARCHAR(MAX) =
-        CASE WHEN @LoaiSaoLuu='LOG' THEN N'BACKUP LOG ' ELSE N'BACKUP DATABASE ' END
-        + QUOTENAME(@TenCSDL) + N' TO DISK=@Tep WITH CHECKSUM, '
-        + CASE WHEN @LoaiSaoLuu='DIFF' THEN N'DIFFERENTIAL, ' ELSE N'' END
-        + N'NOFORMAT, NOINIT, STATS=10;';
-    EXEC sys.sp_executesql @Lenh, N'@Tep NVARCHAR(1000)', @Tep=@TepSaoLuu;
+    BEGIN TRY
+        -- NOINIT: bổ sung backup set, không ghi đè backup cũ nếu trùng đường dẫn.
+        -- Khi demo nên dùng tên tập tin mới cho từng lần chạy.
+        IF @Loai = 'FULL' AND @BanSaoDocLap = 1
+            BACKUP DATABASE @TenCSDL TO DISK = @DuongDan WITH COPY_ONLY, NOINIT, CHECKSUM, STATS = 10;
+        ELSE IF @Loai = 'FULL'
+            BACKUP DATABASE @TenCSDL TO DISK = @DuongDan WITH NOINIT, CHECKSUM, STATS = 10;
+        ELSE IF @Loai = 'DIFF'
+            BACKUP DATABASE @TenCSDL TO DISK = @DuongDan WITH DIFFERENTIAL, NOINIT, CHECKSUM, STATS = 10;
+        ELSE
+        BEGIN
+            IF DATABASEPROPERTYEX(@TenCSDL, 'Recovery') <> 'FULL'
+                THROW 51009, N'Sao lưu LOG yêu cầu recovery model FULL và full backup đầu tiên.', 1;
+            BACKUP LOG @TenCSDL TO DISK = @DuongDan WITH NOINIT, CHECKSUM, STATS = 10;
+        END;
+        SELECT @TenCSDL AS TenCSDL, @Loai AS Loai, @DuongDan AS DuongDan, SYSUTCDATETIME() AS NgayHoanTat;
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH;
 END;
 GO
+/* CÁCH DEMO TRONG SSMS - chạy từng khối sau khi sửa tên database/đường dẫn:
 
--- FULL recovery cần một bản full để khởi đầu chuỗi log.
-ALTER DATABASE [$(TenCSDL)] SET RECOVERY FULL;
+-- 1. Chọn database muốn sao lưu, ghi nhận recovery model trước khi thay đổi.
+SELECT name, recovery_model_desc FROM sys.databases WHERE name = DB_NAME();
+-- Dùng đường dẫn tồn tại, service account SQL có quyền ghi. Ví dụ D:\SQLBackup.
+-- Không chạy trên database đang có giao dịch nghiệp vụ ngoài ý muốn.
+ALTER DATABASE HomeFix_DBMS_Sach SET RECOVERY FULL;
 GO
-DECLARE @Full NVARCHAR(1000), @Diff NVARCHAR(1000), @Log NVARCHAR(1000);
-EXEC dbo.sp_SaoLuuHeThong 'FULL', @TepSaoLuu=@Full OUTPUT;
-EXEC dbo.sp_SaoLuuHeThong 'DIFF', @TepSaoLuu=@Diff OUTPUT;
-EXEC dbo.sp_SaoLuuHeThong 'LOG', @TepSaoLuu=@Log OUTPUT;
-RESTORE VERIFYONLY FROM DISK=@Full WITH CHECKSUM;
-RESTORE VERIFYONLY FROM DISK=@Diff WITH CHECKSUM;
-RESTORE VERIFYONLY FROM DISK=@Log WITH CHECKSUM;
-SELECT @Full AS TepFull, @Diff AS TepDiff, @Log AS TepLog;
-
--- Đặt ThucHienPhucHoi=1 để thực hành. Không dùng REPLACE, không ghi đè CSDL nguồn.
-IF $(ThucHienPhucHoi) = 1
-BEGIN
-    DECLARE @Nguon SYSNAME = DB_NAME(), @Dich SYSNAME = DB_NAME() + N'_Restore';
-    IF DB_ID(@Dich) IS NOT NULL
-        THROW 51009, 'RESTORE_DATABASE_ALREADY_EXISTS', 1;
-    -- Bộ cài HomeFix tạo một file dữ liệu và một file log.
-    IF (SELECT COUNT(*) FROM sys.database_files WHERE type IN (0,1)) <> 2
-        THROW 51009, 'CUSTOM_FILE_LAYOUT_REQUIRES_MANUAL_MOVE', 1;
-    DECLARE @TenData SYSNAME, @TenLog SYSNAME, @Data NVARCHAR(1000), @LogFile NVARCHAR(1000);
-    SELECT @TenData=name,
-           @Data=LEFT(physical_name,LEN(physical_name)-CHARINDEX(N'\',REVERSE(physical_name))+1) + @Dich + N'.mdf'
-    FROM sys.database_files WHERE type=0;
-    SELECT @TenLog=name,
-           @LogFile=LEFT(physical_name,LEN(physical_name)-CHARINDEX(N'\',REVERSE(physical_name))+1) + @Dich + N'_log.ldf'
-    FROM sys.database_files WHERE type=1;
-    DECLARE @Restore NVARCHAR(MAX) = N'RESTORE DATABASE ' + QUOTENAME(@Dich)
-        + N' FROM DISK=@Full WITH MOVE @TenData TO @Data, MOVE @TenLog TO @LogFile, NORECOVERY, CHECKSUM;'
-        + N'RESTORE DATABASE ' + QUOTENAME(@Dich) + N' FROM DISK=@Diff WITH NORECOVERY, CHECKSUM;'
-        + N'RESTORE LOG ' + QUOTENAME(@Dich) + N' FROM DISK=@Log WITH RECOVERY, CHECKSUM;'
-        + N'DBCC CHECKDB (' + QUOTENAME(@Dich) + N') WITH NO_INFOMSGS;';
-    EXEC sys.sp_executesql @Restore,
-        N'@Full NVARCHAR(1000),@Diff NVARCHAR(1000),@Log NVARCHAR(1000),@TenData SYSNAME,@Data NVARCHAR(1000),@TenLog SYSNAME,@LogFile NVARCHAR(1000)',
-        @Full,@Diff,@Log,@TenData,@Data,@TenLog,@LogFile;
-    SELECT @Dich AS CSDLPhucHoi;
-END;
+USE HomeFix_DBMS_Sach;
 GO
+EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Full_20261022.bak', @Loai = 'FULL';
+EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Diff_20261022.bak', @Loai = 'DIFF';
+EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Log_20261022.trn', @Loai = 'LOG';
 
--- Vấn đáp: NORECOVERY giữ DB ở trạng thái RESTORING để nhận bản tiếp theo;
--- RECOVERY kết thúc chuỗi và mở DB. DIFF phải cùng bản FULL nền.
--- Phục hồi theo thời điểm: áp dụng lần lượt các bản LOG liên tục, dùng STOPAT
--- ở bản log chứa thời điểm cần phục hồi. Cân nhắc tail-log backup nếu nguồn còn truy cập được.
--- Ví dụ minh họa (thay tên và đường dẫn bằng tệp trong chuỗi của bạn):
--- RESTORE LOG [HomeFix_PhucHoi] FROM DISK=N'D:\Backup\log.trn'
--- WITH STOPAT='2026-10-15T09:30:00', RECOVERY;
+-- 2. Xem thông tin backup set/logical name và kiểm tra backup có đọc được.
+-- FILE = 1 phù hợp tập tin mới. Nếu đã backup nhiều lần cùng tập tin,
+-- RESTORE HEADERONLY để chọn đúng Position, không mặc định bản mới nhất ở số 1.
+RESTORE HEADERONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak';
+RESTORE FILELISTONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak' WITH FILE = 1;
+RESTORE VERIFYONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak' WITH FILE = 1, CHECKSUM;
+-- VERIFYONLY kiểm tra backup; chưa chứng minh toàn bộ CSDL phục hồi hoạt động.
+
+-- 3. Khôi phục ra TÊN MỚI, không WITH REPLACE. Sửa logical name theo FILELISTONLY.
+USE master;
+GO
+RESTORE DATABASE HomeFix_KiemTraPhucHoi
+FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak'
+WITH FILE = 1, NORECOVERY,
+    MOVE N'HomeFix_DBMS_Sach' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi.mdf',
+    MOVE N'HomeFix_DBMS_Sach_log' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi_log.ldf';
+RESTORE DATABASE HomeFix_KiemTraPhucHoi
+FROM DISK = N'D:\SQLBackup\HomeFix_Diff_20261022.bak' WITH FILE = 1, NORECOVERY;
+RESTORE LOG HomeFix_KiemTraPhucHoi
+FROM DISK = N'D:\SQLBackup\HomeFix_Log_20261022.trn' WITH FILE = 1, RECOVERY;
+-- Nếu chỉ phục hồi FULL: thay NORECOVERY bằng RECOVERY ở lệnh FULL và bỏ DIFF/LOG.
+-- Nếu cần tới một thời điểm: thêm STOPAT = '2026-10-22T14:30:00' vào RESTORE LOG.
+-- FULL/DIFF/LOG phải cùng chuỗi hợp lệ. COPY_ONLY FULL không lập nền cho DIFF.
+
+-- 4. Kiểm tra CSDL được khôi phục. Không chạy web lên bản này ngoài ý muốn.
+DBCC CHECKDB(N'HomeFix_KiemTraPhucHoi') WITH NO_INFOMSGS;
+USE HomeFix_KiemTraPhucHoi;
+SELECT Id, HoTen, VaiTro FROM dbo.vw_NguoiDung;
+SELECT Id, TrangThai FROM dbo.vw_DonHangTongHop;
+SELECT Id, SoDu, SoDuSoCai, ChenhLech FROM dbo.vw_ViKyThuatVien;
+
+LỖI THƯỜNG GẶP:
+- 3201/Operating system error 3: sai đường dẫn trên máy SQL Server.
+- Operating system error 5: service account SQL Server thiếu quyền thư mục.
+- 4214: LOG chưa có full backup đầu tiên sau khi chuyển recovery model.
+- 3117/4305: sai thứ tự hoặc thiếu mắt xích LOG, phải kiểm tra HEADERONLY.
+- 3154: file thuộc database khác; dùng tên đích mới và MOVE đúng logical name.
+- 'database is in use': cần dùng master và đóng kết nối tới bản phục hồi.
+*/
