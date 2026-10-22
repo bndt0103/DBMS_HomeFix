@@ -143,7 +143,7 @@ test("Seed: đúng 7 vai trò, danh mục gốc, số dư 0 và không có giao 
     );
   assert.deepEqual(
     result.recordsets.map((rows) => rows[0].N),
-    [7, 5, 0, 0, 0, 0, 0],
+    [7, 4, 0, 0, 0, 0, 0],
   );
 });
 
@@ -160,7 +160,7 @@ test("Đăng nhập đủ 7 vai trò, public catalog; chặn sai mật khẩu v�
     assert.equal(data.user.MatKhauBam, undefined);
     assert.equal((await api("GET", "/auth/me", role)).Id, data.user.Id);
   }
-  assert.equal((await api("GET", "/services")).length, 5);
+  assert.equal((await api("GET", "/services")).length, 31);
   await api(
     "POST",
     "/auth/login",

@@ -15,15 +15,17 @@ import {
   useResource,
   useSession,
 } from "./components.jsx";
+import { Icon } from "./icons.jsx";
 
 const orderColumns = [
   ["Id", "Mã đơn"],
   ["TenDichVu", "Dịch vụ"],
   ["TenKhachHang", "Khách hàng"],
   ["TenKyThuatVien", "Kỹ thuật viên"],
-  ["TrangThai", "Trạng thái"],
+  ["TrangThai", "Trạng thái", (v) => <span className={`badge ${v === "HoanThanh" || v === "Huy" ? "closed" : ""}`}>{text(v)}</span>],
   ["NgayTao", "Ngày tạo", date],
 ];
+
 const decision = {
   name: "QuyetDinh",
   label: "Quyết định",
@@ -41,104 +43,599 @@ const amount = (name, label, defaultValue = 0) => ({
   defaultValue,
 });
 
-export function ServicesPage() {
+const popularServiceNames = [
+  "Sửa máy lạnh",
+  "Vệ sinh máy lạnh",
+  "Sửa tủ lạnh",
+  "Sửa máy giặt",
+  "Sửa điện tại nhà",
+  "Sửa máy bơm nước",
+  "Thông nghẹt bồn rửa chén",
+  "Sửa bồn cầu",
+];
+
+const categoryIcons = {
+  DienLanh: "snowflake",
+  DienGiaDung: "washingMachine",
+  DienNuoc: "plugZap",
+  VeSinh: "sparkles",
+};
+
+export function CustomerDashboard({ onNavigate, onBookService }) {
+  const { user } = useSession();
   const services = useResource("/services");
+  const orders = useResource("/orders");
+  const serviceList = rows(services.data);
+  const orderList = rows(orders.data);
+  const popular = serviceList
+    .filter((s) => popularServiceNames.includes(s.Ten))
+    .slice(0, 6);
+  const displayServices = popular.length ? popular : serviceList.slice(0, 6);
+
   return (
-    <Panel title="Dịch vụ đang cung cấp">
-      <Resource state={services}>
-        {(data) => (
+    <div className="customer-dashboard">
+      <section className="customer-hero">
+        <div className="hero-content">
+          <span className="eyebrow">CHĂM SÓC NHÀ CỬA, THẬT DỄ DÀNG</span>
+          <h1>
+            Nhà cần sửa?
+            <br />
+            <em>Đã có HomeFix.</em>
+          </h1>
+          <p>
+            Chào {user?.HoTen?.split(" ").at(-1) || user?.HoTen || "quý khách"}, đặt dịch vụ ngay để thiết bị trong nhà luôn hoạt động tốt.
+          </p>
+          <button className="btn primary" onClick={() => onNavigate("services")}>
+            Đặt dịch vụ ngay <Icon name="arrowRight" size={17} />
+          </button>
+          <div className="hero-trust">
+            <span>
+              <Icon name="shield" size={15} /> Giá rõ ràng
+            </span>
+            <span>
+              <Icon name="check" size={15} /> Đặt lịch thuận tiện
+            </span>
+          </div>
+        </div>
+        <div className="hero-visual" aria-hidden="true">
+          <div className="hero-circle">
+            <Icon name="washingMachine" size={96} />
+            <span className="orbit one">
+              <Icon name="snowflake" size={24} />
+            </span>
+            <span className="orbit two">
+              <Icon name="plugZap" size={24} />
+            </span>
+            <span className="orbit three">
+              <Icon name="droplets" size={24} />
+            </span>
+          </div>
+          <div className="hero-label">
+            <Icon name="shield" size={22} />
+            <div>
+              <b>An tâm từng dịch vụ</b>
+              <small>Xác nhận trước khi sửa chữa</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="section-head">
+        <div>
+          <span className="eyebrow">GIẢI PHÁP CHO NGÔI NHÀ</span>
+          <h2>Dịch vụ phổ biến</h2>
+        </div>
+        <button className="link" onClick={() => onNavigate("services")}>
+          Xem tất cả ({serviceList.length}) <Icon name="arrowRight" size={14} />
+        </button>
+      </div>
+
+      <div className="service-grid">
+        {displayServices.map((service, index) => {
+          const iconName = categoryIcons[service.MaDanhMuc] || "wrench";
+          return (
+            <div className="service-card" key={service.Id}>
+              <div className={`service-art color-${index % 4}`}>
+                <Icon name={iconName} size={46} />
+                <span>{service.TenDanhMuc || "Dịch vụ"}</span>
+              </div>
+              <div className="service-copy">
+                <h3>{service.Ten}</h3>
+                <p>{service.MoTa || "Dịch vụ sửa chữa và bảo dưỡng chất lượng cao tại nhà."}</p>
+                <div className="service-price">
+                  <div>
+                    <small>Tiền công tham khảo</small>
+                    <strong>{money(service.TienCong)}</strong>
+                  </div>
+                  <button
+                    className="circle-arrow"
+                    title="Đặt dịch vụ"
+                    onClick={() => onBookService ? onBookService(service.Id) : onNavigate("services")}
+                  >
+                    <Icon name="arrowRight" size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="section-head">
+        <h2>Đơn dịch vụ gần đây</h2>
+        <button className="link" onClick={() => onNavigate("orders")}>
+          Xem lịch sử <Icon name="arrowRight" size={14} />
+        </button>
+      </div>
+
+      {orderList.length ? (
+        <div className="order-list">
+          {orderList.slice(0, 3).map((order) => (
+            <div className="order-card" key={order.Id}>
+              <div className="order-symbol">
+                <Icon name="clipboard" size={24} />
+              </div>
+              <div className="order-main">
+                <span className="badge">{text(order.TrangThai)}</span>
+                <h3>{order.TenDichVu}</h3>
+                <p>{order.DiaChi}</p>
+                <small>Tạo lúc: {date(order.NgayTao)}</small>
+              </div>
+              <button
+                className="secondary"
+                onClick={() => onNavigate("orders")}
+              >
+                Chi tiết
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="empty-card">
+          <p>Bạn chưa có đơn dịch vụ nào. Khi cần sửa chữa, hãy đặt dịch vụ ngay.</p>
+        </div>
+      )}
+
+      <div className="benefit-row">
+        <div>
+          <Icon name="shield" size={28} />
+          <h3>Báo giá minh bạch</h3>
+          <p>Xem báo giá và thống nhất chi phí trước khi sửa chữa.</p>
+        </div>
+        <div>
+          <Icon name="clipboard" size={28} />
+          <h3>Chủ động thời gian</h3>
+          <p>Đặt ngay hoặc chọn lịch hẹn phù hợp.</p>
+        </div>
+        <div>
+          <Icon name="star" size={28} />
+          <h3>Lắng nghe phản hồi</h3>
+          <p>Đánh giá và gửi yêu cầu hỗ trợ sau dịch vụ.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ServicesPage({ initialServiceId }) {
+  const services = useResource("/services");
+  const categories = useResource("/categories");
+  const [selectedGroup, setSelectedGroup] = useState("all");
+  const [search, setSearch] = useState("");
+  const [bookingService, setBookingService] = useState(() => initialServiceId || null);
+
+  const serviceList = rows(services.data);
+  const categoryList = rows(categories.data);
+
+  const filtered = serviceList.filter((s) => {
+    const matchCategory = selectedGroup === "all" || s.MaDanhMuc === selectedGroup || s.DanhMucId === Number(selectedGroup);
+    const matchSearch = !search.trim() || s.Ten.toLowerCase().includes(search.toLowerCase()) || (s.MoTa && s.MoTa.toLowerCase().includes(search.toLowerCase()));
+    return matchCategory && matchSearch;
+  });
+
+  const activeService = serviceList.find((s) => s.Id === Number(bookingService));
+
+  return (
+    <>
+      <div className="page-head">
+        <span className="eyebrow">DỊCH VỤ TẠI NHÀ</span>
+        <h1>Bạn cần HomeFix hỗ trợ gì?</h1>
+        <p>Chọn dịch vụ phù hợp. Báo giá chính thức sẽ được gửi để bạn xác nhận trước khi phân công thợ.</p>
+      </div>
+
+      <div className="filter-bar">
+        <input
+          type="search"
+          placeholder="Tìm kiếm dịch vụ (ví dụ: Sửa máy lạnh, Sửa điện...)"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ maxWidth: 360 }}
+        />
+      </div>
+
+      <div className="tabs">
+        <button
+          className={selectedGroup === "all" ? "active" : ""}
+          onClick={() => setSelectedGroup("all")}
+        >
+          Tất cả dịch vụ ({serviceList.length})
+        </button>
+        {categoryList.map((c) => (
+          <button
+            key={c.Id || c.Ma}
+            className={selectedGroup === (c.Ma || c.Id) ? "active" : ""}
+            onClick={() => setSelectedGroup(c.Ma || c.Id)}
+          >
+            {c.Ten}
+          </button>
+        ))}
+      </div>
+
+      {bookingService && activeService && (
+        <Panel title={`Đặt dịch vụ: ${activeService.Ten}`}>
+          <button className="secondary" onClick={() => setBookingService(null)}>
+            Đóng form đặt lịch
+          </button>
+          <ActionForm
+            title="Thông tin yêu cầu"
+            path="/orders"
+            fields={[
+              {
+                name: "DichVuId",
+                label: "Dịch vụ đã chọn",
+                required: true,
+                options: [[activeService.Id, activeService.Ten]],
+                defaultValue: activeService.Id,
+              },
+              {
+                name: "DiaChi",
+                label: "Địa chỉ thực hiện",
+                required: true,
+                maxLength: 500,
+              },
+              {
+                name: "MoTa",
+                label: "Mô tả tình trạng hư hỏng",
+                required: true,
+                type: "textarea",
+              },
+              {
+                name: "NgayHen",
+                label: "Ngày giờ hẹn mong muốn (tùy chọn)",
+                type: "datetime-local",
+              },
+            ]}
+            submit="Tạo đơn dịch vụ"
+            onDone={() => setBookingService(null)}
+          />
+        </Panel>
+      )}
+
+      <div className="service-grid">
+        {filtered.map((service, index) => {
+          const iconName = categoryIcons[service.MaDanhMuc] || "wrench";
+          return (
+            <div className="service-card" key={service.Id}>
+              <div className={`service-art color-${index % 4}`}>
+                <Icon name={iconName} size={46} />
+                <span>{service.TenDanhMuc || "Dịch vụ"}</span>
+              </div>
+              <div className="service-copy">
+                <h3>{service.Ten}</h3>
+                <p>{service.MoTa || "Dịch vụ sửa chữa và bảo dưỡng uy tín, báo giá minh bạch."}</p>
+                <div className="service-price">
+                  <div>
+                    <small>Tiền công tham khảo</small>
+                    <strong>{money(service.TienCong)}</strong>
+                  </div>
+                  <button
+                    className="btn small primary"
+                    onClick={() => setBookingService(service.Id)}
+                  >
+                    Đặt ngay
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+export function TechnicianOverview({ onNavigate }) {
+  const technician = useResource("/technician/me");
+  const orders = useResource("/orders");
+  const wallet = useResource("/wallet");
+  const { api, changed } = useSession();
+
+  const techRow = rows(technician.data)[0];
+  const orderList = rows(orders.data);
+  const activeOrders = orderList.filter((o) => !["HoanThanh", "Huy"].includes(o.TrangThai));
+  const pendingAssignment = orderList.filter((o) => o.TrangThai === "ChoNhan");
+  const isAvailable = techRow?.TrangThaiSanSang === "SanSang";
+
+  async function toggleAvailability() {
+    if (!techRow) return;
+    const next = isAvailable ? "TamBan" : "SanSang";
+    await api("/technician/status", {
+      method: "PATCH",
+      body: {
+        TrangThaiSanSang: next,
+        PhienBanDuKien: techRow.PhienBan,
+      },
+    });
+    changed(isAvailable ? "Đã chuyển sang tạm nghỉ." : "Đã bật sẵn sàng nhận việc.");
+  }
+
+  return (
+    <>
+      <div className="page-head">
+        <span className="eyebrow">HOMEFIX PARTNER</span>
+        <h1>Sẵn sàng cho một ngày làm việc?</h1>
+        <p>Theo dõi ca làm, phản hồi lệnh và cập nhật tiến độ tại đây.</p>
+      </div>
+
+      {pendingAssignment.length > 0 && (
+        <div className="notice warning">
+          <div>
+            <b>Bạn có {pendingAssignment.length} đơn được phân công đang chờ nhận việc!</b>
+            <p>Vui lòng mở mục Công việc để phản hồi sớm nhất.</p>
+          </div>
+          <button className="btn primary" onClick={() => onNavigate("orders")}>
+            Xem đơn ngay
+          </button>
+        </div>
+      )}
+
+      {techRow && (
+        <div className="availability-card">
+          <div>
+            <span className="eyebrow">TRẠNG THÁI LÀM VIỆC</span>
+            <h2>
+              <span className={`status-dot ${isAvailable ? "on" : ""}`} />
+              {isAvailable ? "Sẵn sàng nhận việc" : "Tạm nghỉ"}
+            </h2>
+            <p>
+              {techRow.NhomTayNghe || "Chưa phân nhóm"} · {techRow.KhuVucPhucVu || "Toàn khu vực"}
+            </p>
+          </div>
+          <button
+            className={`btn ${isAvailable ? "secondary" : "primary"}`}
+            onClick={toggleAvailability}
+          >
+            {isAvailable ? "Tạm nghỉ" : "Bật sẵn sàng"}
+          </button>
+        </div>
+      )}
+
+      <div className="stat-grid">
+        <div className="stat-card">
+          <div className="stat-label">
+            Số dư ví <Icon name="wallet" size={18} />
+          </div>
+          <strong>{money(techRow?.SoDu || wallet.data?.KyThuatVien?.SoDu || 0)}</strong>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">
+            Công việc đang giữ <Icon name="clipboard" size={18} />
+          </div>
+          <strong>{activeOrders.length}</strong>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">
+            Đã hoàn thành <Icon name="check" size={18} />
+          </div>
+          <strong>{orderList.filter((o) => o.TrangThai === "HoanThanh").length}</strong>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">
+            Đánh giá trung bình <Icon name="star" size={18} />
+          </div>
+          <strong>4.9 / 5.0</strong>
+        </div>
+      </div>
+
+      <div className="section-head">
+        <h2>Công việc cần xử lý ({activeOrders.length})</h2>
+        <button className="link" onClick={() => onNavigate("orders")}>
+          Xem tất cả <Icon name="arrowRight" size={14} />
+        </button>
+      </div>
+
+      {activeOrders.length ? (
+        <div className="order-list">
+          {activeOrders.map((o) => (
+            <div className="order-card" key={o.Id}>
+              <div className="order-symbol">
+                <Icon name="clipboard" size={24} />
+              </div>
+              <div className="order-main">
+                <span className="badge">{text(o.TrangThai)}</span>
+                <h3>{o.TenDichVu}</h3>
+                <p>Khách hàng: {o.TenKhachHang} · {o.DiaChi}</p>
+                <small>Ngày tạo: {date(o.NgayTao)}</small>
+              </div>
+              <button className="secondary" onClick={() => onNavigate("orders")}>
+                Xem ca làm
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="empty-card">
+          <p>Chưa có ca làm đang chờ. Hãy bật sẵn sàng để nhận điều phối công việc mới.</p>
+        </div>
+      )}
+    </>
+  );
+}
+
+export function DispatcherHub() {
+  const [tab, setTab] = useState("intake");
+  const [selectedId, setSelectedId] = useState(null);
+  const orders = useResource("/orders");
+  const services = useResource("/services");
+  const technicians = useResource("/technicians");
+
+  const orderList = rows(orders.data);
+  const serviceList = rows(services.data);
+
+  const intakeOrders = orderList.filter((o) => ["ChoTiepNhan", "ChoDuyetSoBo"].includes(o.TrangThai));
+  const assignOrders = orderList.filter((o) => o.TrangThai === "ChoPhanCong");
+  const waitingOrders = orderList.filter((o) => o.TrangThai === "ChoNhan");
+  const historyOrders = orderList.filter((o) => ["HoanThanh", "Huy"].includes(o.TrangThai));
+
+  const currentList = {
+    intake: intakeOrders,
+    assign: assignOrders,
+    waiting: waitingOrders,
+    history: historyOrders,
+  }[tab] || intakeOrders;
+
+  return (
+    <>
+      <div className="page-head">
+        <span className="eyebrow">BÀN ĐIỀU PHỐI</span>
+        <h1>Công việc điều phối</h1>
+        <p>Tiếp nhận, chẩn đoán báo giá sơ bộ và phân công kỹ thuật viên phù hợp.</p>
+      </div>
+
+      <div className="tabs">
+        <button className={tab === "intake" ? "active" : ""} onClick={() => { setTab("intake"); setSelectedId(null); }}>
+          Tiếp nhận & Báo giá ({intakeOrders.length})
+        </button>
+        <button className={tab === "assign" ? "active" : ""} onClick={() => { setTab("assign"); setSelectedId(null); }}>
+          Phân công kỹ thuật viên ({assignOrders.length})
+        </button>
+        <button className={tab === "waiting" ? "active" : ""} onClick={() => { setTab("waiting"); setSelectedId(null); }}>
+          Chờ thợ nhận ({waitingOrders.length})
+        </button>
+        <button className={tab === "history" ? "active" : ""} onClick={() => { setTab("history"); setSelectedId(null); }}>
+          Lịch sử điều phối ({historyOrders.length})
+        </button>
+      </div>
+
+      <div className="two-column">
+        <Panel title={`Danh sách (${currentList.length})`}>
           <Table
-            data={data}
+            data={currentList}
             columns={[
               ["Id", "Mã"],
-              ["TenDanhMuc", "Danh mục"],
-              ["Ten", "Tên dịch vụ"],
-              ["MoTa", "Mô tả"],
-              ["PhiKiemTra", "Phí kiểm tra", money],
-              ["TienCong", "Tiền công tham khảo", money],
+              ["TenDichVu", "Dịch vụ"],
+              ["TenKhachHang", "Khách hàng"],
+              ["TrangThai", "Trạng thái", (v) => <span className="badge">{text(v)}</span>],
             ]}
+            actions={(row) => (
+              <button
+                className={selectedId === row.Id ? "primary" : "secondary"}
+                onClick={() => setSelectedId(row.Id)}
+              >
+                Xử lý
+              </button>
+            )}
           />
-        )}
-      </Resource>
-    </Panel>
+        </Panel>
+
+        <div>
+          {selectedId ? (
+            <OrderDetail id={selectedId} close={() => setSelectedId(null)} services={serviceList} />
+          ) : (
+            <div className="empty-card">
+              <p>Chọn một đơn dịch vụ ở danh sách bên trái để tiếp nhận, báo giá hoặc phân công thợ.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 
 export function OrdersPage() {
   const { user } = useSession();
   const [selected, setSelected] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [search, setSearch] = useState("");
   const orders = useResource("/orders");
   const services = useResource("/services");
+
+  const orderList = rows(orders.data);
+  const serviceList = rows(services.data);
+
+  const filtered = orderList.filter((o) => {
+    const matchStatus = !statusFilter || o.TrangThai === statusFilter;
+    const matchSearch =
+      !search.trim() ||
+      String(o.Id).includes(search.trim()) ||
+      (o.TenDichVu && o.TenDichVu.toLowerCase().includes(search.toLowerCase())) ||
+      (o.TenKhachHang && o.TenKhachHang.toLowerCase().includes(search.toLowerCase()));
+    return matchStatus && matchSearch;
+  });
+
   return (
     <>
-      {user.VaiTro === "KH" && (
-        <ActionForm
-          title="Đặt dịch vụ mới"
-          path="/orders"
-          fields={[
-            {
-              name: "DichVuId",
-              label: "Dịch vụ",
-              required: true,
-              options: rows(services.data).map((s) => [s.Id, s.Ten]),
-            },
-            {
-              name: "DiaChi",
-              label: "Địa chỉ thực hiện",
-              required: true,
-              maxLength: 500,
-            },
-            {
-              name: "MoTa",
-              label: "Mô tả tình trạng",
-              required: true,
-              type: "textarea",
-            },
-            {
-              name: "NgayHen",
-              label: "Ngày giờ hẹn (tùy chọn)",
-              type: "datetime-local",
-            },
-          ]}
-          submit="Tạo đơn"
-          onDone={(result) => setSelected(rows(result)[0]?.Id || null)}
+      <div className="page-head">
+        <span className="eyebrow">HỆ THỐNG ĐƠN HÀNG</span>
+        <h1>{user.VaiTro === "KH" ? "Đơn của tôi" : user.VaiTro === "KTV" ? "Công việc của tôi" : "Đơn sửa chữa & bảo trì"}</h1>
+        <p>Theo dõi tiến độ, khảo sát vật tư, nghiệm thu và thanh toán.</p>
+      </div>
+
+      <div className="filter-bar">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          style={{ maxWidth: 220 }}
+        >
+          <option value="">Tất cả trạng thái</option>
+          <option value="ChoTiepNhan">Chờ tiếp nhận</option>
+          <option value="ChoPhanCong">Chờ phân công</option>
+          <option value="ChoNhan">Chờ thợ nhận</option>
+          <option value="DaTiepNhan">Đã tiếp nhận</option>
+          <option value="DangDiChuyen">Đang di chuyển</option>
+          <option value="DaDenNoi">Đã đến nơi</option>
+          <option value="DangXuLy">Đang xử lý</option>
+          <option value="HoanThanh">Hoàn thành</option>
+          <option value="Huy">Đã hủy</option>
+        </select>
+        <input
+          type="search"
+          placeholder="Tìm theo mã đơn, tên dịch vụ, khách..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ maxWidth: 300 }}
         />
-      )}
-      <Panel
-        title="Danh sách đơn dịch vụ"
-        hint="Chọn Chi tiết để xem tiến độ và thực hiện các bước thuộc vai trò của bạn."
-      >
-        <Resource state={orders}>
-          {(data) => (
-            <Table
-              data={data}
-              columns={orderColumns}
-              actions={(row) => (
-                <button onClick={() => setSelected(row.Id)}>
-                  Chi tiết #{row.Id}
-                </button>
-              )}
-            />
+      </div>
+
+      <Panel title={`Danh sách đơn (${filtered.length})`}>
+        <Table
+          data={filtered}
+          columns={orderColumns}
+          actions={(row) => (
+            <button className="primary" onClick={() => setSelected(row.Id)}>
+              Chi tiết #{row.Id}
+            </button>
           )}
-        </Resource>
+        />
       </Panel>
+
       {selected && (
         <OrderDetail
           key={selected}
           id={selected}
           close={() => setSelected(null)}
-          services={rows(services.data)}
+          services={serviceList}
         />
       )}
     </>
   );
 }
 
-function OrderDetail({ id, close, services }) {
+export function OrderDetail({ id, close, services }) {
   const detail = useResource(`/orders/${id}`);
   return (
     <Panel title={`Chi tiết đơn #${id}`}>
-      <button className="secondary" onClick={close}>
+      <button className="secondary" onClick={close} style={{ marginBottom: 16 }}>
         Đóng chi tiết
       </button>
       <Resource state={detail}>
@@ -177,13 +674,14 @@ function OrderContent({ data, services }) {
     DangDiChuyen: "DaDenNoi",
     DaDenNoi: "DangXuLy",
   }[order.TrangThai];
+
   return (
     <div className="order-detail">
       <Details
         row={order}
         fields={[
           ["TenDichVu", "Dịch vụ"],
-          ["TrangThai", "Trạng thái"],
+          ["TrangThai", "Trạng thái", (v) => <span className="badge">{text(v)}</span>],
           ["TenKhachHang", "Khách hàng"],
           ["TenKyThuatVien", "Kỹ thuật viên"],
           ["DiaChi", "Địa chỉ"],
@@ -258,6 +756,7 @@ function OrderContent({ data, services }) {
       {dispatcher && order.TrangThai === "ChoPhanCong" && (
         <AssignmentForm order={order} />
       )}
+
       <h3>Điều phối kỹ thuật viên</h3>
       <Table
         data={assignments}
@@ -288,6 +787,7 @@ function OrderContent({ data, services }) {
             ]}
           />
         ))}
+
       {technician && nextStatus && (
         <ActionForm
           title={`Cập nhật tiến độ: ${text(nextStatus)}`}
@@ -300,6 +800,7 @@ function OrderContent({ data, services }) {
           fields={[reason]}
         />
       )}
+
       {(customer || dispatcher) && open && (
         <ActionForm
           title="Hủy đơn (theo điều kiện cho phép)"
@@ -531,43 +1032,17 @@ function OrderContent({ data, services }) {
             },
             ...(role !== "KH"
               ? [
-                  {
-                    name: "NoiBo",
-                    label: "Chỉ nhân viên xem",
-                    type: "checkbox",
-                  },
-                ]
+                {
+                  name: "NoiBo",
+                  label: "Chỉ nhân viên xem",
+                  type: "checkbox",
+                },
+              ]
               : []),
           ]}
         />
       )}
-      {customer && open && (
-        <ActionForm
-          title="Chia sẻ vị trí tại địa chỉ thực hiện"
-          path={`/orders/${order.Id}/location`}
-          method="PUT"
-          fields={[
-            {
-              name: "ViDo",
-              label: "Vĩ độ",
-              type: "number",
-              required: true,
-              min: -90,
-              max: 90,
-              step: 0.000001,
-            },
-            {
-              name: "KinhDo",
-              label: "Kinh độ",
-              type: "number",
-              required: true,
-              min: -180,
-              max: 180,
-              step: 0.000001,
-            },
-          ]}
-        />
-      )}
+
       <h3>Lịch sử trạng thái</h3>
       <Table
         data={data.LichSu}

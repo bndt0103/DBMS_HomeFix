@@ -3969,17 +3969,47 @@ BEGIN TRY
     INSERT INTO dbo.KyThuatVien(Id, NhomTayNghe, KhuVucPhucVu, TrangThaiSanSang, SoDu)
     SELECT Id, N'Điện, Nước, Điện lạnh', N'Thành phố Hồ Chí Minh', 'SanSang', 0 FROM dbo.NguoiDung WHERE VaiTro = 'KTV';
     INSERT INTO dbo.DanhMucDichVu(Ten, Ma)
-    VALUES (N'Điện', 'DIEN'), (N'Nước', 'NUOC'), (N'Điện lạnh', 'DIEN_LANH'), (N'Đồ gỗ', 'DO_GO'), (N'Khóa', 'KHOA');
+    VALUES (N'Điện lạnh', 'DienLanh'),
+           (N'Điện gia dụng', 'DienGiaDung'),
+           (N'Điện nước', 'DienNuoc'),
+           (N'Vệ sinh & bảo trì', 'VeSinh');
+
     INSERT INTO dbo.DichVu(DanhMucId, Ten, MoTa, PhiKiemTra, TienCong, TyLeHoaHong)
-    SELECT Id, N'Kiểm tra và sửa chữa điện', N'Sửa ổ cắm, công tắc và sự cố điện gia đình.', 50000, 150000, 15 FROM dbo.DanhMucDichVu WHERE Ma = 'DIEN';
-    INSERT INTO dbo.DichVu(DanhMucId, Ten, MoTa, PhiKiemTra, TienCong, TyLeHoaHong)
-    SELECT Id, N'Kiểm tra và sửa chữa nước', N'Khắc phục rò rỉ và thay phụ kiện đường nước.', 50000, 150000, 15 FROM dbo.DanhMucDichVu WHERE Ma = 'NUOC';
-    INSERT INTO dbo.DichVu(DanhMucId, Ten, MoTa, PhiKiemTra, TienCong, TyLeHoaHong)
-    SELECT Id, N'Bảo dưỡng máy lạnh', N'Kiểm tra và vệ sinh máy lạnh gia đình.', 50000, 200000, 15 FROM dbo.DanhMucDichVu WHERE Ma = 'DIEN_LANH';
-    INSERT INTO dbo.DichVu(DanhMucId, Ten, MoTa, PhiKiemTra, TienCong, TyLeHoaHong)
-    SELECT Id, N'Sửa đồ gỗ gia đình', N'Sửa bản lề, cánh tủ và phụ kiện đồ gỗ.', 50000, 180000, 15 FROM dbo.DanhMucDichVu WHERE Ma = 'DO_GO';
-    INSERT INTO dbo.DichVu(DanhMucId, Ten, MoTa, PhiKiemTra, TienCong, TyLeHoaHong)
-    SELECT Id, N'Sửa và thay khóa', N'Kiểm tra, sửa hoặc thay khóa dân dụng.', 50000, 150000, 15 FROM dbo.DanhMucDichVu WHERE Ma = 'KHOA';
+    SELECT c.Id, s.Ten, s.MoTa, s.PhiKiemTra, s.TienCong, 15
+    FROM (VALUES
+      ('DienLanh', N'Sửa máy lạnh', N'Kiểm tra và sửa máy lạnh không lạnh, chảy nước.', 50000, 300000),
+      ('DienLanh', N'Vệ sinh máy lạnh', N'Bảo dưỡng, vệ sinh dàn lạnh và dàn nóng.', 30000, 180000),
+      ('DienLanh', N'Sửa tủ lạnh', N'Khắc phục lỗi tủ lạnh không đông đá, hở ron.', 50000, 300000),
+      ('DienGiaDung', N'Sửa máy giặt', N'Sửa máy giặt mất nguồn, báo lỗi, không vắt.', 50000, 250000),
+      ('DienNuoc', N'Sửa điện nước', N'Sửa rò rỉ, đường ống và thiết bị điện gia đình.', 50000, 200000),
+      ('VeSinh', N'Vệ sinh thiết bị', N'Làm sạch và bảo trì định kỳ thiết bị gia đình.', 30000, 150000),
+      ('DienNuoc', N'Sửa điện tại nhà', N'Khắc phục sự cố chập điện, mất điện, nhảy aptomat.', 50000, 200000),
+      ('DienNuoc', N'Sửa điện 3 pha', N'Khắc phục sự cố tủ điện 3 pha, cân pha công nghiệp.', 100000, 500000),
+      ('DienNuoc', N'Lắp quạt trần', N'Thi công và lắp ráp các loại quạt trần dân dụng.', 50000, 250000),
+      ('DienNuoc', N'Sửa quạt trần', N'Sửa chữa quạt trần không quay, kêu to, hỏng tụ.', 30000, 150000),
+      ('DienNuoc', N'Thi công đèn trong nhà', N'Lắp đặt, đi dây và thiết kế hệ thống chiếu sáng.', 50000, 300000),
+      ('DienNuoc', N'Sửa ống nước tại nhà', N'Khắc phục các sự cố bục vỡ, rò rỉ đường ống nước.', 50000, 150000),
+      ('DienNuoc', N'Sửa máy bơm nước', N'Kiểm tra và sửa chữa máy bơm nước không lên nước, kêu to.', 50000, 250000),
+      ('DienNuoc', N'Lắp phao nước tự động', N'Lắp đặt phao điện, phao cơ ngắt nước tự động.', 30000, 150000),
+      ('DienNuoc', N'Thông nghẹt bồn rửa chén', N'Xử lý triệt để bồn rửa chén bị tắc nghẽn nước.', 50000, 250000),
+      ('DienNuoc', N'Sửa vòi rửa bát', N'Khắc phục vòi rửa bát bị rò rỉ nước, gãy vòi.', 30000, 100000),
+      ('DienNuoc', N'Thay vòi hoa sen', N'Lắp mới, thay thế bộ vòi hoa sen nhà tắm.', 30000, 150000),
+      ('DienNuoc', N'Sửa bồn cầu', N'Sửa bồn cầu rỉ nước, hỏng phao, nút nhấn không được.', 50000, 200000),
+      ('DienNuoc', N'Dò tìm rò rỉ nước ngầm', N'Sử dụng máy siêu âm tìm điểm vỡ ống nước ngầm âm tường/nền.', 100000, 800000),
+      ('DienLanh', N'Bơm gas máy lạnh', N'Kiểm tra và châm thêm gas cho máy lạnh.', 50000, 350000),
+      ('DienLanh', N'Vệ sinh máy lạnh âm trần', N'Bảo dưỡng máy lạnh cassette, máy lạnh âm trần ống gió.', 100000, 450000),
+      ('DienLanh', N'Sửa tủ mát, tủ đông', N'Bơm gas, thay lốc tủ đông công nghiệp/nhà hàng.', 100000, 500000),
+      ('DienGiaDung', N'Vệ sinh máy giặt lồng ngang', N'Tháo lồng và vệ sinh máy giặt cửa trước.', 50000, 400000),
+      ('DienGiaDung', N'Vệ sinh máy giặt lồng đứng', N'Tháo lồng và vệ sinh máy giặt cửa trên.', 50000, 250000),
+      ('DienGiaDung', N'Sửa lò vi sóng', N'Sửa lò vi sóng mất nguồn, không nóng.', 50000, 200000),
+      ('DienGiaDung', N'Sửa máy nước nóng năng lượng mặt trời', N'Khắc phục rò rỉ, thay ống thủy tinh năng lượng mặt trời.', 100000, 400000),
+      ('DienGiaDung', N'Sửa máy nước nóng', N'Sửa máy nước nóng trực tiếp/gián tiếp không nóng.', 50000, 250000),
+      ('VeSinh', N'Vệ sinh bồn nước inox', N'Súc rửa cặn bẩn bồn nước inox trên cao.', 50000, 350000),
+      ('VeSinh', N'Vệ sinh bồn nước ngầm', N'Hút cặn và khử khuẩn bể nước ngầm bằng máy.', 100000, 600000),
+      ('VeSinh', N'Vệ sinh sofa tại nhà', N'Giặt sofa nỉ, sofa da bằng công nghệ hơi nước.', 50000, 450000),
+      ('VeSinh', N'Rút hầm cầu', N'Hút hầm cầu, nạo vét hố ga, xử lý mùi hôi.', 150000, 800000)
+    ) AS s(MaNhom, Ten, MoTa, PhiKiemTra, TienCong)
+    INNER JOIN dbo.DanhMucDichVu c ON c.Ma = s.MaNhom;
     INSERT INTO dbo.TaiKhoanNganHang(MaNganHang, TenNganHang, SoTaiKhoan, ChuTaiKhoan)
     VALUES ('DEMO', N'Ngân hàng mô phỏng - không chuyển tiền thật', '000000000000', N'HOMEFIX DEMO');
     INSERT INTO dbo.CauHinh(Khoa, GiaTri, NhanHienThi)
@@ -4057,56 +4087,55 @@ BEGIN
     END CATCH;
 END;
 GO
-/* CÁCH DEMO TRONG SSMS - chạy từng khối sau khi sửa tên database/đường dẫn:
-
+-- CÁCH DEMO TRONG SSMS - chạy từng khối sau khi sửa tên database/đường dẫn:
+--
 -- 1. Chọn database muốn sao lưu, ghi nhận recovery model trước khi thay đổi.
-SELECT name, recovery_model_desc FROM sys.databases WHERE name = DB_NAME();
+-- SELECT name, recovery_model_desc FROM sys.databases WHERE name = DB_NAME();
 -- Dùng đường dẫn tồn tại, service account SQL có quyền ghi. Ví dụ D:\SQLBackup.
 -- Không chạy trên database đang có giao dịch nghiệp vụ ngoài ý muốn.
-ALTER DATABASE HomeFix_DBMS_Sach SET RECOVERY FULL;
-GO
-USE HomeFix_DBMS_Sach;
-GO
-EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Full_20261022.bak', @Loai = 'FULL';
-EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Diff_20261022.bak', @Loai = 'DIFF';
-EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Log_20261022.trn', @Loai = 'LOG';
-
+-- ALTER DATABASE HomeFix_DBMS_Sach SET RECOVERY FULL;
+-- GO
+-- USE HomeFix_DBMS_Sach;
+-- GO
+-- EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Full_20261022.bak', @Loai = 'FULL';
+-- EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Diff_20261022.bak', @Loai = 'DIFF';
+-- EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Log_20261022.trn', @Loai = 'LOG';
+--
 -- 2. Xem thông tin backup set/logical name và kiểm tra backup có đọc được.
 -- FILE = 1 phù hợp tập tin mới. Nếu đã backup nhiều lần cùng tập tin,
 -- RESTORE HEADERONLY để chọn đúng Position, không mặc định bản mới nhất ở số 1.
-RESTORE HEADERONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak';
-RESTORE FILELISTONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak' WITH FILE = 1;
-RESTORE VERIFYONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak' WITH FILE = 1, CHECKSUM;
+-- RESTORE HEADERONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak';
+-- RESTORE FILELISTONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak' WITH FILE = 1;
+-- RESTORE VERIFYONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak' WITH FILE = 1, CHECKSUM;
 -- VERIFYONLY kiểm tra backup; chưa chứng minh toàn bộ CSDL phục hồi hoạt động.
-
+--
 -- 3. Khôi phục ra TÊN MỚI, không WITH REPLACE. Sửa logical name theo FILELISTONLY.
-USE master;
-GO
-RESTORE DATABASE HomeFix_KiemTraPhucHoi
-FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak'
-WITH FILE = 1, NORECOVERY,
-    MOVE N'HomeFix_DBMS_Sach' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi.mdf',
-    MOVE N'HomeFix_DBMS_Sach_log' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi_log.ldf';
-RESTORE DATABASE HomeFix_KiemTraPhucHoi
-FROM DISK = N'D:\SQLBackup\HomeFix_Diff_20261022.bak' WITH FILE = 1, NORECOVERY;
-RESTORE LOG HomeFix_KiemTraPhucHoi
-FROM DISK = N'D:\SQLBackup\HomeFix_Log_20261022.trn' WITH FILE = 1, RECOVERY;
+-- USE master;
+-- GO
+-- RESTORE DATABASE HomeFix_KiemTraPhucHoi
+-- FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak'
+-- WITH FILE = 1, NORECOVERY,
+--     MOVE N'HomeFix_DBMS_Sach' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi.mdf',
+--     MOVE N'HomeFix_DBMS_Sach_log' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi_log.ldf';
+-- RESTORE DATABASE HomeFix_KiemTraPhucHoi
+-- FROM DISK = N'D:\SQLBackup\HomeFix_Diff_20261022.bak' WITH FILE = 1, NORECOVERY;
+-- RESTORE LOG HomeFix_KiemTraPhucHoi
+-- FROM DISK = N'D:\SQLBackup\HomeFix_Log_20261022.trn' WITH FILE = 1, RECOVERY;
 -- Nếu chỉ phục hồi FULL: thay NORECOVERY bằng RECOVERY ở lệnh FULL và bỏ DIFF/LOG.
 -- Nếu cần tới một thời điểm: thêm STOPAT = '2026-10-22T14:30:00' vào RESTORE LOG.
 -- FULL/DIFF/LOG phải cùng chuỗi hợp lệ. COPY_ONLY FULL không lập nền cho DIFF.
-
+--
 -- 4. Kiểm tra CSDL được khôi phục. Không chạy web lên bản này ngoài ý muốn.
-DBCC CHECKDB(N'HomeFix_KiemTraPhucHoi') WITH NO_INFOMSGS;
-USE HomeFix_KiemTraPhucHoi;
-SELECT Id, HoTen, VaiTro FROM dbo.vw_NguoiDung;
-SELECT Id, TrangThai FROM dbo.vw_DonHangTongHop;
-SELECT Id, SoDu, SoDuSoCai, ChenhLech FROM dbo.vw_ViKyThuatVien;
-
-LỖI THƯỜNG GẶP:
-- 3201/Operating system error 3: sai đường dẫn trên máy SQL Server.
-- Operating system error 5: service account SQL Server thiếu quyền thư mục.
-- 4214: LOG chưa có full backup đầu tiên sau khi chuyển recovery model.
-- 3117/4305: sai thứ tự hoặc thiếu mắt xích LOG, phải kiểm tra HEADERONLY.
-- 3154: file thuộc database khác; dùng tên đích mới và MOVE đúng logical name.
-- 'database is in use': cần dùng master và đóng kết nối tới bản phục hồi.
-*/
+-- DBCC CHECKDB(N'HomeFix_KiemTraPhucHoi') WITH NO_INFOMSGS;
+-- USE HomeFix_KiemTraPhucHoi;
+-- SELECT Id, HoTen, VaiTro FROM dbo.vw_NguoiDung;
+-- SELECT Id, TrangThai FROM dbo.vw_DonHangTongHop;
+-- SELECT Id, SoDu, SoDuSoCai, ChenhLech FROM dbo.vw_ViKyThuatVien;
+--
+-- LỖI THƯỜNG GẶP:
+-- - 3201/Operating system error 3: sai đường dẫn trên máy SQL Server.
+-- - Operating system error 5: service account SQL Server thiếu quyền thư mục.
+-- - 4214: LOG chưa có full backup đầu tiên sau khi chuyển recovery model.
+-- - 3117/4305: sai thứ tự hoặc thiếu mắt xích LOG, phải kiểm tra HEADERONLY.
+-- - 3154: file thuộc database khác; dùng tên đích mới và MOVE đúng logical name.
+-- - 'database is in use': cần dùng master và đóng kết nối tới bản phục hồi.

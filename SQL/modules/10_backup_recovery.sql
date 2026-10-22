@@ -44,56 +44,56 @@ BEGIN
     END CATCH;
 END;
 GO
-/* CÁCH DEMO TRONG SSMS - chạy từng khối sau khi sửa tên database/đường dẫn:
-
+-- CÁCH DEMO TRONG SSMS - chạy từng khối sau khi sửa tên database/đường dẫn:
+--
 -- 1. Chọn database muốn sao lưu, ghi nhận recovery model trước khi thay đổi.
-SELECT name, recovery_model_desc FROM sys.databases WHERE name = DB_NAME();
+-- SELECT name, recovery_model_desc FROM sys.databases WHERE name = DB_NAME();
 -- Dùng đường dẫn tồn tại, service account SQL có quyền ghi. Ví dụ D:\SQLBackup.
 -- Không chạy trên database đang có giao dịch nghiệp vụ ngoài ý muốn.
-ALTER DATABASE HomeFix_DBMS_Sach SET RECOVERY FULL;
-GO
-USE HomeFix_DBMS_Sach;
-GO
-EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Full_20261022.bak', @Loai = 'FULL';
-EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Diff_20261022.bak', @Loai = 'DIFF';
-EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Log_20261022.trn', @Loai = 'LOG';
-
+-- ALTER DATABASE HomeFix_DBMS_Sach SET RECOVERY FULL;
+-- GO
+-- USE HomeFix_DBMS_Sach;
+-- GO
+-- EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Full_20261022.bak', @Loai = 'FULL';
+-- EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Diff_20261022.bak', @Loai = 'DIFF';
+-- EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Log_20261022.trn', @Loai = 'LOG';
+--
 -- 2. Xem thông tin backup set/logical name và kiểm tra backup có đọc được.
 -- FILE = 1 phù hợp tập tin mới. Nếu đã backup nhiều lần cùng tập tin,
 -- RESTORE HEADERONLY để chọn đúng Position, không mặc định bản mới nhất ở số 1.
-RESTORE HEADERONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak';
-RESTORE FILELISTONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak' WITH FILE = 1;
-RESTORE VERIFYONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak' WITH FILE = 1, CHECKSUM;
+-- RESTORE HEADERONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak';
+-- RESTORE FILELISTONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak' WITH FILE = 1;
+-- RESTORE VERIFYONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak' WITH FILE = 1, CHECKSUM;
 -- VERIFYONLY kiểm tra backup; chưa chứng minh toàn bộ CSDL phục hồi hoạt động.
-
+--
 -- 3. Khôi phục ra TÊN MỚI, không WITH REPLACE. Sửa logical name theo FILELISTONLY.
-USE master;
-GO
-RESTORE DATABASE HomeFix_KiemTraPhucHoi
-FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak'
-WITH FILE = 1, NORECOVERY,
-    MOVE N'HomeFix_DBMS_Sach' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi.mdf',
-    MOVE N'HomeFix_DBMS_Sach_log' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi_log.ldf';
-RESTORE DATABASE HomeFix_KiemTraPhucHoi
-FROM DISK = N'D:\SQLBackup\HomeFix_Diff_20261022.bak' WITH FILE = 1, NORECOVERY;
-RESTORE LOG HomeFix_KiemTraPhucHoi
-FROM DISK = N'D:\SQLBackup\HomeFix_Log_20261022.trn' WITH FILE = 1, RECOVERY;
+-- USE master;
+-- GO
+-- RESTORE DATABASE HomeFix_KiemTraPhucHoi
+-- FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak'
+-- WITH FILE = 1, NORECOVERY,
+--     MOVE N'HomeFix_DBMS_Sach' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi.mdf',
+--     MOVE N'HomeFix_DBMS_Sach_log' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi_log.ldf';
+-- RESTORE DATABASE HomeFix_KiemTraPhucHoi
+-- FROM DISK = N'D:\SQLBackup\HomeFix_Diff_20261022.bak' WITH FILE = 1, NORECOVERY;
+-- RESTORE LOG HomeFix_KiemTraPhucHoi
+-- FROM DISK = N'D:\SQLBackup\HomeFix_Log_20261022.trn' WITH FILE = 1, RECOVERY;
 -- Nếu chỉ phục hồi FULL: thay NORECOVERY bằng RECOVERY ở lệnh FULL và bỏ DIFF/LOG.
 -- Nếu cần tới một thời điểm: thêm STOPAT = '2026-10-22T14:30:00' vào RESTORE LOG.
 -- FULL/DIFF/LOG phải cùng chuỗi hợp lệ. COPY_ONLY FULL không lập nền cho DIFF.
-
+--
 -- 4. Kiểm tra CSDL được khôi phục. Không chạy web lên bản này ngoài ý muốn.
-DBCC CHECKDB(N'HomeFix_KiemTraPhucHoi') WITH NO_INFOMSGS;
-USE HomeFix_KiemTraPhucHoi;
-SELECT Id, HoTen, VaiTro FROM dbo.vw_NguoiDung;
-SELECT Id, TrangThai FROM dbo.vw_DonHangTongHop;
-SELECT Id, SoDu, SoDuSoCai, ChenhLech FROM dbo.vw_ViKyThuatVien;
+-- DBCC CHECKDB(N'HomeFix_KiemTraPhucHoi') WITH NO_INFOMSGS;
+-- USE HomeFix_KiemTraPhucHoi;
+-- SELECT Id, HoTen, VaiTro FROM dbo.vw_NguoiDung;
+-- SELECT Id, TrangThai FROM dbo.vw_DonHangTongHop;
+-- SELECT Id, SoDu, SoDuSoCai, ChenhLech FROM dbo.vw_ViKyThuatVien;
+--
+-- LỖI THƯỜNG GẶP:
+-- - 3201/Operating system error 3: sai đường dẫn trên máy SQL Server.
+-- - Operating system error 5: service account SQL Server thiếu quyền thư mục.
+-- - 4214: LOG chưa có full backup đầu tiên sau khi chuyển recovery model.
+-- - 3117/4305: sai thứ tự hoặc thiếu mắt xích LOG, phải kiểm tra HEADERONLY.
+-- - 3154: file thuộc database khác; dùng tên đích mới và MOVE đúng logical name.
+-- - 'database is in use': cần dùng master và đóng kết nối tới bản phục hồi.
 
-LỖI THƯỜNG GẶP:
-- 3201/Operating system error 3: sai đường dẫn trên máy SQL Server.
-- Operating system error 5: service account SQL Server thiếu quyền thư mục.
-- 4214: LOG chưa có full backup đầu tiên sau khi chuyển recovery model.
-- 3117/4305: sai thứ tự hoặc thiếu mắt xích LOG, phải kiểm tra HEADERONLY.
-- 3154: file thuộc database khác; dùng tên đích mới và MOVE đúng logical name.
-- 'database is in use': cần dùng master và đóng kết nối tới bản phục hồi.
-*/

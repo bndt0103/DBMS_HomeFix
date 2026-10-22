@@ -57,6 +57,13 @@ adminRouter.put(
   write("sp_LuuCauHinh", (req) => ({ Khoa: req.params.key })),
 );
 adminRouter.get(
+  "/audit",
+  roles("ADMIN"),
+  wrap(async (_req, res) =>
+    ok(res, await queryView("vw_NhatKy", {}, { order: "Id DESC" })),
+  ),
+);
+adminRouter.get(
   "/technicians",
   roles("DPV", "ADMIN", "CSKH"),
   wrap(async (_req, res) => ok(res, await queryView("vw_KyThuatVien"))),
