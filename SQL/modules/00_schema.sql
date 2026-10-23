@@ -73,12 +73,14 @@ CREATE TABLE dbo.DonHang (
     DiaChi NVARCHAR(400) NOT NULL,
     MoTa NVARCHAR(2000) NOT NULL,
     NgayHen DATETIME2(3) NULL,
+    PhiHuyDon DECIMAL(18,2) NOT NULL CONSTRAINT DF_DonHang_PhiHuy DEFAULT 0,
     TrangThai VARCHAR(20) NOT NULL CONSTRAINT DF_DonHang_TrangThai DEFAULT 'ChoTiepNhan',
     KyThuatVienId INT NULL CONSTRAINT FK_DonHang_KTV REFERENCES dbo.KyThuatVien(Id),
     NgayTao DATETIME2(3) NOT NULL CONSTRAINT DF_DonHang_NgayTao DEFAULT SYSUTCDATETIME(),
     NgayCapNhat DATETIME2(3) NOT NULL CONSTRAINT DF_DonHang_CapNhat DEFAULT SYSUTCDATETIME(),
     PhienBan ROWVERSION,
     CONSTRAINT CK_DonHang_TrangThai CHECK (TrangThai IN ('ChoTiepNhan','ChoDuyetSoBo','ChoPhanCong','ChoNhan','DaTiepNhan','DangDiChuyen','DaDenNoi','DangXuLy','ChoNghiemThu','HoanThanh','Huy')),
+    CONSTRAINT CK_DonHang_PhiHuy CHECK (PhiHuyDon >= 0 AND (PhiHuyDon = 0 OR (TrangThai = 'Huy' AND KyThuatVienId IS NOT NULL))),
     CONSTRAINT CK_DonHang_DiaChi CHECK (LEN(LTRIM(RTRIM(DiaChi))) >= 5)
 );
 CREATE TABLE dbo.LichSuDonHang (
@@ -115,28 +117,26 @@ CREATE TABLE dbo.BaoGiaSoBo (
     CONSTRAINT CK_BaoGiaSoBo_Gia CHECK (PhiKiemTra >= 0 AND TienCong >= 0 AND TyLeHoaHong BETWEEN 0 AND 100),
     CONSTRAINT CK_BaoGiaSoBo_TrangThai CHECK (TrangThai IN ('Pending','Approved','Rejected'))
 );
-CREATE TABLE dbo.DeXuatVatTu (
-    Id INT IDENTITY CONSTRAINT PK_DeXuatVatTu PRIMARY KEY,
-    DonHangId INT NOT NULL CONSTRAINT FK_DeXuatVatTu_Don REFERENCES dbo.DonHang(Id),
+CREATE TABLE dbo.BangKeVatTu (
+    Id INT IDENTITY CONSTRAINT PK_BangKeVatTu PRIMARY KEY,
+    DonHangId INT NOT NULL CONSTRAINT FK_BangKeVatTu_Don REFERENCES dbo.DonHang(Id),
     LanSuaDoi INT NOT NULL,
-    DangApDung BIT NOT NULL CONSTRAINT DF_DeXuatVatTu_ApDung DEFAULT 1,
-    TrangThai VARCHAR(10) NOT NULL CONSTRAINT DF_DeXuatVatTu_TrangThai DEFAULT 'Pending',
-    NguoiTaoId INT NOT NULL CONSTRAINT FK_DeXuatVatTu_NguoiTao REFERENCES dbo.NguoiDung(Id),
-    NgayTao DATETIME2(3) NOT NULL CONSTRAINT DF_DeXuatVatTu_Ngay DEFAULT SYSUTCDATETIME(),
+    DangApDung BIT NOT NULL CONSTRAINT DF_BangKeVatTu_ApDung DEFAULT 1,
+    NguoiTaoId INT NOT NULL CONSTRAINT FK_BangKeVatTu_NguoiTao REFERENCES dbo.NguoiDung(Id),
+    NgayTao DATETIME2(3) NOT NULL CONSTRAINT DF_BangKeVatTu_Ngay DEFAULT SYSUTCDATETIME(),
     PhienBan ROWVERSION,
-    CONSTRAINT UQ_DeXuatVatTu_PhienBan UNIQUE (DonHangId, LanSuaDoi),
-    CONSTRAINT CK_DeXuatVatTu_LanSuaDoi CHECK (LanSuaDoi > 0),
-    CONSTRAINT CK_DeXuatVatTu_TrangThai CHECK (TrangThai IN ('Pending','Approved','Rejected'))
+    CONSTRAINT UQ_BangKeVatTu_PhienBan UNIQUE (DonHangId, LanSuaDoi),
+    CONSTRAINT CK_BangKeVatTu_LanSuaDoi CHECK (LanSuaDoi > 0)
 );
-CREATE TABLE dbo.ChiTietDeXuatVatTu (
-    Id INT IDENTITY CONSTRAINT PK_ChiTietDeXuatVatTu PRIMARY KEY,
-    DeXuatVatTuId INT NOT NULL CONSTRAINT FK_ChiTietDeXuatVatTu_DeXuat REFERENCES dbo.DeXuatVatTu(Id),
+CREATE TABLE dbo.ChiTietVatTu (
+    Id INT IDENTITY CONSTRAINT PK_ChiTietVatTu PRIMARY KEY,
+    BangKeVatTuId INT NOT NULL CONSTRAINT FK_ChiTietVatTu_DeXuat REFERENCES dbo.BangKeVatTu(Id),
     Ten NVARCHAR(200) NOT NULL,
     SoLuong DECIMAL(10,2) NOT NULL,
     DonGia DECIMAL(18,2) NOT NULL,
-    SoThangBaoHanh INT NOT NULL CONSTRAINT DF_ChiTietDeXuatVatTu_BaoHanh DEFAULT 0,
+    SoThangBaoHanh INT NOT NULL CONSTRAINT DF_ChiTietVatTu_BaoHanh DEFAULT 0,
     ThanhTien AS (CONVERT(DECIMAL(18,2), SoLuong * DonGia)) PERSISTED,
-    CONSTRAINT CK_ChiTietDeXuatVatTu_Gia CHECK (SoLuong > 0 AND DonGia >= 0 AND SoThangBaoHanh BETWEEN 0 AND 120)
+    CONSTRAINT CK_ChiTietVatTu_Gia CHECK (SoLuong > 0 AND DonGia >= 0 AND SoThangBaoHanh BETWEEN 0 AND 120)
 );
 CREATE TABLE dbo.TepDinhKem (
     Id INT IDENTITY CONSTRAINT PK_TepDinhKem PRIMARY KEY,
@@ -148,7 +148,7 @@ CREATE TABLE dbo.TepDinhKem (
     KieuMIME VARCHAR(100) NOT NULL,
     KichThuoc INT NOT NULL,
     NgayTao DATETIME2(3) NOT NULL CONSTRAINT DF_TepDinhKem_Ngay DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT CK_TepDinhKem_MucDich CHECK (MucDich IN ('OrderFault','AcceptancePhoto','CustomerSignature','TechnicianSignature','WalletProof','PaymentProof','TechnicianDocument','Avatar')),
+    CONSTRAINT CK_TepDinhKem_MucDich CHECK (MucDich IN ('OrderFault','AcceptancePhoto','CustomerSignature','TechnicianSignature','WalletProof','MaterialEvidence','PaymentProof','TechnicianDocument','Avatar')),
     CONSTRAINT CK_TepDinhKem_KichThuoc CHECK (KichThuoc BETWEEN 1 AND 10485760),
     CONSTRAINT CK_TepDinhKem_MIME CHECK (KieuMIME IN ('image/jpeg','image/png','image/webp','application/pdf'))
 );
@@ -156,7 +156,7 @@ CREATE TABLE dbo.PhieuNghiemThu (
     Id INT IDENTITY CONSTRAINT PK_PhieuNghiemThu PRIMARY KEY,
     DonHangId INT NOT NULL CONSTRAINT FK_PhieuNghiemThu_Don REFERENCES dbo.DonHang(Id),
     KyThuatVienId INT NOT NULL CONSTRAINT FK_PhieuNghiemThu_KTV REFERENCES dbo.KyThuatVien(Id),
-    DeXuatVatTuId INT NULL CONSTRAINT FK_PhieuNghiemThu_VatTu REFERENCES dbo.DeXuatVatTu(Id),
+    BangKeVatTuId INT NULL CONSTRAINT FK_PhieuNghiemThu_VatTu REFERENCES dbo.BangKeVatTu(Id),
     NguyenNhan NVARCHAR(1000) NOT NULL,
     PhuongAnXuLy NVARCHAR(1000) NOT NULL,
     PhiKiemTra DECIMAL(18,2) NOT NULL,
@@ -189,13 +189,15 @@ CREATE TABLE dbo.TaiKhoanNganHang (
 CREATE TABLE dbo.ThanhToan (
     Id INT IDENTITY CONSTRAINT PK_ThanhToan PRIMARY KEY,
     DonHangId INT NOT NULL CONSTRAINT UQ_ThanhToan_Don UNIQUE CONSTRAINT FK_ThanhToan_Don REFERENCES dbo.DonHang(Id),
-    NghiemThuId INT NOT NULL CONSTRAINT UQ_ThanhToan_NghiemThu UNIQUE CONSTRAINT FK_ThanhToan_NghiemThu REFERENCES dbo.PhieuNghiemThu(Id),
+    LoaiThanhToan VARCHAR(12) NOT NULL CONSTRAINT DF_ThanhToan_Loai DEFAULT 'DichVu',
+    NghiemThuId INT NULL CONSTRAINT FK_ThanhToan_NghiemThu REFERENCES dbo.PhieuNghiemThu(Id),
     SoTien DECIMAL(18,2) NOT NULL,
     PhuongThuc VARCHAR(4) NOT NULL,
     NguoiThuTienId INT NOT NULL CONSTRAINT FK_ThanhToan_NguoiThu REFERENCES dbo.NguoiDung(Id),
     MaThamChieu VARCHAR(100) NULL,
     TaiKhoanNganHangId INT NULL CONSTRAINT FK_ThanhToan_NganHang REFERENCES dbo.TaiKhoanNganHang(Id),
     NgayTao DATETIME2(3) NOT NULL CONSTRAINT DF_ThanhToan_Ngay DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT CK_ThanhToan_Loai CHECK ((LoaiThanhToan = 'DichVu' AND NghiemThuId IS NOT NULL) OR (LoaiThanhToan = 'PhiHuyDon' AND NghiemThuId IS NULL AND PhuongThuc = 'BANK')),
     CONSTRAINT CK_ThanhToan_SoTien CHECK (SoTien > 0),
     CONSTRAINT CK_ThanhToan_PhuongThuc CHECK (PhuongThuc IN ('COD','BANK')),
     CONSTRAINT CK_ThanhToan_NganHang CHECK ((PhuongThuc = 'COD' AND TaiKhoanNganHangId IS NULL) OR (PhuongThuc = 'BANK' AND TaiKhoanNganHangId IS NOT NULL AND MaThamChieu IS NOT NULL))
@@ -218,7 +220,8 @@ CREATE TABLE dbo.DoiSoat (
 CREATE TABLE dbo.YeuCauThanhToan (
     Id INT IDENTITY CONSTRAINT PK_YeuCauThanhToan PRIMARY KEY,
     DonHangId INT NOT NULL CONSTRAINT FK_YeuCauThanhToan_Don REFERENCES dbo.DonHang(Id),
-    NghiemThuId INT NOT NULL CONSTRAINT FK_YeuCauThanhToan_NghiemThu REFERENCES dbo.PhieuNghiemThu(Id),
+    LoaiThanhToan VARCHAR(12) NOT NULL CONSTRAINT DF_YeuCauThanhToan_Loai DEFAULT 'DichVu',
+    NghiemThuId INT NULL CONSTRAINT FK_YeuCauThanhToan_NghiemThu REFERENCES dbo.PhieuNghiemThu(Id),
     KhachHangId INT NOT NULL CONSTRAINT FK_YeuCauThanhToan_Khach REFERENCES dbo.NguoiDung(Id),
     TaiKhoanNganHangId INT NOT NULL CONSTRAINT FK_YeuCauThanhToan_NganHang REFERENCES dbo.TaiKhoanNganHang(Id),
     SoTien DECIMAL(18,2) NOT NULL,
@@ -227,6 +230,7 @@ CREATE TABLE dbo.YeuCauThanhToan (
     TrangThai VARCHAR(10) NOT NULL CONSTRAINT DF_YeuCauThanhToan_TrangThai DEFAULT 'Pending',
     NgayTao DATETIME2(3) NOT NULL CONSTRAINT DF_YeuCauThanhToan_Ngay DEFAULT SYSUTCDATETIME(),
     PhienBan ROWVERSION,
+    CONSTRAINT CK_YeuCauThanhToan_Loai CHECK ((LoaiThanhToan = 'DichVu' AND NghiemThuId IS NOT NULL) OR (LoaiThanhToan = 'PhiHuyDon' AND NghiemThuId IS NULL)),
     CONSTRAINT CK_YeuCauThanhToan_Tien CHECK (SoTien > 0),
     CONSTRAINT CK_YeuCauThanhToan_TrangThai CHECK (TrangThai IN ('Pending','Confirmed','Rejected'))
 );
@@ -243,7 +247,7 @@ CREATE TABLE dbo.YeuCauVi (
     PhienBan ROWVERSION,
     CONSTRAINT CK_YeuCauVi_Loai CHECK (Loai IN ('Deposit','Withdrawal')),
     CONSTRAINT CK_YeuCauVi_Tien CHECK (SoTien > 0),
-    CONSTRAINT CK_YeuCauVi_TrangThai CHECK (TrangThai IN ('Pending','Approved','Rejected'))
+    CONSTRAINT CK_YeuCauVi_TrangThai CHECK (TrangThai IN ('Pending','Approved','Rejected','Cancelled'))
 );
 CREATE TABLE dbo.GiaoDichVi (
     Id INT IDENTITY CONSTRAINT PK_GiaoDichVi PRIMARY KEY,
@@ -265,6 +269,9 @@ CREATE TABLE dbo.HoSoKTV (
     NhomTayNghe NVARCHAR(200) NOT NULL,
     KhuVucPhucVu NVARCHAR(200) NOT NULL,
     KinhNghiem NVARCHAR(2000) NOT NULL,
+    HoSoJSON NVARCHAR(MAX) NULL CONSTRAINT CK_HoSoKTV_JSON CHECK (HoSoJSON IS NULL OR ISJSON(HoSoJSON) = 1),
+    GiayToMatTruocId INT NULL CONSTRAINT FK_HoSoKTV_MatTruoc REFERENCES dbo.TepDinhKem(Id),
+    GiayToMatSauId INT NULL CONSTRAINT FK_HoSoKTV_MatSau REFERENCES dbo.TepDinhKem(Id),
     TrangThai VARCHAR(10) NOT NULL CONSTRAINT DF_HoSoKTV_TrangThai DEFAULT 'Pending',
     LyDo NVARCHAR(1000) NULL,
     NgayTao DATETIME2(3) NOT NULL CONSTRAINT DF_HoSoKTV_Ngay DEFAULT SYSUTCDATETIME(),
@@ -280,6 +287,7 @@ CREATE TABLE dbo.YeuCauHoTro (
     TrangThai VARCHAR(12) NOT NULL CONSTRAINT DF_YeuCauHoTro_TrangThai DEFAULT 'Open',
     KetQuaXuLy NVARCHAR(2000) NULL,
     NguoiXuLyId INT NULL CONSTRAINT FK_YeuCauHoTro_NguoiXuLy REFERENCES dbo.NguoiDung(Id),
+    NgayCapNhat DATETIME2(3) NOT NULL CONSTRAINT DF_YeuCauHoTro_CapNhat DEFAULT SYSUTCDATETIME(),
     NgayTao DATETIME2(3) NOT NULL CONSTRAINT DF_YeuCauHoTro_Ngay DEFAULT SYSUTCDATETIME(),
     PhienBan ROWVERSION,
     CONSTRAINT CK_YeuCauHoTro_Loai CHECK (Loai IN ('Complaint','Warranty')),
@@ -287,6 +295,7 @@ CREATE TABLE dbo.YeuCauHoTro (
 );
 CREATE TABLE dbo.TraoDoiHoTro (
     Id INT IDENTITY CONSTRAINT PK_TraoDoiHoTro PRIMARY KEY,
+    TrangThai VARCHAR(12) NULL CONSTRAINT CK_TraoDoiHoTro_TrangThai CHECK (TrangThai IN ('InProgress','Resolved','Rejected')),
     YeuCauHoTroId INT NOT NULL CONSTRAINT FK_TraoDoiHoTro_YeuCau REFERENCES dbo.YeuCauHoTro(Id),
     NguoiGuiId INT NOT NULL CONSTRAINT FK_TraoDoiHoTro_NguoiGui REFERENCES dbo.NguoiDung(Id),
     NoiDung NVARCHAR(2000) NOT NULL,
@@ -353,4 +362,9 @@ CREATE TABLE dbo.XacThucOTP (
     CONSTRAINT CK_XacThucOTP_LanThu CHECK (SoLanThu BETWEEN 0 AND 5),
     CONSTRAINT CK_XacThucOTP_MaBam CHECK (LEN(MaBam) = 64 AND MaBam NOT LIKE '%[^0-9a-f]%')
 );
+GO
+
+-- Tài khoản được khách chọn lúc ký nghiệm thu, trước khi gửi chứng từ.
+ALTER TABLE dbo.PhieuNghiemThu ADD TaiKhoanNganHangId INT NULL
+    CONSTRAINT FK_NghiemThu_NganHang REFERENCES dbo.TaiKhoanNganHang(Id);
 GO

@@ -40,6 +40,7 @@ BEGIN TRY
     SELECT Id, N'Sửa và thay khóa', N'Kiểm tra, sửa hoặc thay khóa dân dụng.', 50000, 150000, 15 FROM dbo.DanhMucDichVu WHERE Ma = 'KHOA';
     INSERT INTO dbo.TaiKhoanNganHang(MaNganHang, TenNganHang, SoTaiKhoan, ChuTaiKhoan)
     VALUES ('DEMO', N'Ngân hàng mô phỏng - không chuyển tiền thật', '000000000000', N'HOMEFIX DEMO');
+    INSERT INTO dbo.CauHinh(Khoa, GiaTri, NhanHienThi) VALUES ('PhiHuyDon', N'60000', N'Phí hủy khi KTV đã di chuyển');
     INSERT INTO dbo.CauHinh(Khoa, GiaTri, NhanHienThi)
     VALUES ('TyLeHoaHongMacDinh', N'15', N'Tỷ lệ hoa hồng mặc định'),
            ('TaiKhoanNganHangMacDinh', N'1', N'Id tài khoản ngân hàng nhận tiền'),

@@ -232,6 +232,24 @@
         "type": "NVARCHAR(2000)",
         "optional": false,
         "output": false
+      },
+      {
+        "name": "HoSoJSON",
+        "type": "NVARCHAR(MAX)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "GiayToMatTruocId",
+        "type": "INT",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "GiayToMatSauId",
+        "type": "INT",
+        "optional": true,
+        "output": false
       }
     ],
     "sp_DuyetHoSoKTV": [
@@ -577,6 +595,12 @@
         "type": "DATETIME2",
         "optional": true,
         "output": false
+      },
+      {
+        "name": "TepDinhKem",
+        "type": "NVARCHAR(MAX)",
+        "optional": true,
+        "output": false
       }
     ],
     "sp_TaoBaoGiaSoBo": [
@@ -743,6 +767,18 @@
         "type": "NVARCHAR(1000)",
         "optional": true,
         "output": false
+      },
+      {
+        "name": "DongYPhiHuy",
+        "type": "BIT",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "PhiHuyDuKien",
+        "type": "DECIMAL(18,2)",
+        "optional": true,
+        "output": false
       }
     ],
     "sp_ThemGhiChuDon": [
@@ -797,7 +833,7 @@
         "output": false
       }
     ],
-    "sp_TaoDeXuatVatTu": [
+    "sp_LuuBangKeVatTu": [
       {
         "name": "NguoiThucHienId",
         "type": "INT",
@@ -831,7 +867,7 @@
         "output": false
       },
       {
-        "name": "DeXuatVatTuId",
+        "name": "BangKeVatTuId",
         "type": "INT",
         "optional": false,
         "output": false
@@ -867,38 +903,6 @@
         "output": false
       }
     ],
-    "sp_KhachDuyetDeXuatVatTu": [
-      {
-        "name": "NguoiThucHienId",
-        "type": "INT",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "DeXuatVatTuId",
-        "type": "INT",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "QuyetDinh",
-        "type": "VARCHAR(20)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "PhienBanDuKien",
-        "type": "BINARY(8)",
-        "optional": true,
-        "output": false
-      },
-      {
-        "name": "LyDo",
-        "type": "NVARCHAR(1000)",
-        "optional": true,
-        "output": false
-      }
-    ],
     "sp_TaoPhieuNghiemThu": [
       {
         "name": "NguoiThucHienId",
@@ -927,6 +931,18 @@
       {
         "name": "PhienBanDuKien",
         "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "ChuKyKTVId",
+        "type": "INT",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "AnhThanhPham",
+        "type": "NVARCHAR(MAX)",
         "optional": true,
         "output": false
       }
@@ -985,6 +1001,12 @@
       {
         "name": "PhienBanDuKien",
         "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "TaiKhoanNganHangId",
+        "type": "INT",
         "optional": true,
         "output": false
       }
@@ -1337,6 +1359,130 @@
         "output": false
       }
     ],
+    "sp_HuyYeuCauVi": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "YeuCauViId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_TuChoiNghiemThu": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NghiemThuId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "LyDo",
+        "type": "NVARCHAR(1000)",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_LuuTuyChonGiamSat": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "GiaTri",
+        "type": "NVARCHAR(MAX)",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_DuyetChinhSach": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Khoa",
+        "type": "VARCHAR(100)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "QuyetDinh",
+        "type": "VARCHAR(30)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "GhiChu",
+        "type": "NVARCHAR(1000)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NgayHieuLuc",
+        "type": "DATETIME2",
+        "optional": false,
+        "output": false
+      }
+    ],
+    "sp_DoiPhuongThucThanhToan": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "DonHangId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhuongThuc",
+        "type": "VARCHAR(10)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "TaiKhoanNganHangId",
+        "type": "INT",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": true,
+        "output": false
+      }
+    ],
     "sp_SaoLuuHeThong": [
       {
         "name": "DuongDan",
@@ -1366,8 +1512,8 @@
     "vw_LichSuDonHang",
     "vw_LenhDieuPhoi",
     "vw_BaoGiaSoBo",
-    "vw_DeXuatVatTu",
-    "vw_ChiTietDeXuatVatTu",
+    "vw_BangKeVatTu",
+    "vw_ChiTietVatTu",
     "vw_PhieuNghiemThu",
     "vw_ThanhToan",
     "vw_DoiSoat",

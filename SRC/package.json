@@ -15,7 +15,9 @@
     "db:init": "node backend/tools/install-database.js",
     "test": "node --test --test-concurrency=1 backend/test/*.test.js",
     "format": "prettier --write backend/src backend/tools backend/test frontend/src frontend/*.js *.json backend/package.json frontend/package.json",
-    "format:check": "prettier --check backend/src backend/tools backend/test frontend/src frontend/*.js *.json backend/package.json frontend/package.json"
+    "format:check": "prettier --check backend/src backend/tools backend/test frontend/src frontend/*.js *.json backend/package.json frontend/package.json",
+    "db:upgrade": "node backend/tools/upgrade-database.js",
+    "db:demo": "node backend/tools/demo-data.js"
   },
   "engines": {
     "node": ">=22.12"

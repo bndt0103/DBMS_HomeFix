@@ -1,178 +1,181 @@
-# HomeFix: cài đặt và đọc hiểu SQL
+# HomeFix: SQL Server và thực hành
 
-## 1. Chạy đúng database
+Thành viên cài máy mới xem [hướng dẫn cài đặt](CAI_DAT_THANH_VIEN.md). Trên máy nhóm trưởng, kết nối **`MSI\SQLEXPRESS`**, chọn database **`HomeFix_DBMS_Clean_20261022`**. Kiểm tra trước khi chạy:
 
-Trên máy được bàn giao, chọn database **HomeFix_DBMS_Clean_20261022** trước khi chạy ví dụ. Bộ cài dùng tên mặc định khác để hỗ trợ cài mới trên máy khác.
+```sql
+SELECT @@SERVERNAME AS MayChu, DB_NAME() AS TenCSDL;
+```
 
-Mở `CSDL_HomeFix.sql` trong SSMS, chọn Windows Authentication và tài khoản quản trị SQL Server. Bật **Query → SQLCMD Mode**, đọc phần đầu file, đổi biến `TenCSDL` nếu cần rồi chạy toàn bộ bằng F5. Bộ cài tạo database mới và từ chối tên đã tồn tại; không tự xóa dữ liệu cũ. Tên mặc định là `HomeFix_DBMS_Nhom08`. Nếu tên này đang được ứng dụng cũ sử dụng, chọn tên khác và cập nhật `DB_NAME` của backend theo hướng dẫn ở README chính.
+## 1. Các file cần mở
 
-Sau khi cài, chọn đúng database ở danh sách phía trên cửa sổ truy vấn. Không chạy lại seed lên database đã có tài khoản. `seed_data.sql` là bản seed riêng cho database đã tạo cấu trúc nhưng chưa có dữ liệu; nội dung giống module `08_seed.sql`.
-
-| Module | Nội dung và cách hiểu |
+| File | Nội dung |
 |---|---|
-| `00_schema.sql` | 28 bảng, khóa chính/ngoại, UNIQUE, CHECK, DEFAULT, cột tính toán, ROWVERSION |
-| `01_index.sql` | Tra cứu nhanh và UNIQUE có điều kiện, ví dụ mỗi thợ chỉ có một phân công còn hiệu lực |
-| `02_function.sql` | 2 hàm trả một giá trị và 4 hàm trả bảng, chỉ đọc/tính toán |
-| `03_view.sql` | 34 view; định nghĩa cột được đọc, che mật khẩu khỏi các view nghiệp vụ |
-| `04_sp.sql` | 19 thủ tục tài khoản, danh mục, OTP, tệp và cấu hình |
-| `05_transaction.sql` | 26 thủ tục đặt đơn, điều phối, nghiệm thu, thanh toán, ví, hỗ trợ, báo cáo |
-| `06_trigger.sql` | 7 trigger bảo vệ trạng thái/chứng từ, vật tư, chữ ký và đánh giá |
-| `07_security.sql` | 7 role nghiệp vụ, user kiểm chứng quyền và role xác thực nội bộ |
-| `08_seed.sql` | Dữ liệu khởi tạo sạch, không có giao dịch giả |
-| `09_data_migration.sql` | Ghi chú chuyển đổi, không chạy lệnh chuyển giao dịch cũ vào bản sạch |
-| `10_backup_recovery.sql` | Thủ tục sao lưu và các lệnh phục hồi có chú thích |
+| `CSDL_HomeFix.sql` | Bộ cài vào database mới, không ghi đè tên đã tồn tại |
+| `seed_data.sql` | 7 tài khoản, 5 danh mục/5 dịch vụ, cấu hình và ngân hàng mẫu; không có giao dịch |
+| `du_lieu_mau.sql` | Bổ sung khách, thợ, 20 dịch vụ và 10 đơn qua các thủ tục; chạy lặp không tạo trùng |
+| `truy_van_mau.sql` | Chọn từng khối để demo view, function, SP, transaction, savepoint, lỗi ràng buộc, trigger, index và quyền |
+| `sao_luu_mau.sql` | Sao lưu FULL COPY_ONLY và VERIFYONLY vào thư mục backup của SQL Server |
 
-Thứ tự cài được bộ cài tổng hợp xử lý. Nếu mở từng module, phải chạy schema → index → function → view → thủ tục → trigger → security → seed. Backup module chỉ tạo thủ tục; chưa sao lưu ngay.
+Dữ liệu minh họa chỉ là dữ liệu giả phục vụ học tập. Script không tạo file ảnh; metadata ảnh còn lại trong SQL không đồng nghĩa có file ảnh thật. Khi thao tác web cần ảnh/chữ ký mới, tải tệp lên từ form tương ứng.
 
-## 2. Tài khoản và dữ liệu ban đầu
+## 2. Các module SQL
 
-Mật khẩu cả bảy tài khoản là **`123456`**, chỉ dùng cho bản học tập. Trong bảng chỉ lưu chuỗi băm bcrypt; giao diện đăng nhập nhận mật khẩu rõ rồi backend dùng bcrypt để đối chiếu.
+| Module | Thành phần |
+|---|---|
+| `00_schema.sql` | 28 bảng, PK, FK, UNIQUE, CHECK, DEFAULT, cột tính toán và ROWVERSION |
+| `01_index.sql` | Index hỗ trợ truy vấn, UNIQUE lọc chống phân công trùng/bảng kê đang áp dụng trùng |
+| `02_function.sql` | 2 hàm scalar và 4 hàm trả bảng |
+| `03_view.sql` | 34 view phục vụ đọc dữ liệu |
+| `04_sp.sql` | 19 thủ tục tài khoản, danh mục, cấu hình, tệp và tiện ích |
+| `05_transaction.sql` | 30 thủ tục nghiệp vụ và báo cáo |
+| `06_trigger.sql` | 7 trigger bảo vệ trạng thái, chứng từ, vật tư, chữ ký và đánh giá |
+| `07_security.sql` | 7 role nghiệp vụ và ngữ cảnh xác thực nội bộ |
+| `08_seed.sql` | Seed sạch, giống `seed_data.sql` |
+| `09_data_migration.sql` | Chuyển cấu trúc cũ sang hiện tại, giữ dữ liệu |
+| `10_backup_recovery.sql` | Thủ tục sao lưu và ví dụ phục hồi |
 
-| Số điện thoại | Vai trò | Công việc |
+`CSDL_HomeFix.sql` được sinh từ các module bằng `npm.cmd run sql:build` trong `SRC`. Không sửa riêng bộ cài tổng. Tổng cộng 50 SP: 48 SP ghi có giao dịch, 1 SP báo cáo chỉ đọc và 1 SP sao lưu. BACKUP không được đặt trong transaction người dùng.
+
+## 3. Luồng vật tư hiện tại
+
+1. KTV được phân công cập nhật đơn đến `DangXuLy`.
+2. KTV trao đổi trực tiếp với khách về vật tư và chi phí.
+3. KTV chọn **Kê khai vật tư**, nhập tên, số lượng, đơn giá và thời gian bảo hành. Không có bước gửi khách duyệt riêng.
+4. `sp_LuuBangKeVatTu` kiểm tra đúng thợ, trạng thái đơn và phiên bản; tạo bảng kê áp dụng mới. Khi sửa, nhập lại **toàn bộ danh sách**, không chỉ các dòng phát sinh. Phiên bản cũ vẫn được giữ để đối chiếu.
+5. `sp_TaoPhieuNghiemThu` cộng vật tư của bảng kê áp dụng vào phí kiểm tra và tiền công. Khách kiểm tra tổng tiền, ký xác nhận **phiếu nghiệm thu cuối cùng**.
+
+Các bảng và đối tượng chính:
+
+```sql
+SELECT Id, DonHangId, LanSuaDoi, DangApDung, NgayTao FROM dbo.vw_BangKeVatTu;
+SELECT BangKeVatTuId, Ten, SoLuong, DonGia, ThanhTien, SoThangBaoHanh FROM dbo.vw_ChiTietVatTu;
+SELECT DonHangId, BangKeVatTuId, PhiKiemTra, TienCong, TongTienVatTu, TongTien FROM dbo.vw_PhieuNghiemThu;
+```
+
+`ThanhTien = SoLuong * DonGia` là cột tính toán. Số lượng phải dương, đơn giá không âm; thủ tục còn giới hạn số dòng, tên và mức giá. Tổng tiền do SQL tính, không lấy tổng tùy ý từ trình duyệt.
+
+`tr_ChiTietVatTu_KhoaNghiemThu` chặn INSERT/UPDATE/DELETE các dòng thuộc bảng kê đã được dùng trong bất kỳ phiếu nghiệm thu nào. Nếu cần sửa vật tư sau khi khách yêu cầu xử lý lại, phải tạo bảng kê phiên bản mới; phiếu cũ vẫn giữ được chi tiết và tổng tiền. Bảng kê không còn cột trạng thái duyệt vật tư, không còn SP/API khách duyệt vật tư.
+
+Khối **13–14** trong `truy_van_mau.sql` cho xem đơn giá, tổng hợp nghiệm thu và chạy thử SP trong giao dịch ngoài rồi rollback.
+
+## 4. Thanh toán và đối soát
+
+Thanh toán và đối soát là hai bước khác nhau: thanh toán ghi nhận khách đã trả; đối soát ghi phần tiền thuộc hệ thống/KTV vào sổ ví.
+
+| Phương thức | Ghi nhận thanh toán | Kế toán đối soát |
 |---|---|---|
-| `0900000001` | KH | Đặt đơn, duyệt giá/vật tư, ký nghiệm thu, hỗ trợ và đánh giá |
-| `0900000002` | KTV | Nhận việc, cập nhật tiến độ, lập vật tư/nghiệm thu và yêu cầu ví |
-| `0900000003` | DPV | Báo giá sơ bộ và phân công thợ |
-| `0900000004` | CSKH | Xử lý phiếu hỗ trợ và trao đổi với khách |
-| `0900000005` | KT | Xác nhận chuyển khoản, duyệt ví và đối soát |
-| `0900000006` | GD | Xem báo cáo tổng hợp |
-| `0900000007` | ADMIN | Tài khoản, vai trò, khóa/mở khóa, duyệt hồ sơ thợ và danh mục |
+| COD | KTV xác nhận đã nhận tiền mặt | Trừ hoa hồng từ ví KTV; không cộng lại tiền mặt |
+| BANK | Khách gửi chứng từ; KT xác nhận đủ tiền, đúng mã giao dịch | Cộng khoản thanh toán trừ hoa hồng vào ví KTV |
 
-Seed có 5 nhóm Điện/Nước/Điện lạnh/Đồ gỗ/Khóa, mỗi nhóm một dịch vụ. Thợ có số dư **0**; tài khoản ngân hàng là mô phỏng, không chuyển tiền thật. Không có đơn, lịch sử đơn, thanh toán, giao dịch ví, OTP hoặc nhật ký được chèn sẵn.
+Kế toán mở **Đối soát thanh toán** → chọn **Đối soát** ở đúng dòng → xem mã đơn, số tiền và hoa hồng → **Đồng ý đối soát**. Đóng hộp thoại không ghi dữ liệu. Không chuyển sang trang duyệt ví. Trang **Duyệt ví KTV** chỉ xử lý nạp/rút.
+
+`sp_DoiSoatCOD` xử lý cả COD/BANK. Thủ tục khóa dòng, so phiên bản, cập nhật đối soát, số dư và sổ cái cùng transaction. Gửi lặp hoặc dùng phiên bản cũ bị từ chối; một tham chiếu nghiệp vụ chỉ ghi sổ một lần.
 
 ```sql
-SELECT Id, HoTen, SoDienThoai, VaiTro FROM dbo.vw_NguoiDung;
-SELECT Id, TenDanhMuc, Ten, PhiKiemTra, TienCong FROM dbo.vw_DichVuCongKhai;
-SELECT Id, SoDu, SoDuSoCai, ChenhLech FROM dbo.vw_ViKyThuatVien;
-SELECT TongDon, DonHoanThanh, DonHuy FROM dbo.fn_ThongKeDon(NULL, NULL);
-SELECT dbo.fn_HoaHong(200000, 15) AS HoaHong; -- 30000; 15 là 15%
+SELECT Id, DonHangId, TienCong, TyLeHoaHong, TienHoaHong, TrangThai FROM dbo.vw_DoiSoat;
+SELECT Id, HoTen, SoDu, SoDuSoCai, ChenhLech FROM dbo.vw_ViKyThuatVien;
 ```
 
-## 3. Cách giải thích những thành phần chính
+`ChenhLech` luôn phải bằng 0. Không tự UPDATE số dư hay chỉnh/xóa `GiaoDichVi` để chuẩn bị demo.
 
-**PK** định danh một dòng, **FK** bắt buộc dòng được tham chiếu tồn tại. `DonHang.KhachHangId` tham chiếu người dùng; thủ tục kiểm tra thêm người đó có vai trò KH. FK không tự kiểm tra được vai trò. Không dùng xóa dây chuyền cho chứng từ để tránh mất lịch sử.
+## 5. Cách giải thích các thành phần khi vấn đáp
 
-**CHECK** kiểm tra điều kiện trên dòng: số dư không âm, điểm 1–5, tỷ lệ hoa hồng 0–100, số lượng vật tư dương. **UNIQUE** chống trùng số điện thoại, một thanh toán cho mỗi đơn, một đánh giá cho mỗi đơn. UNIQUE lọc chỉ xét các dòng thỏa điều kiện, ví dụ `DangHoatDong = 1` của lệnh điều phối. Vì vậy lịch sử điều phối cũ được giữ nhưng không thể phân hai đơn đồng thời cho cùng một thợ.
+- **PK/FK:** định danh và bảo đảm dòng tham chiếu tồn tại. FK không tự biết người được tham chiếu có vai trò KH hay KTV; SP kiểm tra thêm vai trò và quyền sở hữu.
+- **CHECK/UNIQUE:** CHECK kiểm tra miền giá trị; UNIQUE chặn trùng điện thoại, chứng từ thanh toán, đánh giá. UNIQUE lọc chỉ xét các dòng còn hiệu lực, nên vẫn giữ lịch sử cũ.
+- **DEFAULT:** cấp giá trị khi INSERT bỏ qua cột; không tự cập nhật ngày sửa khi UPDATE.
+- **ROWVERSION:** 8 byte tự đổi khi UPDATE, không phải ngày giờ. Form gửi lại phiên bản đã đọc; SQL từ chối phiên bản cũ để tránh ghi đè.
+- **View/TVF:** đóng gói phần đọc; view dùng như bảng trong FROM, TVF nhận được tham số. `fn_SoDuVi`, `fn_DiemDanhGia`, `fn_ThongKeDon`, `fn_HanBaoHanh` trả bảng; `fn_HoaHong`, `fn_TongTienDonHang` trả một giá trị.
+- **Transaction:** gộp nhiều thay đổi thành một đơn vị cùng thành công hoặc cùng hủy. `UPDLOCK, HOLDLOCK` giữ khóa để trạng thái, phiên bản và số dư không bị thay đổi giữa lúc kiểm tra và ghi.
+- **Savepoint:** SP tự BEGIN/COMMIT nếu chưa có transaction. Nếu caller đã mở, SP đặt SAVE TRANSACTION và không COMMIT thay caller. Trong CATCH, `XACT_STATE() = 1` mới rollback về savepoint được; `-1` cần chủ giao dịch rollback toàn bộ.
+- **Trigger:** chạy tự động khi bảng thay đổi. `inserted`/`deleted` có thể có nhiều dòng, nên kiểm tra bằng EXISTS/JOIN. SP điều phối luồng, trigger chặn vi phạm khi dữ liệu bị ghi trực tiếp.
+- **Index:** giảm lượng đọc cho truy vấn phù hợp nhưng tốn dung lượng và chi phí ghi. Dữ liệu ít có thể được optimizer chọn Scan; bật Ctrl+M và STATISTICS IO để quan sát.
 
-**DEFAULT** chỉ cấp giá trị khi INSERT bỏ qua cột; không tự cập nhật thời gian khi UPDATE. **Cột tính toán** lấy `SoLuong * DonGia` hoặc cộng các khoản tiền; backend không gửi tổng tiền tùy ý. Tiền dùng DECIMAL để tính chính xác theo thang số thập phân.
+Tỷ lệ hoa hồng lưu theo phần trăm: `15` là 15% tiền công. Tiền dùng DECIMAL; thời gian lưu UTC và hiển thị theo múi giờ Việt Nam.
 
-**ROWVERSION** là 8 byte tự thay đổi khi UPDATE, không phải ngày giờ. Khi mở form, web nhận `PhienBan`; khi lưu gửi lại `PhienBanDuKien`. Thủ tục khóa dòng bằng `UPDLOCK, HOLDLOCK`, so phiên bản, kiểm tra trạng thái rồi ghi. Phiên bản cũ bị từ chối để tránh người sau ghi đè quyết định của người trước.
+## 6. Quyền của bảy bộ phận
 
-**View** đóng gói một câu SELECT; **hàm scalar** trả một giá trị, ví dụ hoa hồng; **TVF** trả bảng, dùng trong FROM. `fn_SoDuVi` cộng sổ cái, `fn_DiemDanhGia` tính trung bình, `fn_HanBaoHanh` tìm hạn bảo hành từ vật tư nghiệm thu, `fn_ThongKeDon` thống kê theo ngày. `fn_TongTienDonHang` ưu tiên tiền nghiệm thu, nếu chưa có thì lấy báo giá và vật tư đã duyệt.
+Mật khẩu tài khoản học tập là **`123456`**. Mật khẩu trong CSDL được băm bcrypt.
 
-**Stored Procedure** nhận tham số có kiểu, kiểm tra người thực hiện/quyền sở hữu, trạng thái và dữ liệu rồi mới ghi. Ví dụ `sp_TaoBaoGiaSoBo` chỉ nhận DPV/ADMIN, đơn phải ở `ChoTiepNhan`, giá hợp lệ và phiên bản phải khớp. SP ghi báo giá, chuyển đơn sang `ChoDuyetSoBo` và lưu lịch sử trong cùng giao dịch.
+| SĐT | Vai trò | Chức năng |
+|---|---|---|
+| 0900000001 | KH | Đặt đơn, duyệt sơ bộ, nghiệm thu, thanh toán, đánh giá và hỗ trợ |
+| 0900000002 | KTV | Nhận việc, tiến độ, kê khai vật tư, nghiệm thu, COD và ví |
+| 0900000003 | DPV | Báo giá sơ bộ, phân công, xem hiệu suất thợ |
+| 0900000004 | CSKH | Xử lý hỗ trợ, xem chất lượng dịch vụ |
+| 0900000005 | KT | Xác minh BANK, đối soát, duyệt nạp/rút và báo cáo tài chính |
+| 0900000006 | GD | Báo cáo tổng hợp, chất lượng, hiệu suất và tài chính |
+| 0900000007 | ADMIN | Tài khoản, vai trò, khóa/mở khóa, hồ sơ thợ, danh mục, cấu hình |
 
-**Transaction** bảo đảm nhiều thao tác cùng thành công hoặc cùng hủy. SP tự BEGIN/COMMIT nếu chưa có giao dịch; nếu bên ngoài đã mở thì chỉ SAVE TRANSACTION. Trong CATCH, `XACT_STATE() = 1` còn quay về savepoint được; `-1` là giao dịch không còn khả năng COMMIT, bên sở hữu giao dịch phải ROLLBACK toàn bộ. `XACT_ABORT ON` làm các lỗi ghi dữ liệu nghiêm trọng hủy khả năng COMMIT, không được cố COMMIT tiếp.
+JWT kiểm tra vai trò ở API; truy vấn đơn/tệp được kiểm tra chủ sở hữu. Mỗi request chạy dưới user SQL `hf_*`, với Id đã xác thực trong SESSION_CONTEXT. SP so khớp actor với phiên, không tin Id do khách tùy ý gửi.
 
-**Trigger** tự chạy khi bảng bị tác động. `inserted`/`deleted` chứa nhiều dòng, vì vậy code dùng EXISTS/JOIN, không gán tùy tiện một dòng vào biến. Trigger chặn chuyển trạng thái sai, thanh toán lệch nghiệm thu, sửa/xóa sổ cái hoặc thanh toán, sửa chi tiết vật tư đã duyệt, đánh giá sai chủ đơn và chữ ký sai người/đơn. Trigger kiểm tra quy tắc; SP vẫn chịu trách nhiệm lưu lịch sử và điều phối nghiệp vụ.
+Bảy role `HomeFix_KH/KTV/DPV/CSKH/KT/GD/ADMIN` chỉ được EXECUTE các SP liên quan và SELECT view/TVF tương ứng, bị DENY truy cập bảng trực tiếp và cột hash. `HomeFix_UngDung` là ngữ cảnh xác thực nội bộ trước khi có JWT, không phải bộ phận thứ tám. Ownership chain cho phép View/SP cùng chủ dbo đọc/ghi bảng bên trong.
 
-## 4. Demo luồng SQL và tự hoàn tác
+Khối **11** trong file truy vấn mẫu dùng `EXECUTE AS USER`, cho đọc view nhưng bắt lỗi 229/230 khi đọc bảng mật khẩu, sau đó luôn `REVERT`.
 
-Chạy **nguyên khối** bên dưới trong database vừa cài. Mọi thay đổi nằm trong một giao dịch ngoài và cuối cùng ROLLBACK, nên dữ liệu khởi tạo vẫn sạch. Các Id được tra từ view, không giả định luôn bằng 1/2/3.
+## 7. Cài mới hoặc nâng cấp
 
-```sql
-SET XACT_ABORT ON;
-BEGIN TRY
-    BEGIN TRANSACTION;
-    DECLARE @KH INT, @DPV INT, @KTV INT, @DV INT, @Don INT, @BaoGia INT, @Lenh INT;
-    DECLARE @PB BINARY(8), @Dau NVARCHAR(100) = N'Demo SSMS ' + CONVERT(NVARCHAR(36), NEWID());
-    SELECT @KH = Id FROM dbo.vw_NguoiDung WHERE SoDienThoai = '0900000001';
-    SELECT @KTV = Id FROM dbo.vw_NguoiDung WHERE SoDienThoai = '0900000002';
-    SELECT @DPV = Id FROM dbo.vw_NguoiDung WHERE SoDienThoai = '0900000003';
-    SELECT TOP (1) @DV = Id FROM dbo.vw_DichVuCongKhai ORDER BY Id;
-    EXEC dbo.sp_TaoDonHang @NguoiThucHienId = @KH, @DichVuId = @DV,
-        @DiaChi = N'01 Võ Văn Ngân, Thành phố Hồ Chí Minh', @MoTa = @Dau;
-    SELECT @Don = Id, @PB = PhienBan FROM dbo.vw_DonHangTongHop WHERE KhachHangId = @KH AND MoTa = @Dau;
-    EXEC dbo.sp_TaoBaoGiaSoBo @NguoiThucHienId = @DPV, @DonHangId = @Don,
-        @PhiKiemTra = 50000, @TienCong = 200000, @TyLeHoaHong = 15,
-        @ChanDoan = N'Kiểm tra và sửa công tắc bị hỏng', @PhienBanDuKien = @PB;
-    SELECT @BaoGia = Id, @PB = PhienBan FROM dbo.vw_BaoGiaSoBo WHERE DonHangId = @Don;
-    EXEC dbo.sp_KhachDuyetBaoGiaSoBo @NguoiThucHienId = @KH, @BaoGiaId = @BaoGia,
-        @QuyetDinh = 'Approved', @PhienBanDuKien = @PB;
-    SELECT @PB = PhienBan FROM dbo.vw_DonHangTongHop WHERE Id = @Don;
-    EXEC dbo.sp_TaoLenhDieuPhoi @NguoiThucHienId = @DPV, @DonHangId = @Don,
-        @KyThuatVienId = @KTV, @PhienBanDuKien = @PB;
-    SELECT @Lenh = Id, @PB = PhienBan FROM dbo.vw_LenhDieuPhoi WHERE DonHangId = @Don AND DangHoatDong = 1;
-    EXEC dbo.sp_KTVPhanHoiDieuPhoi @NguoiThucHienId = @KTV, @LenhDieuPhoiId = @Lenh,
-        @QuyetDinh = 'Accepted', @PhienBanDuKien = @PB;
-    SELECT @PB = PhienBan FROM dbo.vw_DonHangTongHop WHERE Id = @Don;
-    EXEC dbo.sp_ChuyenTrangThaiDon @NguoiThucHienId = @KTV, @DonHangId = @Don,
-        @TrangThaiTiepTheo = 'DangDiChuyen', @PhienBanDuKien = @PB;
-    SELECT @PB = PhienBan FROM dbo.vw_DonHangTongHop WHERE Id = @Don;
-    EXEC dbo.sp_ChuyenTrangThaiDon @NguoiThucHienId = @KTV, @DonHangId = @Don,
-        @TrangThaiTiepTheo = 'DaDenNoi', @PhienBanDuKien = @PB;
-    SELECT @PB = PhienBan FROM dbo.vw_DonHangTongHop WHERE Id = @Don;
-    EXEC dbo.sp_ChuyenTrangThaiDon @NguoiThucHienId = @KTV, @DonHangId = @Don,
-        @TrangThaiTiepTheo = 'DangXuLy', @PhienBanDuKien = @PB;
-    SELECT Id, TrangThai, TenKhachHang, TenKyThuatVien, TongTien FROM dbo.vw_DonHangTongHop WHERE Id = @Don;
-    SELECT TrangThaiTruoc, TrangThaiSau, NguoiThucHienId, LyDo FROM dbo.vw_LichSuDonHang WHERE DonHangId = @Don ORDER BY Id;
-    ROLLBACK TRANSACTION;
-END TRY
-BEGIN CATCH
-    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-    SELECT ERROR_NUMBER() AS MaLoi, ERROR_MESSAGE() AS NoiDung;
-END CATCH;
+Cài mới trong SSMS: mở `CSDL_HomeFix.sql`, bật **Query → SQLCMD Mode**, chọn tên database mới tại biến `TenCSDL`, chạy toàn bộ. Bộ cài từ chối tên đã tồn tại. Không chạy lại schema hoặc seed lên database đang dùng.
+
+Khi nâng cấp, sao lưu trước và dừng ứng dụng; trong `SRC` chạy:
+
+```powershell
+npm.cmd run sql:build
+npm.cmd run db:upgrade
+npm.cmd run build
+npm.cmd start
 ```
 
-Nếu thợ đang có đơn, thủ tục phân công sẽ báo lỗi thay vì phá dữ liệu. Dùng database seed mới để luyện. ROLLBACK không thu hồi số IDENTITY đã cấp nên Id có thể nhảy số; đây là hành vi bình thường, không phải mất đơn đã lưu. Muốn tiếp tục luồng từ trình duyệt, thực hiện lại các bước bằng giao diện để lưu thật: KTV lập vật tư → KH duyệt → KTV tạo và ký nghiệm thu → KH ký, chọn COD/BANK → ghi nhận tiền thực thu → KT đối soát. Chữ ký/chứng từ phải là tệp upload thật, đúng chủ sở hữu và đơn hàng; không tự INSERT metadata để giả lập tệp còn thiếu.
+Nâng cấp đọc `DB_NAME` trong `.env`; không chạy seed, không reset dữ liệu. Module 09 chuyển tên bảng/cột vật tư, bỏ trạng thái duyệt và SP/View cũ. Bảng kê từng bị từ chối được đặt không áp dụng; các Id, số tiền nghiệm thu và sổ ví cũ được giữ.
 
-COD trừ hoa hồng từ ví KTV khi KT đối soát, vì vậy cần KTV gửi yêu cầu nạp ví và KT duyệt trước. BANK do KT xác nhận đúng số tiền/tham chiếu; đối soát ghi khoản được nhận theo quy tắc trong `sp_DoiSoatCOD`. Mỗi tham chiếu sổ cái là duy nhất, ngăn ghi tiền hai lần. Dùng view ví để so `SoDu` với `SoDuSoCai`; `ChenhLech` phải bằng 0.
+## 8. Sao lưu và xử lý lỗi
 
-## 5. Demo lỗi trigger, quyền và cách đọc lỗi
+Chạy từng khối của `sao_luu_mau.sql` bằng tài khoản DBA. File `.bak` nằm trên máy SQL Server; tài khoản dịch vụ SQL Server cần quyền ghi thư mục đó. `VERIFYONLY` kiểm tra bản sao; cần RESTORE sang **tên khác**, MOVE tệp dữ liệu/log sang đường dẫn mới và CHECKDB để kiểm chứng phục hồi thực tế. Không ghi đè database đang demo.
 
-Đây là thao tác **DBA trong SSMS để chứng minh trigger**, không phải SQL chạy từ backend. Đơn vừa tạo chưa có báo giá/phân công/thanh toán nên không thể nhảy thẳng tới hoàn thành. Giao dịch sẽ hủy; CATCH hiển thị lỗi dự kiến.
+| Lỗi | Cách xử lý |
+|---|---|
+| 547 | Đọc tên CHECK/FK; kiểm tra giá, số lượng và Id tham chiếu |
+| 2601/2627 | Trùng giá trị UNIQUE; kiểm tra điện thoại/chứng từ/phiên bản hiện hành |
+| 51003 hoặc HTTP 403 | Sai vai trò, chủ đơn hoặc người được phân công |
+| 51004 hoặc HTTP 404 | Dòng/tệp không tồn tại |
+| 51009 hoặc HTTP 409 | Sai trạng thái, phiên bản cũ, vật tư đã nghiệm thu hoặc số dư không đủ; tải lại và kiểm tra dữ liệu |
+| 229/230 | Ngữ cảnh SQL không có quyền đối tượng/cột |
 
-```sql
-SET XACT_ABORT ON;
-BEGIN TRY
-    BEGIN TRANSACTION;
-    DECLARE @KH INT, @DV INT, @Don INT, @Dau NVARCHAR(100) = CONVERT(NVARCHAR(36), NEWID());
-    SELECT @KH = Id FROM dbo.vw_NguoiDung WHERE SoDienThoai = '0900000001';
-    SELECT TOP (1) @DV = Id FROM dbo.vw_DichVuCongKhai ORDER BY Id;
-    EXEC dbo.sp_TaoDonHang @NguoiThucHienId = @KH, @DichVuId = @DV, @DiaChi = N'Địa chỉ demo', @MoTa = @Dau;
-    SELECT @Don = Id FROM dbo.vw_DonHangTongHop WHERE MoTa = @Dau AND KhachHangId = @KH;
-    UPDATE dbo.DonHang SET TrangThai = 'HoanThanh' WHERE Id = @Don; -- dự kiến lỗi 51009
-    ROLLBACK TRANSACTION;
-END TRY
-BEGIN CATCH
-    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-    SELECT ERROR_NUMBER() AS MaLoi, ERROR_MESSAGE() AS GiaiThich;
-END CATCH;
-```
+Các khối gây lỗi minh họa đều có TRY/CATCH và rollback. Rollback không thu hồi số IDENTITY đã cấp, nên Id nhảy số là bình thường. Trước khi kết thúc kiểm tra `SELECT @@TRANCOUNT;` phải bằng 0.
 
-```sql
-EXECUTE AS USER = 'hf_KH';
-SELECT Id, HoTen, VaiTro FROM dbo.vw_NguoiDung; -- được đọc cột công khai
-BEGIN TRY
-    SELECT Id FROM dbo.NguoiDung; -- lỗi 229: role không được đọc bảng gốc
-END TRY
-BEGIN CATCH
-    SELECT ERROR_NUMBER() AS MaLoi, ERROR_MESSAGE() AS GiaiThich;
-END CATCH;
-REVERT; -- bắt buộc trả lại quyền ban đầu
-```
 
-Bảy role `HomeFix_KH/KTV/DPV/CSKH/KT/GD/ADMIN` chỉ được EXECUTE các SP phù hợp, SELECT các view/TVF cần dùng; không có GRANT CRUD bảng. Có DENY cột `MatKhauBam` và cấm sửa/xóa `GiaoDichVi`. Role thứ tám `HomeFix_UngDung` chỉ phục vụ bước đăng nhập/OTP trước khi có JWT, được đọc view xác thực có hash; đây không phải vai trò nhân viên thứ tám. `hf_*` là user WITHOUT LOGIN để ứng dụng/demo mượn quyền; không phải bảy tài khoản web có mật khẩu.
+## 9. Hỗ trợ khách hàng và phí hủy đơn
 
-Backend kiểm tra JWT và lọc đơn theo chủ sở hữu; mỗi request đăng nhập đặt Id vào SESSION_CONTEXT và chạy trong ngữ cảnh role tương ứng. SP đối chiếu Id tham số với ngữ cảnh đó và vai trò thực tế, chặn giả mạo actor. Quyền role SQL giới hạn loại đối tượng, không tự lọc từng dòng theo khách hàng. Không cấp tài khoản SQL hoặc quyền IMPERSONATE cho người dùng web. Ownership chain cho phép View/SP cùng chủ dbo truy cập bảng nội bộ dù caller bị cấm đọc/ghi trực tiếp.
+Đặt đơn chỉ tạo `DonHang` và lịch sử; không tự tạo `YeuCauHoTro`. Bộ dữ liệu minh họa cũng không chèn sẵn phiếu hỗ trợ. Khách chọn đơn ngay trong mục Hỗ trợ, nhập nội dung và bấm Gửi yêu cầu mới phát sinh phiếu.
 
-Mã lỗi 51003 là thiếu quyền; 51004 là không tìm thấy; 51009 là dữ liệu/trạng thái/phiên bản không hợp lệ; 229 là SQL Server từ chối quyền đối tượng. Khi web báo dữ liệu đã thay đổi, tải lại trang rồi lấy phiên bản mới; không bỏ điều kiện phiên bản. FK lỗi 547: kiểm tra Id được tham chiếu có tồn tại. UNIQUE lỗi 2601/2627: kiểm tra dữ liệu trùng. Luôn đọc dòng `ERROR_MESSAGE()` trước khi sửa SQL.
+Luồng trạng thái: `Open` (chờ tiếp nhận) → `InProgress` (CSKH đang xử lý) → `Resolved` (đã giải quyết). CSKH có thể chuyển phiếu đang mở sang `Rejected` nhưng phải ghi lý do. Khách chỉ gửi thông tin, xem phản hồi; không được sửa trạng thái. CSKH phải tiếp nhận trước khi trả lời và chỉ nhân viên phụ trách được kết thúc phiếu. Phiếu đã kết thúc không nhận tin nhắn mới.
 
-## 6. Backup và phục hồi
+`sp_XuLyHoTro` cập nhật phiếu, lưu một dòng `TraoDoiHoTro` có trạng thái và thời gian thực tế, đồng thời tạo thông báo cho khách trong cùng transaction. `sp_ThemTraoDoiHoTro` kiểm tra chủ phiếu và người phụ trách trước khi lưu. Không dùng ngày tạo phiếu để giả làm thời điểm phản hồi. Khách đang chờ CSKH không bị đếm là việc khách phải xử lý.
 
-Mở `modules/10_backup_recovery.sql`, đọc ví dụ cuối file và chạy từng khối sau khi đổi tên/đường dẫn. Chạy bằng tài khoản quản trị SQL Server, không phải role ADMIN của web. Có thể lấy thư mục mặc định bằng:
+| Thời điểm khách hủy | Cách xử lý |
+|---|---|
+| Chờ tiếp nhận/báo giá/phân công/nhận ca hoặc KTV đã nhận nhưng chưa di chuyển | Hủy miễn phí |
+| KTV đang di chuyển hoặc đã đến nơi, chưa bắt đầu sửa | Khách xác nhận phí 60.000đ trước khi hủy; chỉ chuyển khoản cho HomeFix |
+| KTV đã bắt đầu sửa/nghiệm thu/hoàn thành | Không hủy trực tiếp; gửi yêu cầu CSKH |
 
-```sql
-SELECT SERVERPROPERTY('InstanceDefaultBackupPath') AS ThuMucBackup;
-SELECT name, recovery_model_desc FROM sys.databases WHERE name = DB_NAME();
--- Đổi đường dẫn cho đúng máy chủ, dùng tên file mới mỗi lần.
-EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Full_Lan1.bak', @Loai = 'FULL';
-RESTORE HEADERONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_Lan1.bak';
-RESTORE VERIFYONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_Lan1.bak' WITH FILE = 1, CHECKSUM;
-```
+Phí mặc định lưu tại `CauHinh.Khoa = 'PhiHuyDon'`. `sp_ChuyenTrangThaiDon` tự lấy phí và lưu snapshot vào `DonHang.PhiHuyDon`; không lấy giá tùy ý từ HTTP. Tham số `DongYPhiHuy`, `PhiHuyDuKien` chỉ kiểm tra khách đã đồng ý đúng mức phí. Hủy đồng thời với KTV bắt đầu di chuyển dùng khóa và ROWVERSION; giao dịch nào dùng dữ liệu cũ bị từ chối.
 
-FULL là bản đầy đủ; DIFF chứa phần thay đổi từ FULL thường gần nhất; LOG lưu phần nhật ký và cần recovery model FULL cùng chuỗi backup hợp lệ. COPY_ONLY FULL dùng làm bản độc lập, không tạo nền mới cho DIFF. Thủ tục dùng NOINIT nên nếu trùng tên file sẽ thêm backup set: xem Position bằng HEADERONLY và chọn đúng `FILE`, không mặc định bản mới nhất luôn là 1.
+Không thêm bảng nghiệp vụ. `ThanhToan` và `YeuCauThanhToan` có `LoaiThanhToan` phân biệt `DichVu`/`PhiHuyDon`. Phí hủy không cần nghiệm thu nên `NghiemThuId` để NULL; CHECK bắt buộc phí hủy chỉ có BANK, còn thanh toán dịch vụ phải tham chiếu nghiệm thu. UNIQUE lọc trên `NghiemThuId IS NOT NULL` giữ quy tắc một nghiệm thu chỉ thanh toán một lần nhưng cho phép nhiều đơn hủy độc lập.
 
-**BACKUP/RESTORE bị SQL Server cấm chạy trong BEGIN TRANSACTION.** Vì vậy SP sao lưu dùng TRY/CATCH và kiểm tra quyền, không mở giao dịch CRUD. Khôi phục từ `master` sang **tên database mới**, dùng `MOVE` theo logical name từ FILELISTONLY; phục hồi FULL → DIFF → LOG, NORECOVERY cho các bước trung gian và RECOVERY ở bước cuối. Không dùng WITH REPLACE để ghi đè bản đang chạy. Sau phục hồi, chạy `DBCC CHECKDB` và đọc lại view người dùng/đơn/ví để kiểm chứng. VERIFYONLY chỉ kiểm tra bản sao đọc được, không thay thế việc phục hồi thử.
+Khách gửi chứng từ → KT xác minh đúng 60.000đ và mã giao dịch → tạo đối soát → KT xác nhận đối soát → cộng **đủ 60.000đ** vào ví KTV, hoa hồng bằng 0. Đơn vẫn `Huy`, không chuyển thành `HoanThanh`. Việc KT xác minh phí cũ không thay trạng thái sẵn sàng của KTV đang làm đơn khác. SP và UNIQUE của sổ cái ngăn cộng ví hai lần.
 
-Sai đường dẫn/thiếu quyền thư mục thường báo 3201 hoặc OS error 3/5: thư mục phải có trên **máy SQL Server**, service account SQL có quyền ghi. Lỗi LOG 4214: chưa có FULL đầu tiên. Lỗi 4305/3117: thiếu/sai thứ tự chuỗi backup. Hướng dẫn đầy đủ có sẵn ở cuối module, gồm các lệnh RESTORE không tự chạy khi cài.
+Khối 15–16 trong `truy_van_mau.sql` dùng để xem phí hủy, loại khoản thu và lịch sử hỗ trợ. Các khoản phí hủy được tách khỏi GMV dịch vụ ở báo cáo tổng quan và vẫn xuất hiện trong dòng tiền chuyển khoản.
+
+## 10. Thực hành SQL theo phân công 4 thành viên
+
+Bắt đầu từ [Hướng dẫn học và demo](thuc_hanh_nhom/HUONG_DAN.md), [bảng phân công](thuc_hanh_nhom/PHAN_CONG.md) và [kết quả rà soát](thuc_hanh_nhom/KET_QUA_RASOAT.md).
+
+| Thành viên | File thực hành |
+|---|---|
+| Nguyễn Quốc Việt – 24110381 | [Thiết kế, ràng buộc, seed và index](thuc_hanh_nhom/01_NguyenQuocViet.sql) |
+| Đỗ Anh Tuấn – 24110369 | [View, function và báo cáo](thuc_hanh_nhom/02_DoAnhTuan.sql) |
+| Bùi Nguyễn Duy Trung – 24110363 | [SP, transaction và nghiệp vụ đơn](thuc_hanh_nhom/03_BuiNguyenDuyTrung.sql) |
+| Lê Tấn Tài – 24110319 | [Trigger, quyền, đối soát và migration](thuc_hanh_nhom/04_LeTanTai.sql); [backup/restore](thuc_hanh_nhom/04b_SaoLuuPhucHoi.sql) |
+
+Bảng đúng định dạng cuối rubric đã có trong repo: [Word](thuc_hanh_nhom/BangPhanCong_SQL_Nhom08.docx), [PDF](thuc_hanh_nhom/BangPhanCong_SQL_Nhom08.pdf). Máy nhóm trưởng còn giữ bản bàn giao tại `D:\Subject_K5\DBMS\ProjectCK\TaiLieuVanDap_Nhom08`.
+
+Mỗi người chạy phần đầu file, sau đó chọn trọn từng khối theo mã bài. Các bài thử ghi/quyền có rollback; bài index dùng bảng tạm, bài FULL/DIFF/LOG dùng bản sao riêng và tự dọn database thực hành. Không chạy lại bộ cài để chuẩn bị demo trên CSDL đang có dữ liệu.

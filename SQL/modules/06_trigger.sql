@@ -26,10 +26,17 @@ BEGIN
              OR (d.TrangThai = 'DangDiChuyen' AND i.TrangThai = 'DaDenNoi')
              OR (d.TrangThai = 'DaDenNoi' AND i.TrangThai = 'DangXuLy')
              OR (d.TrangThai = 'DangXuLy' AND i.TrangThai = 'ChoNghiemThu')
-             OR (d.TrangThai = 'ChoNghiemThu' AND i.TrangThai = 'HoanThanh')
+             OR (d.TrangThai = 'ChoNghiemThu' AND i.TrangThai IN ('HoanThanh','DangXuLy'))
              OR (d.TrangThai IN ('ChoTiepNhan','ChoDuyetSoBo','ChoPhanCong','ChoNhan','DaTiepNhan','DangDiChuyen','DaDenNoi') AND i.TrangThai = 'Huy')
            ))
     ) THROW 51009, N'Trạng thái đơn không được chuyển theo bước này.', 1;
+    IF EXISTS (
+        SELECT 1 FROM inserted AS i INNER JOIN deleted AS d ON d.Id = i.Id
+        WHERE (d.TrangThai = 'Huy' AND (i.PhiHuyDon <> d.PhiHuyDon
+            OR ISNULL(i.KyThuatVienId, 0) <> ISNULL(d.KyThuatVienId, 0)))
+          OR (i.TrangThai = 'Huy' AND d.TrangThai IN ('DangDiChuyen','DaDenNoi') AND i.PhiHuyDon <= 0)
+          OR (i.TrangThai = 'Huy' AND d.TrangThai NOT IN ('DangDiChuyen','DaDenNoi','Huy') AND i.PhiHuyDon <> 0)
+    ) THROW 51009, N'Phí hủy phải đúng thời điểm di chuyển và không được đổi sau khi hủy.', 1;
     IF EXISTS (
         SELECT 1 FROM inserted AS i
         WHERE i.TrangThai IN ('DaTiepNhan','DangDiChuyen','DaDenNoi','DangXuLy','ChoNghiemThu','HoanThanh')
@@ -49,12 +56,14 @@ BEGIN
     SET NOCOUNT ON;
     IF EXISTS (
         SELECT 1 FROM inserted AS i
-        INNER JOIN dbo.PhieuNghiemThu AS nt ON nt.Id = i.NghiemThuId
         INNER JOIN dbo.DonHang AS dh ON dh.Id = i.DonHangId
-        WHERE nt.DonHangId <> i.DonHangId OR nt.TrangThai <> 'Approved'
-           OR nt.TongTien <> i.SoTien OR nt.PhuongThucThanhToan <> i.PhuongThuc
-           OR dh.TrangThai <> 'ChoNghiemThu'
-    ) THROW 51009, N'Thanh toán phải khớp nghiệm thu đã được khách và thợ ký.', 1;
+        LEFT JOIN dbo.PhieuNghiemThu AS nt ON nt.Id = i.NghiemThuId
+        WHERE (i.LoaiThanhToan = 'DichVu' AND (nt.Id IS NULL OR nt.DonHangId <> i.DonHangId
+            OR nt.TrangThai <> 'Approved' OR nt.TongTien <> i.SoTien OR nt.PhuongThucThanhToan <> i.PhuongThuc
+            OR dh.TrangThai <> 'ChoNghiemThu'))
+          OR (i.LoaiThanhToan = 'PhiHuyDon' AND (dh.TrangThai <> 'Huy' OR dh.PhiHuyDon <> i.SoTien
+            OR dh.PhiHuyDon <= 0 OR dh.KyThuatVienId IS NULL OR i.NghiemThuId IS NOT NULL OR i.PhuongThuc <> 'BANK'))
+    ) THROW 51009, N'Thanh toán phải khớp nghiệm thu hoặc đúng phí hủy đơn chuyển khoản.', 1;
 END;
 GO
 CREATE OR ALTER TRIGGER dbo.tr_ThanhToan_BatBien
@@ -84,18 +93,18 @@ BEGIN
     ) THROW 51009, N'Đánh giá phải thuộc khách hàng và kỹ thuật viên của đơn hoàn thành.', 1;
 END;
 GO
-CREATE OR ALTER TRIGGER dbo.tr_ChiTietVatTu_KhoaDaDuyet
-ON dbo.ChiTietDeXuatVatTu AFTER INSERT, UPDATE, DELETE
+CREATE OR ALTER TRIGGER dbo.tr_ChiTietVatTu_KhoaNghiemThu
+ON dbo.ChiTietVatTu AFTER INSERT, UPDATE, DELETE
 AS
 BEGIN
     SET NOCOUNT ON;
     IF EXISTS (
-        SELECT 1 FROM dbo.DeXuatVatTu AS dx
-        WHERE dx.TrangThai <> 'Pending' AND (
-            EXISTS (SELECT 1 FROM inserted AS i WHERE i.DeXuatVatTuId = dx.Id)
-            OR EXISTS (SELECT 1 FROM deleted AS d WHERE d.DeXuatVatTuId = dx.Id)
+        SELECT 1 FROM dbo.BangKeVatTu AS dx
+        WHERE EXISTS (SELECT 1 FROM dbo.PhieuNghiemThu AS nt WHERE nt.BangKeVatTuId = dx.Id) AND (
+            EXISTS (SELECT 1 FROM inserted AS i WHERE i.BangKeVatTuId = dx.Id)
+            OR EXISTS (SELECT 1 FROM deleted AS d WHERE d.BangKeVatTuId = dx.Id)
         )
-    ) THROW 51009, N'Vật tư đã duyệt/từ chối phải lập phiên bản đề xuất mới.', 1;
+    ) THROW 51009, N'Vật tư đã lập nghiệm thu không được sửa. Hãy lập phiên bản mới khi xử lý lại.', 1;
 END;
 GO
 CREATE OR ALTER TRIGGER dbo.tr_PhieuNghiemThu_KiemTraChuKy

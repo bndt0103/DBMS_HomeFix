@@ -66,6 +66,11 @@ uploadsRouter.get(
     }
     if (!/^[a-f0-9-]+\.png$/i.test(file.KhoaLuuTru))
       fail(400, "Khóa tệp không hợp lệ.");
+    try {
+      await fs.access(path.join(config.uploads, file.KhoaLuuTru));
+    } catch {
+      fail(404, "Không còn tệp ảnh được lưu.");
+    }
     res.type(file.KieuMIME).set("Cache-Control", "private, no-store");
     res.sendFile(path.join(config.uploads, file.KhoaLuuTru));
   }),

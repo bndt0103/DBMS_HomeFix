@@ -1,0 +1,20 @@
+:root {
+  --green: #087b4b;
+  --ink: #243d30;
+  --muted: #7a8980;
+  --border: #e3eae5;
+  --bg: #f7f9f7;
+  color-scheme: light;
+}
+.two-column > * {
+  min-width: 0;
+}
+
+.policy-note {
+  font-size: 12px;
+  line-height: 1.7;
+  background: #fff9ed;
+  border-radius: 8px;
+  padding: 13px;
+  color: #88672c;
+}

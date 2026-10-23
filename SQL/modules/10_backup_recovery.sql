@@ -50,34 +50,34 @@ GO
 SELECT name, recovery_model_desc FROM sys.databases WHERE name = DB_NAME();
 -- Dùng đường dẫn tồn tại, service account SQL có quyền ghi. Ví dụ D:\SQLBackup.
 -- Không chạy trên database đang có giao dịch nghiệp vụ ngoài ý muốn.
-ALTER DATABASE HomeFix_DBMS_Sach SET RECOVERY FULL;
+ALTER DATABASE HomeFix_DBMS_Clean_20261022 SET RECOVERY FULL;
 GO
-USE HomeFix_DBMS_Sach;
+USE HomeFix_DBMS_Clean_20261022;
 GO
-EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Full_20261022.bak', @Loai = 'FULL';
-EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Diff_20261022.bak', @Loai = 'DIFF';
-EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Log_20261022.trn', @Loai = 'LOG';
+EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Full_20261023.bak', @Loai = 'FULL';
+EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Diff_20261023.bak', @Loai = 'DIFF';
+EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Log_20261023.trn', @Loai = 'LOG';
 
 -- 2. Xem thông tin backup set/logical name và kiểm tra backup có đọc được.
 -- FILE = 1 phù hợp tập tin mới. Nếu đã backup nhiều lần cùng tập tin,
 -- RESTORE HEADERONLY để chọn đúng Position, không mặc định bản mới nhất ở số 1.
-RESTORE HEADERONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak';
-RESTORE FILELISTONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak' WITH FILE = 1;
-RESTORE VERIFYONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak' WITH FILE = 1, CHECKSUM;
+RESTORE HEADERONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261023.bak';
+RESTORE FILELISTONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261023.bak' WITH FILE = 1;
+RESTORE VERIFYONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261023.bak' WITH FILE = 1, CHECKSUM;
 -- VERIFYONLY kiểm tra backup; chưa chứng minh toàn bộ CSDL phục hồi hoạt động.
 
 -- 3. Khôi phục ra TÊN MỚI, không WITH REPLACE. Sửa logical name theo FILELISTONLY.
 USE master;
 GO
 RESTORE DATABASE HomeFix_KiemTraPhucHoi
-FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261022.bak'
+FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261023.bak'
 WITH FILE = 1, NORECOVERY,
-    MOVE N'HomeFix_DBMS_Sach' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi.mdf',
-    MOVE N'HomeFix_DBMS_Sach_log' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi_log.ldf';
+    MOVE N'HomeFix_DBMS_Clean_20261022' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi.mdf',
+    MOVE N'HomeFix_DBMS_Clean_20261022_log' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi_log.ldf';
 RESTORE DATABASE HomeFix_KiemTraPhucHoi
-FROM DISK = N'D:\SQLBackup\HomeFix_Diff_20261022.bak' WITH FILE = 1, NORECOVERY;
+FROM DISK = N'D:\SQLBackup\HomeFix_Diff_20261023.bak' WITH FILE = 1, NORECOVERY;
 RESTORE LOG HomeFix_KiemTraPhucHoi
-FROM DISK = N'D:\SQLBackup\HomeFix_Log_20261022.trn' WITH FILE = 1, RECOVERY;
+FROM DISK = N'D:\SQLBackup\HomeFix_Log_20261023.trn' WITH FILE = 1, RECOVERY;
 -- Nếu chỉ phục hồi FULL: thay NORECOVERY bằng RECOVERY ở lệnh FULL và bỏ DIFF/LOG.
 -- Nếu cần tới một thời điểm: thêm STOPAT = '2026-10-22T14:30:00' vào RESTORE LOG.
 -- FULL/DIFF/LOG phải cùng chuỗi hợp lệ. COPY_ONLY FULL không lập nền cho DIFF.

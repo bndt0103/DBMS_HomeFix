@@ -1,6 +1,10 @@
 # HomeFix — Đồ án Hệ quản trị cơ sở dữ liệu
 
-Ứng dụng đặt dịch vụ sửa chữa tại nhà dùng **SQL Server + Node.js/Express + React**. Bản tinh gọn ngày 22/10/2026 tập trung vào SQL và quy trình nghiệp vụ để có thể đọc, chạy và giải thích trong SSMS.
+Ứng dụng đặt dịch vụ sửa chữa tại nhà dùng **SQL Server + Node.js/Express + React**. Giao diện gồm: bố cục, thanh điều hướng, trang dịch vụ, đơn hàng, điều phối, ví và báo cáo. Chỉ bỏ chatbot AI và phần ma trận quyền tại trang tài khoản Admin. Tầng SQL vẫn đóng gói nghiệp vụ để đọc, chạy và giải thích trong SSMS.
+
+## Thành viên lấy bản mới và CSDL
+
+Nhánh dùng chung: **main**. Làm theo [hướng dẫn cài trên máy thành viên](SQL/CAI_DAT_THANH_VIEN.md) để pull/clone, tạo CSDL mới và nạp 10 đơn mẫu. Cấu hình `.env` là riêng từng máy. [Bảng phân công Word](SQL/thuc_hanh_nhom/BangPhanCong_SQL_Nhom08.docx), [PDF](SQL/thuc_hanh_nhom/BangPhanCong_SQL_Nhom08.pdf) và [bài học SQL cho 4 thành viên](SQL/thuc_hanh_nhom/HUONG_DAN.md) đã có trong repo.
 
 ## 1. Cấu trúc
 
@@ -15,11 +19,11 @@ SQL/
     02_function.sql        6 hàm
     03_view.sql            34 view
     04_sp.sql              19 SP tài khoản/tiện ích
-    05_transaction.sql     26 SP nghiệp vụ/báo cáo
+    05_transaction.sql     30 SP nghiệp vụ/báo cáo
     06_trigger.sql         7 trigger
     07_security.sql        Quyền của các role
     08_seed.sql            Dữ liệu sạch
-    09_data_migration.sql  Ghi chú phiên bản, không nhập giao dịch cũ
+    09_data_migration.sql  Nâng cấu trúc hiện có, giữ dữ liệu
     10_backup_recovery.sql SP sao lưu và hướng dẫn phục hồi
 SRC/
   package.json             Lệnh cài, chạy và kiểm thử
@@ -40,9 +44,11 @@ Thư mục DOC, SLIDES, HELP, bản hướng dẫn vấn đáp cũ và các bộ
 - Đọc dùng `queryView()` hoặc `queryFunction()`. Tên đối tượng có trong danh sách đăng ký; điều kiện lọc được dựng từ các toán tử cho phép và giá trị được tham số hóa.
 - Không có SELECT/INSERT/UPDATE/DELETE bảng trong controller. Các câu SELECT dữ liệu trong `db.js` chỉ nhắm đến view/TVF đã đăng ký. Công cụ cài đặt và kiểm thử quản trị có quyền khác với API vận hành.
 - Mỗi SP ghi kiểm tra vai trò, quyền sở hữu, dữ liệu, trạng thái và phiên bản trước khi cập nhật. Có transaction, savepoint khi nằm trong transaction ngoài, TRY/CATCH và XACT_STATE.
-- Có **46 SP**: 44 SP ghi có giao dịch; `sp_BaoCaoTongHop` chỉ đọc; `sp_SaoLuuHeThong` dành cho DBA và không mở transaction vì SQL Server không cho BACKUP nằm trong transaction. [Quy định BACKUP của Microsoft](https://learn.microsoft.com/en-us/sql/t-sql/statements/backup-transact-sql).
+- Có **50 SP**: 48 SP ghi có giao dịch; `sp_BaoCaoTongHop` chỉ đọc; `sp_SaoLuuHeThong` dành cho DBA và không mở transaction vì SQL Server không cho BACKUP nằm trong transaction. [Quy định BACKUP của Microsoft](https://learn.microsoft.com/en-us/sql/t-sql/statements/backup-transact-sql).
 - Số dư ví được SP duyệt ví/đối soát cập nhật cùng giao dịch ghi sổ cái. View ví đối chiếu số dư với SUM sổ. Trigger sổ cái ngăn UPDATE/DELETE; không có cơ chế cập nhật số dư lần hai bằng trigger.
 - Tỷ lệ hoa hồng lưu theo phần trăm: `15` nghĩa là **15%** của tiền công, không phải `0.15`.
+
+`/api/web` nối hợp đồng JSON của giao diện gốc với SP/View hiện tại. `web.js` xử lý các màn hình nghiệp vụ; `web-reports.js` đọc dữ liệu báo cáo; `web-shape.js` đổi tên thuộc tính trả về. Các lớp này không ghi trực tiếp vào bảng và không thay thế kiểm tra quyền ở SQL. Các API dùng tên tiếng Việt hiện có vẫn được giữ để kiểm thử và minh họa.
 
 Khi thay đổi SQL, sửa module trước rồi chạy `npm.cmd run sql:build`. Lệnh dựng lại bộ cài tổng, seed riêng và `backend/src/db-contract.json` dùng để kiểm tra tên/kiểu tham số. Không sửa riêng file tổng rồi để module lệch nhau.
 
@@ -50,7 +56,7 @@ Khi thay đổi SQL, sửa module trước rồi chạy `npm.cmd run sql:build`.
 
 JWT middleware kiểm tra phiên/tài khoản/role ở mỗi request. `DB_IMPERSONATE=true` là cấu hình mặc định: backend mở kết nối riêng cho request, ghi Id người dùng vào SESSION_CONTEXT chỉ đọc, rồi thực thi dưới `hf_KH`, `hf_KTV`, … tương ứng. Kết nối được đóng sau phản hồi để tránh lẫn ngữ cảnh giữa người dùng. SP đối chiếu actor do server cung cấp với ngữ cảnh này.
 
-Database có **7 role nghiệp vụ** được nêu trong yêu cầu. Role kỹ thuật bổ sung `HomeFix_UngDung`/user `hf_UngDung` chỉ phục vụ đăng nhập, đăng ký và OTP; chỉ view xác thực nội bộ chứa hash bcrypt. Các view danh sách không trả hash. User WITHOUT LOGIN là ngữ cảnh thực thi bên trong database, không phải 7 tài khoản đăng nhập SQL độc lập.
+Database có **7 role nghiệp vụ** được nêu trong yêu cầu. Role kỹ thuật bổ sung `HomeFix_UngDung`/user `hf_UngDung` chỉ phục vụ đăng nhập và đăng ký; chỉ view xác thực nội bộ chứa hash bcrypt. Các view danh sách không trả hash. User WITHOUT LOGIN là ngữ cảnh thực thi bên trong database, không phải 7 tài khoản đăng nhập SQL độc lập.
 
 Các role bị DENY truy cập bảng trực tiếp; được GRANT EXECUTE đúng SP và SELECT đúng view/TVF. SP/view và bảng cùng chủ sở hữu `dbo` để sử dụng ownership chaining. [Microsoft: ownership chaining và context switching](https://learn.microsoft.com/en-us/sql/relational-databases/tutorial-ownership-chains-and-context-switching). Quyền xem từng đơn/tệp còn được backend kiểm tra theo người dùng thực tế; role SQL chỉ đại diện nhóm nghiệp vụ.
 
@@ -93,11 +99,25 @@ Mở **http://localhost:3000**. Khi phát triển, `npm.cmd run dev` mở API v�
 
 Máy được bàn giao đang dùng database **`HomeFix_DBMS_Clean_20261022`**. Cấu hình `.env` cục bộ trỏ đúng database đó; tên này khác tên mặc định của bộ cài để giữ bản trước tái cấu trúc phục vụ khôi phục khi cần.
 
+### Nâng bản đang có dữ liệu
+
+Khi nâng cấp database đang dùng, sao lưu database trước theo module `10_backup_recovery.sql`, dừng ứng dụng rồi chạy trong `SRC`:
+
+```powershell
+npm.cmd install
+npm.cmd run sql:build
+npm.cmd run db:upgrade
+npm.cmd run build
+npm.cmd start
+```
+
+`db:upgrade` đọc đúng `DB_NAME` trong `.env`, bổ sung các cột còn thiếu, chuyển DeXuatVatTu/ChiTietDeXuatVatTu sang BangKeVatTu/ChiTietVatTu, bỏ quyết định duyệt vật tư và cập nhật function, view, SP, trigger, quyền. Id và chứng từ cũ được giữ nguyên; bảng kê bị từ chối trước đây không tự tính tiền. Không chạy `00_schema` hay `08_seed` lên database đang sử dụng. Công cụ dành cho bản refactor có bảng `KyThuatVien`, không chuyển tự động database HomeFix đời trước.
+
 ## 4. Seed sạch và đăng nhập
 
 | Số điện thoại | Vai trò | Công việc |
 |---|---|---|
-| 0900000001 | KH | Đặt dịch vụ, duyệt giá/vật tư, ký, chuyển khoản, hỗ trợ, đánh giá |
+| 0900000001 | KH | Đặt dịch vụ, duyệt báo giá sơ bộ, ký, chuyển khoản, hỗ trợ, đánh giá |
 | 0900000002 | KTV | Nhận đơn, tiến độ, vật tư, ký nghiệm thu, thu COD, ví |
 | 0900000003 | DPV | Báo giá và điều phối |
 | 0900000004 | CSKH | Xử lý phiếu hỗ trợ và trao đổi |
@@ -113,8 +133,8 @@ Seed chỉ thêm: 7 người dùng, hồ sơ KTV số dư 0, 5 danh mục/5 dị
 
 ### Chuẩn bị ví
 
-1. Đăng nhập KTV → Ví, tải ảnh chứng từ mô phỏng mục đích WalletProof, ghi nhận Id tệp.
-2. Tạo yêu cầu Deposit, ví dụ 500.000, kèm Id chứng từ và ghi chú.
+1. Đăng nhập KTV → Ví & thu nhập → Nạp ví, chọn ảnh chứng từ mô phỏng.
+2. Nhập số tiền, ví dụ 500.000, và ghi chú rồi gửi yêu cầu. Giao diện tự tải ảnh và gắn chứng từ.
 3. Đăng nhập KT → Tài chính → duyệt yêu cầu. Ví tăng sau khi duyệt; duyệt lặp/phiên bản cũ bị từ chối.
 
 Yêu cầu rút tiền được kiểm số dư khả dụng sau khi giữ tiền cho các yêu cầu đang chờ; khi đang có phân công hoạt động không được rút. Không cộng tiền vào ví bằng sửa trực tiếp bảng.
@@ -122,15 +142,19 @@ Yêu cầu rút tiền được kiểm số dư khả dụng sau khi giữ tiề
 ### Một đơn COD đầy đủ
 
 1. KH chọn dịch vụ, nhập địa chỉ và mô tả, tạo đơn.
-2. DPV mở đơn, lập báo giá: phí kiểm tra 50.000, tiền công 200.000, tỷ lệ 15.
+2. DPV mở đơn → Lập báo giá sơ bộ, nhập chẩn đoán. Giá được lấy từ danh mục dịch vụ; chọn dịch vụ Bảo dưỡng máy lạnh để minh họa phí kiểm tra 50.000, tiền công 200.000 và tỷ lệ 15%.
 3. KH duyệt báo giá. DPV giao KTV mẫu đang sẵn sàng.
 4. KTV nhận phân công, cập nhật Di chuyển → Đến nơi → Đang xử lý.
-5. KTV lập đề xuất vật tư nếu cần; KH duyệt. Hai vật tư giá 50.000 sẽ tính 100.000 tại SQL.
-6. KTV lập nghiệm thu, tải chữ ký với mục đích TechnicianSignature và ký bằng Id tệp đó.
-7. KH tải chữ ký mục đích CustomerSignature, chọn đúng Id rồi ký nghiệm thu, chọn COD.
+5. KTV kê khai vật tư và đơn giá đã trao đổi trực tiếp với khách; không có bước duyệt vật tư riêng. Hai vật tư giá 50.000 sẽ tính 100.000 tại SQL.
+6. KTV chọn Hoàn thành · Lập phiếu nghiệm thu; nhập nguyên nhân, biện pháp, thêm ảnh thành phẩm và ký trong khung chữ ký thợ. Gửi phiếu.
+7. KH mở phiếu, ký trực tiếp trong khung chữ ký khách (hoặc chọn ảnh chữ ký), chọn Tiền mặt và xác nhận. Đơn vẫn chờ nghiệm thu/thanh toán cho đến khi KTV ghi nhận tiền.
 8. KTV ghi nhận đã thu tiền COD. Đơn hoàn thành và tạo đối soát Pending.
-9. KT xác nhận đối soát. Hoa hồng là 200.000 × 15% = 30.000, trừ ví thợ; không tính 15% trên tổng tiền gồm vật tư/phí kiểm tra.
+9. KT chọn Đối soát ở đúng dòng và xác nhận trong hộp thoại tại chỗ. Hoa hồng là 200.000 × 15% = 30.000, trừ ví thợ; không tính 15% trên tổng tiền gồm vật tư/phí kiểm tra.
 10. KH đánh giá hoặc mở phiếu hỗ trợ; CSKH phản hồi và xử lý phiếu.
+
+Khách chọn đơn và gửi phiếu ngay trong mục Hỗ trợ, không bị chuyển qua danh sách đặt dịch vụ. CSKH tiếp nhận, trao đổi và kết thúc/từ chối có lý do; khách theo dõi phản hồi và bổ sung thông tin. Đặt đơn và dữ liệu mẫu không tự tạo phiếu hỗ trợ.
+
+Khách hủy miễn phí trước khi KTV di chuyển. Khi KTV đang di chuyển/đã đến nhưng chưa bắt đầu sửa, khách phải xác nhận phí 60.000đ và chỉ chuyển khoản vào tài khoản HomeFix. KT xác minh tiền rồi đối soát để cộng đủ phí di chuyển vào ví KTV, không trừ hoa hồng; đơn vẫn đã hủy. Khi đang sửa/nghiệm thu, khách gửi phiếu cho CSKH, không hủy trực tiếp. Chi tiết SQL ở mục 9 của [SQL/README.md](SQL/README.md).
 
 ### Một đơn BANK
 
@@ -140,7 +164,7 @@ Giao diện Admin chỉ có danh sách tài khoản, tạo tài khoản bằng d
 
 ## 6. Demo SQL và giải thích lỗi
 
-Đọc [SQL/README.md](SQL/README.md), mở các module cần giải thích. Tài liệu có câu lệnh SELECT trên view, EXEC tạo đơn/báo giá/điều phối trong giao dịch rồi rollback, ví dụ trigger từ chối dữ liệu sai và EXECUTE AS kiểm quyền. Không cần thư mục vấn đáp/demo riêng.
+Đọc [SQL/README.md](SQL/README.md), mở các module cần giải thích. Tài liệu có câu lệnh SELECT trên view, EXEC tạo đơn/báo giá/điều phối trong giao dịch rồi rollback, ví dụ trigger từ chối dữ liệu sai và EXECUTE AS kiểm quyền. Bài thực hành đã chia theo 4 thành viên trong [SQL/thuc_hanh_nhom](SQL/thuc_hanh_nhom/HUONG_DAN.md).
 
 - `ROWVERSION` là 8 byte tự đổi, không phải ngày giờ; API trả chuỗi 0x… và gửi lại thành PhienBanDuKien.
 - 51003 → quyền không phù hợp; 51004 → không có đối tượng; 51009 → trạng thái/phiên bản/dữ liệu không hợp lệ; 547 → CHECK/FK; 2601/2627 → trùng khóa.
@@ -161,10 +185,16 @@ npm.cmd run format:check
 npm.cmd test
 ```
 
-Kiểm thử tự tạo database tên `HomeFix_Test_<ngẫu nhiên>`, chạy API với database role thật, kiểm tra seed, COD/BANK, số tiền, concurrency, quyền, tài khoản, OTP và trigger. Cuối lượt chạy xóa đúng database thử của lượt đó. Cần tài khoản đủ quyền tạo/xóa database và IMPERSONATE để chạy test. Không chạy các thao tác thử lên database đang dùng.
+Kiểm thử tự tạo database tên `HomeFix_Test_<ngẫu nhiên>`, chạy API với database role thật, kiểm tra seed, COD/BANK, số tiền, concurrency, quyền, tài khoản, đổi mật khẩu và trigger. Cuối lượt chạy xóa đúng database thử của lượt đó. Cần tài khoản đủ quyền tạo/xóa database và IMPERSONATE để chạy test. Không chạy các thao tác thử lên database đang dùng.
 
 `node_modules`, `.env`, `dist`, `uploads`, ảnh chụp và test-results/log được bỏ qua bằng .gitignore. Chỉ giữ bộ kiểm thử cốt lõi ở `backend/test`, không cần các bộ ảnh/log cũ.
 
-OTP phát triển có thể dùng `OTP_PROVIDER=console`: mã được in trên terminal cục bộ, không trả qua API. Để gửi email thật, cấu hình SMTP_HOST/PORT/USER/PASSWORD/FROM. Chức năng đổi mật khẩu khi đang đăng nhập kiểm mật khẩu cũ; API reset qua OTP kiểm mã dùng một lần và email tài khoản. Việc kiểm thử không tự khẳng định đã gửi email ra dịch vụ bên ngoài.
+Bản web DBMS không dùng OTP/SMTP hoặc Google Maps/GPS. Đăng ký bằng số điện thoại, email không bắt buộc. Đổi mật khẩu tại Hồ sơ yêu cầu mật khẩu hiện tại; đổi thành công sẽ thu hồi phiên đăng nhập cũ. Quên mật khẩu hiển thị hướng dẫn liên hệ quản trị viên, không mở API đổi mật khẩu công khai. Các đối tượng SQL OTP/vị trí cũ được giữ để tương thích cấu trúc và không được web gọi.
 
-Kết quả xác minh ngày 22/10/2026: format và build đạt; 13 nhóm kiểm thử tích hợp cốt lõi đạt trên database tạm; 21 kiểm tra SQL nghiệp vụ và 33 lượt trang của 7 vai trò đã được kiểm chứng. Chuỗi FULL/DIFF/LOG được phục hồi sang database thử riêng và CHECKDB đạt. Database vận hành bàn giao vẫn có 7 tài khoản, 0 đơn, 0 giao dịch ví, 0 OTP và 0 nhật ký.
+Bộ kiểm thử tích hợp gồm 20 nhóm: quyền của bảy vai trò, seed, COD/BANK, vật tư/nghiệm thu, sổ ví, hỗ trợ hai chiều và phí hủy đơn. Kiểm thử trình duyệt xác minh các màn hình theo vai trò và các nút trong luồng hỗ trợ, hủy, gửi chứng từ và đối soát. Thử nghiệm sử dụng database riêng và tự dọn sau khi chạy.
+
+## Dữ liệu và truy vấn minh họa
+
+Bản local dùng `HomeFix_DBMS_Clean_20261022` trên `MSI\SQLEXPRESS`. Đã bổ sung 5 khách, 3 thợ, 20 dịch vụ và 10 đơn; giữ dữ liệu cũ. Tài khoản KH mới `0900001001`–`0900001005`, KTV mới `0900002001`–`0900002003`, mật khẩu `123456`. Danh tính, ảnh và chứng từ là giả lập.
+
+Trên bản cài mới, chạy `npm.cmd run db:demo` tại `SRC` để bổ sung một lần; không chạy lại seed trắng. Lệnh không đặt lại các đơn đã demo. Mở `SQL/truy_van_mau.sql` trong SSMS để chạy ví dụ SP/function/view/index/transaction/trigger/bảo mật; mở `SQL/sao_luu_mau.sql` để sao lưu. Xem hướng dẫn và kết quả mong đợi trong [SQL/README.md](SQL/README.md).

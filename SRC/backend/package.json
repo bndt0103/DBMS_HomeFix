@@ -18,7 +18,6 @@
     "msnodesqlv8": "^5.0.0",
     "mssql": "^12.0.0",
     "multer": "^2.0.2",
-    "nodemailer": "^10.0.10",
     "sharp": "^0.34.4"
   }
 }

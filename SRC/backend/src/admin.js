@@ -115,11 +115,14 @@ adminRouter.get(
   wrap(async (req, res) => {
     ok(res, {
       DoanhThu: await queryView("vw_DoanhThuNgay", {}, { order: "Ngay" }),
-      HieuSuat: await queryView(
-        "vw_HieuSuatKyThuatVien",
-        {},
-        { order: "KyThuatVienId" },
-      ),
+      HieuSuat:
+        req.user.VaiTro === "KT"
+          ? undefined
+          : await queryView(
+              "vw_HieuSuatKyThuatVien",
+              {},
+              { order: "KyThuatVienId" },
+            ),
       ThongKe: await queryFunction("fn_ThongKeDon", {
         TuNgay: req.query.TuNgay || null,
         DenNgay: req.query.DenNgay || null,

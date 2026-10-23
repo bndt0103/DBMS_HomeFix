@@ -247,7 +247,7 @@ export async function queryView(
   const order = params.order || "Id";
   if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(order))
     throw new Error("Invalid sort column");
-  const statement = `SELECT TOP (${Math.trunc(limit)}) v.* FROM dbo.[${viewName}] AS v${clauses.length ? " WHERE " + clauses.join(" AND ") : ""} ORDER BY [${order}] ${params.ascending ? "ASC" : "DESC"};`;
+  const statement = `SELECT ${params.all === true ? "" : `TOP (${Math.trunc(limit)}) `}v.* FROM dbo.[${viewName}] AS v${clauses.length ? " WHERE " + clauses.join(" AND ") : ""} ORDER BY [${order}] ${params.ascending ? "ASC" : "DESC"};`;
   return publicValue((await request.query(statement)).recordset);
 }
 

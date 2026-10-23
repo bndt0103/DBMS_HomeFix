@@ -44,24 +44,24 @@ AS
 SELECT Id, DonHangId, PhiKiemTra, TienCong, TyLeHoaHong, TongTien, ChanDoan, TrangThai, NgayTao, PhienBan
 FROM dbo.BaoGiaSoBo;
 GO
-CREATE OR ALTER VIEW dbo.vw_DeXuatVatTu
+CREATE OR ALTER VIEW dbo.vw_BangKeVatTu
 AS
-SELECT Id, DonHangId, LanSuaDoi, DangApDung, TrangThai, NguoiTaoId, NgayTao, PhienBan
-FROM dbo.DeXuatVatTu;
+SELECT Id, DonHangId, LanSuaDoi, DangApDung, NguoiTaoId, NgayTao, PhienBan
+FROM dbo.BangKeVatTu;
 GO
-CREATE OR ALTER VIEW dbo.vw_ChiTietDeXuatVatTu
+CREATE OR ALTER VIEW dbo.vw_ChiTietVatTu
 AS
-SELECT Id, DeXuatVatTuId, Ten, SoLuong, DonGia, SoThangBaoHanh, ThanhTien
-FROM dbo.ChiTietDeXuatVatTu;
+SELECT Id, BangKeVatTuId, Ten, SoLuong, DonGia, SoThangBaoHanh, ThanhTien
+FROM dbo.ChiTietVatTu;
 GO
 CREATE OR ALTER VIEW dbo.vw_PhieuNghiemThu
 AS
-SELECT Id, DonHangId, KyThuatVienId, DeXuatVatTuId, NguyenNhan, PhuongAnXuLy, PhiKiemTra, TienCong, TongTienVatTu, TongTien, TrangThai, ChuKyKTVId, ChuKyKHId, PhuongThucThanhToan, NgayDuyet, NgayTao, PhienBan
+SELECT Id, DonHangId, KyThuatVienId, BangKeVatTuId, NguyenNhan, PhuongAnXuLy, PhiKiemTra, TienCong, TongTienVatTu, TongTien, TrangThai, ChuKyKTVId, ChuKyKHId, PhuongThucThanhToan, TaiKhoanNganHangId, NgayDuyet, NgayTao, PhienBan
 FROM dbo.PhieuNghiemThu;
 GO
 CREATE OR ALTER VIEW dbo.vw_ThanhToan
 AS
-SELECT Id, DonHangId, NghiemThuId, SoTien, PhuongThuc, NguoiThuTienId, MaThamChieu, TaiKhoanNganHangId, NgayTao
+SELECT Id, DonHangId, LoaiThanhToan, NghiemThuId, SoTien, PhuongThuc, NguoiThuTienId, MaThamChieu, TaiKhoanNganHangId, NgayTao
 FROM dbo.ThanhToan;
 GO
 CREATE OR ALTER VIEW dbo.vw_DoiSoat
@@ -76,7 +76,7 @@ FROM dbo.TaiKhoanNganHang;
 GO
 CREATE OR ALTER VIEW dbo.vw_YeuCauThanhToan
 AS
-SELECT Id, DonHangId, NghiemThuId, KhachHangId, TaiKhoanNganHangId, SoTien, ChungTuId, MaThamChieu, TrangThai, NgayTao, PhienBan
+SELECT Id, DonHangId, LoaiThanhToan, NghiemThuId, KhachHangId, TaiKhoanNganHangId, SoTien, ChungTuId, MaThamChieu, TrangThai, NgayTao, PhienBan
 FROM dbo.YeuCauThanhToan;
 GO
 CREATE OR ALTER VIEW dbo.vw_YeuCauVi
@@ -91,18 +91,23 @@ FROM dbo.GiaoDichVi;
 GO
 CREATE OR ALTER VIEW dbo.vw_HoSoKTV
 AS
-SELECT Id, NguoiDungId, NhomTayNghe, KhuVucPhucVu, KinhNghiem, TrangThai, LyDo, NgayTao, PhienBan
+SELECT Id, NguoiDungId, NhomTayNghe, KhuVucPhucVu, KinhNghiem, HoSoJSON, GiayToMatTruocId, GiayToMatSauId, TrangThai, LyDo, NgayTao, PhienBan
 FROM dbo.HoSoKTV;
 GO
 CREATE OR ALTER VIEW dbo.vw_YeuCauHoTro
 AS
-SELECT Id, DonHangId, KhachHangId, Loai, MoTa, TrangThai, KetQuaXuLy, NguoiXuLyId, NgayTao, PhienBan
-FROM dbo.YeuCauHoTro;
+SELECT ht.Id, ht.DonHangId, ht.KhachHangId, kh.HoTen AS TenKhachHang, kh.SoDienThoai AS SDTKhachHang,
+    ht.Loai, ht.MoTa, ht.TrangThai, ht.KetQuaXuLy, ht.NguoiXuLyId, nv.HoTen AS TenNguoiXuLy,
+    dh.TenDichVu, dh.DiaChi, dh.TrangThai AS TrangThaiDon, ht.NgayTao, ht.NgayCapNhat, ht.PhienBan
+FROM dbo.YeuCauHoTro AS ht
+INNER JOIN dbo.NguoiDung AS kh ON kh.Id = ht.KhachHangId
+INNER JOIN dbo.DonHang AS dh ON dh.Id = ht.DonHangId
+LEFT JOIN dbo.NguoiDung AS nv ON nv.Id = ht.NguoiXuLyId;
 GO
 CREATE OR ALTER VIEW dbo.vw_TraoDoiHoTro
 AS
-SELECT Id, YeuCauHoTroId, NguoiGuiId, NoiDung, NgayTao
-FROM dbo.TraoDoiHoTro;
+SELECT td.Id, td.YeuCauHoTroId, td.NguoiGuiId, nd.HoTen, nd.VaiTro, td.NoiDung, td.TrangThai, td.NgayTao
+FROM dbo.TraoDoiHoTro AS td INNER JOIN dbo.NguoiDung AS nd ON nd.Id = td.NguoiGuiId;
 GO
 CREATE OR ALTER VIEW dbo.vw_DanhGia
 AS
@@ -147,12 +152,14 @@ FROM dbo.NguoiDung;
 GO
 CREATE OR ALTER VIEW dbo.vw_DonHangTongHop
 AS
-SELECT dh.Id, dh.KhachHangId, kh.HoTen AS TenKhachHang, kh.SoDienThoai AS SDTKhachHang,
+SELECT dh.Id, dv.DanhMucId, dm.Ma AS MaDanhMuc, dh.KhachHangId, kh.HoTen AS TenKhachHang, kh.SoDienThoai AS SDTKhachHang,
     dh.DichVuId, dh.TenDichVu, dh.DiaChi, dh.MoTa, dh.NgayHen, dh.TrangThai,
     dh.KyThuatVienId, ktv.HoTen AS TenKyThuatVien, ktv.SoDienThoai AS SDTKyThuatVien,
-    dh.NgayTao, dh.NgayCapNhat, dh.PhienBan, dbo.fn_TongTienDonHang(dh.Id) AS TongTien,
+    dh.PhiHuyDon, dh.NgayTao, dh.NgayCapNhat, dh.PhienBan, dbo.fn_TongTienDonHang(dh.Id) AS TongTien,
     (SELECT HanBaoHanh FROM dbo.fn_HanBaoHanh(dh.Id)) AS HanBaoHanh
 FROM dbo.DonHang AS dh
+INNER JOIN dbo.DichVu AS dv ON dv.Id = dh.DichVuId
+INNER JOIN dbo.DanhMucDichVu AS dm ON dm.Id = dv.DanhMucId
 INNER JOIN dbo.NguoiDung AS kh ON kh.Id = dh.KhachHangId
 LEFT JOIN dbo.NguoiDung AS ktv ON ktv.Id = dh.KyThuatVienId;
 GO
@@ -166,14 +173,14 @@ WHERE dv.DangHoatDong = 1 AND dm.DangHoatDong = 1;
 GO
 CREATE OR ALTER VIEW dbo.vw_DoanhThuNgay
 AS
-SELECT CONVERT(DATE, tt.NgayTao) AS Ngay, COUNT_BIG(*) AS SoDon,
+SELECT CONVERT(DATE, DATEADD(HOUR, 7, tt.NgayTao)) AS Ngay, COUNT_BIG(*) AS SoDon,
     SUM(tt.SoTien) AS TongThu, SUM(CASE WHEN tt.PhuongThuc = 'COD' THEN tt.SoTien ELSE 0 END) AS ThuCOD,
     SUM(CASE WHEN tt.PhuongThuc = 'BANK' THEN tt.SoTien ELSE 0 END) AS ThuNganHang,
     SUM(ds.TienHoaHong) AS TienHoaHong,
     SUM(CASE WHEN ds.TrangThai = 'Confirmed' THEN ds.TienHoaHong ELSE 0 END) AS HoaHongDaDoiSoat
 FROM dbo.ThanhToan AS tt
 INNER JOIN dbo.DoiSoat AS ds ON ds.ThanhToanId = tt.Id
-GROUP BY CONVERT(DATE, tt.NgayTao);
+GROUP BY CONVERT(DATE, DATEADD(HOUR, 7, tt.NgayTao));
 GO
 CREATE OR ALTER VIEW dbo.vw_ViKyThuatVien
 AS

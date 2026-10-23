@@ -21,12 +21,12 @@ ordersRouter.get(
   wrap(async (req, res) => {
     const DonHang = await orderFor(req.user, req.params.id);
     const id = DonHang.Id;
-    const DeXuatVatTu = await queryView("vw_DeXuatVatTu", { DonHangId: id });
+    const BangKeVatTu = await queryView("vw_BangKeVatTu", { DonHangId: id });
     const ChiTietVatTu = [];
-    for (const item of DeXuatVatTu)
+    for (const item of BangKeVatTu)
       ChiTietVatTu.push(
-        ...(await queryView("vw_ChiTietDeXuatVatTu", {
-          DeXuatVatTuId: item.Id,
+        ...(await queryView("vw_ChiTietVatTu", {
+          BangKeVatTuId: item.Id,
         })),
       );
     const GhiChu = await queryView(
@@ -37,7 +37,7 @@ ordersRouter.get(
     );
     ok(res, {
       DonHang,
-      DeXuatVatTu,
+      BangKeVatTu,
       ChiTietVatTu,
       GhiChu,
       BaoGiaSoBo: await queryView("vw_BaoGiaSoBo", { DonHangId: id }),
@@ -89,17 +89,9 @@ ordersRouter.post(
 ordersRouter.post(
   "/orders/:id/materials",
   roles("KTV"),
-  write("sp_TaoDeXuatVatTu", (req) => ({
+  write("sp_LuuBangKeVatTu", (req) => ({
     DonHangId: positiveId(req.params.id),
     VatTu: JSON.stringify(req.body.VatTu || []),
-  })),
-);
-ordersRouter.post(
-  "/materials/:id/decision",
-  roles("KH"),
-  write("sp_KhachDuyetDeXuatVatTu", (req) => ({
-    DeXuatVatTuId: positiveId(req.params.id),
-    DeXuatId: positiveId(req.params.id),
   })),
 );
 ordersRouter.post(
@@ -130,32 +122,10 @@ ordersRouter.post(
     DonHangId: positiveId(req.params.id),
   })),
 );
-ordersRouter.put(
-  "/orders/:id/location",
-  roles("KH"),
-  write("sp_LuuViTriKhachHang", (req) => ({
-    DonHangId: positiveId(req.params.id),
-  })),
-);
 ordersRouter.post(
   "/orders/:id/review",
   roles("KH"),
   write("sp_TaoDanhGiaDonHang", (req) => ({
     DonHangId: positiveId(req.params.id),
   })),
-);
-ordersRouter.get(
-  "/orders/:id/location",
-  roles("KH", "KTV", "DPV"),
-  wrap(async (req, res) => {
-    await orderFor(req.user, req.params.id);
-    ok(
-      res,
-      (await first(
-        "vw_ViTriKhachHang",
-        { DonHangId: positiveId(req.params.id) },
-        { order: "DonHangId" },
-      )) || null,
-    );
-  }),
 );

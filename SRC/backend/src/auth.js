@@ -1,9 +1,9 @@
+import { createHash } from "node:crypto";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { createHash, randomInt, randomUUID } from "node:crypto";
-import nodemailer from "nodemailer";
 import { exec, first, withDatabaseRole } from "./db.js";
+import { shape } from "./web-shape.js";
 import { config } from "./config.js";
 import { ok, fail, wrap } from "./common.js";
 
@@ -18,24 +18,31 @@ const passwordHash = async (value) => {
     fail(400, "Mật khẩu từ 6 ký tự và không quá 72 byte.");
   return bcrypt.hash(value, 10);
 };
-const otpHash = (id, code) =>
-  createHash("sha256")
-    .update(id + ":" + String(code) + ":" + config.jwtSecret)
-    .digest("hex");
+const credentialFingerprint = (hash) =>
+  createHash("sha256").update(hash).digest("hex");
 const publicUser = ({ MatKhauBam, ...user }) => user;
 const internal = (callback) => withDatabaseRole(null, callback);
 
 authRouter.post(
   "/login",
   wrap(async (req, res) => {
+    const identifier = String(
+      req.body.SoDienThoai || req.body.identifier || "",
+    );
     const user = await internal(() =>
-      first("vw_XacThucDangNhap", {
-        SoDienThoai: String(req.body.SoDienThoai || ""),
-      }),
+      first(
+        "vw_XacThucDangNhap",
+        identifier.includes("@")
+          ? { Email: identifier }
+          : { SoDienThoai: identifier },
+      ),
     );
     if (
       !user?.DangHoatDong ||
-      !(await bcrypt.compare(String(req.body.MatKhau || ""), user.MatKhauBam))
+      !(await bcrypt.compare(
+        String(req.body.MatKhau || req.body.password || ""),
+        user.MatKhauBam,
+      ))
     )
       fail(
         401,
@@ -43,97 +50,59 @@ authRouter.post(
         "INVALID_CREDENTIALS",
       );
     const token = jwt.sign(
-      { sub: String(user.Id), VaiTro: user.VaiTro },
+      {
+        sub: String(user.Id),
+        VaiTro: user.VaiTro,
+        credential: credentialFingerprint(user.MatKhauBam),
+      },
       config.jwtSecret,
       { expiresIn: "8h", issuer: "homefix-dbms" },
     );
-    ok(res, { token, user: publicUser(user) });
+    ok(res, {
+      token,
+      accessToken: token,
+      user: { ...publicUser(user), ...shape(publicUser(user)) },
+    });
   }),
 );
 
 authRouter.post(
   "/register",
   wrap(async (req, res) => {
-    const MatKhauBam = await passwordHash(req.body.MatKhau);
+    const MatKhauBam = await passwordHash(
+      req.body.MatKhau || req.body.password,
+    );
     const rows = await internal(() =>
-      exec("sp_DangKyKhachHang", { ...req.body, MatKhauBam }),
+      exec("sp_DangKyKhachHang", {
+        HoTen: req.body.HoTen || req.body.fullName,
+        SoDienThoai: req.body.SoDienThoai || req.body.phone,
+        Email: req.body.Email || req.body.email || null,
+        MatKhauBam,
+      }),
     );
     ok(res, rows[0]);
   }),
 );
 
-authRouter.post(
-  "/otp",
-  wrap(async (req, res) => {
-    const { DiaChiNhan, MucDich } = req.body;
-    if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(DiaChiNhan || "") ||
-      !["ResetPassword", "Register"].includes(MucDich)
-    )
-      fail(400, "Email hoặc mục đích OTP không hợp lệ.");
-    const Id = randomUUID();
-    const code = String(randomInt(100000, 1000000));
-    const NgayHetHan = new Date(Date.now() + 5 * 60000);
-    await internal(() =>
-      exec("sp_TaoMaOTP", {
-        Id,
-        MucDich,
-        DiaChiNhan,
-        MaBam: otpHash(Id, code),
-        NgayHetHan,
-      }),
-    );
-    if (process.env.SMTP_HOST) {
-      const mail = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: process.env.SMTP_SECURE === "true",
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
-      });
-      await mail.sendMail({
-        from: process.env.SMTP_FROM,
-        to: DiaChiNhan,
-        subject: "HomeFix: mã xác thực",
-        text: `Mã xác thực: ${code}. Hết hạn sau 5 phút.`,
-      });
-    } else if (process.env.OTP_PROVIDER === "console") {
-      console.log(
-        "OTP phát triển (không dùng trên máy chủ công khai):",
-        Id,
-        code,
-      );
-    } else {
-      fail(
-        503,
-        "Chưa cấu hình nhà cung cấp email OTP.",
-        "OTP_DELIVERY_UNAVAILABLE",
-      );
-    }
-    ok(res, { Id, NgayHetHan });
-  }),
-);
-
-authRouter.post(
-  "/reset-password",
-  wrap(async (req, res) => {
-    const MatKhauBam = await passwordHash(req.body.MatKhauMoi);
-    const outcome = await internal(async () => {
-      const challenge = await first("vw_XacThucOTP", { Id: req.body.Id });
-      if (!challenge || challenge.MucDich !== "ResetPassword")
-        fail(400, "Yêu cầu xác thực không hợp lệ.");
-      const result = await exec("sp_XacThucOTP", {
-        Id: req.body.Id,
-        MaBam: otpHash(req.body.Id, req.body.MaOTP),
-      });
-      if (!result[0]?.DaXacThuc)
-        fail(400, "Mã OTP không đúng, hết hạn hoặc đã dùng.", "INVALID_OTP");
-      const user = await first("vw_NguoiDung", { Email: challenge.DiaChiNhan });
-      if (!user) fail(400, "Không có tài khoản phù hợp.");
-      return exec("sp_DoiMatKhau", { NguoiThucHienId: user.Id, MatKhauBam });
-    });
-    ok(res, outcome[0] || { DaCapNhat: true });
-  }),
-);
+authRouter.post("/logout", (_req, res) => ok(res, { loggedOut: true }));
+export const webPasswordChange = wrap(async (req, res) => {
+  const user = await internal(() =>
+    first("vw_XacThucDangNhap", { Id: req.user.Id }),
+  );
+  if (
+    !(await bcrypt.compare(
+      String(req.body.currentPassword || ""),
+      user.MatKhauBam,
+    ))
+  )
+    fail(400, "Mật khẩu hiện tại không đúng.");
+  const hash = await passwordHash(req.body.newPassword);
+  await exec("sp_DoiMatKhau", {
+    NguoiThucHienId: req.user.Id,
+    MatKhauBam: hash,
+  });
+  ok(res, { updated: true });
+});
 
 export async function loadActor(req) {
   const token = /^Bearer\s+(.+)$/i.exec(req.headers.authorization || "")?.[1];
@@ -149,6 +118,15 @@ export async function loadActor(req) {
     fail(
       401,
       "Tài khoản bị khóa hoặc vai trò đã thay đổi. Vui lòng đăng nhập lại.",
+      "SESSION_REVOKED",
+    );
+  const credentials = await first("vw_XacThucDangNhap", { Id: user.Id });
+  if (
+    payload.credential !== credentialFingerprint(credentials?.MatKhauBam || "")
+  )
+    fail(
+      401,
+      "Mật khẩu đã thay đổi. Vui lòng đăng nhập lại.",
       "SESSION_REVOKED",
     );
   return user;

@@ -41,8 +41,9 @@ RETURN (
         COALESCE(SUM(CASE WHEN TrangThai = 'Huy' THEN 1 ELSE 0 END), 0) AS DonHuy,
         COALESCE(SUM(CASE WHEN TrangThai NOT IN ('HoanThanh','Huy') THEN 1 ELSE 0 END), 0) AS DonDangXuLy
     FROM dbo.DonHang
-    WHERE (@TuNgay IS NULL OR NgayTao >= @TuNgay)
-        AND (@DenNgay IS NULL OR NgayTao < DATEADD(DAY, 1, CONVERT(DATETIME2, @DenNgay)))
+    -- NgayTao lưu UTC; tham số DATE là ngày người dùng ở Việt Nam.
+    WHERE (@TuNgay IS NULL OR NgayTao >= DATEADD(HOUR, -7, CONVERT(DATETIME2, @TuNgay)))
+        AND (@DenNgay IS NULL OR NgayTao < DATEADD(HOUR, -7, DATEADD(DAY, 1, CONVERT(DATETIME2, @DenNgay))))
 );
 GO
 CREATE OR ALTER FUNCTION dbo.fn_HanBaoHanh (@DonHangId INT)
@@ -51,7 +52,7 @@ AS
 RETURN (
     SELECT MAX(CASE WHEN ct.SoThangBaoHanh > 0 THEN DATEADD(MONTH, ct.SoThangBaoHanh, nt.NgayDuyet) END) AS HanBaoHanh
     FROM dbo.PhieuNghiemThu AS nt
-    LEFT JOIN dbo.ChiTietDeXuatVatTu AS ct ON ct.DeXuatVatTuId = nt.DeXuatVatTuId
+    LEFT JOIN dbo.ChiTietVatTu AS ct ON ct.BangKeVatTuId = nt.BangKeVatTuId
     WHERE nt.DonHangId = @DonHangId AND nt.TrangThai = 'Approved'
 );
 GO
@@ -60,14 +61,16 @@ RETURNS DECIMAL(18,2)
 AS
 BEGIN
     DECLARE @TongTien DECIMAL(18,2);
+    IF EXISTS (SELECT 1 FROM dbo.DonHang WHERE Id = @DonHangId AND TrangThai = 'Huy')
+        RETURN (SELECT PhiHuyDon FROM dbo.DonHang WHERE Id = @DonHangId);
     SELECT @TongTien = TongTien FROM dbo.PhieuNghiemThu WHERE DonHangId = @DonHangId AND TrangThai <> 'Rejected';
     IF @TongTien IS NULL
     BEGIN
         SELECT @TongTien = bg.TongTien + COALESCE((
             SELECT SUM(ct.ThanhTien)
-            FROM dbo.DeXuatVatTu AS dx
-            INNER JOIN dbo.ChiTietDeXuatVatTu AS ct ON ct.DeXuatVatTuId = dx.Id
-            WHERE dx.DonHangId = @DonHangId AND dx.DangApDung = 1 AND dx.TrangThai = 'Approved'
+            FROM dbo.BangKeVatTu AS dx
+            INNER JOIN dbo.ChiTietVatTu AS ct ON ct.BangKeVatTuId = dx.Id
+            WHERE dx.DonHangId = @DonHangId AND dx.DangApDung = 1
         ), 0)
         FROM dbo.BaoGiaSoBo AS bg WHERE bg.DonHangId = @DonHangId AND bg.TrangThai = 'Approved';
     END;

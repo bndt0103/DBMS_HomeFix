@@ -364,7 +364,8 @@ GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_GuiHoSoKTV
     @NguoiThucHienId INT, @NhomTayNghe NVARCHAR(200), @KhuVucPhucVu NVARCHAR(200),
-    @KinhNghiem NVARCHAR(2000)
+    @KinhNghiem NVARCHAR(2000),
+    @HoSoJSON NVARCHAR(MAX) = NULL, @GiayToMatTruocId INT = NULL, @GiayToMatSauId INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -389,8 +390,16 @@ BEGIN
 
         IF EXISTS (SELECT 1 FROM dbo.HoSoKTV WITH (UPDLOCK, HOLDLOCK) WHERE NguoiDungId = @NguoiThucHienId AND TrangThai = 'Pending')
             THROW 51009, N'Đã có hồ sơ đang chờ duyệt.', 1;
-        INSERT INTO dbo.HoSoKTV(NguoiDungId, NhomTayNghe, KhuVucPhucVu, KinhNghiem)
-        VALUES (@NguoiThucHienId, @NhomTayNghe, @KhuVucPhucVu, @KinhNghiem);
+        IF @HoSoJSON IS NOT NULL AND ISJSON(@HoSoJSON) <> 1
+            THROW 51009, N'Nội dung hồ sơ phải là JSON hợp lệ.', 1;
+        IF EXISTS (
+            SELECT Id FROM (VALUES (@GiayToMatTruocId), (@GiayToMatSauId)) AS x(Id)
+            WHERE Id IS NOT NULL AND NOT EXISTS (
+                SELECT 1 FROM dbo.TepDinhKem AS t WHERE t.Id = x.Id
+                AND t.ChuSoHuuId = @NguoiThucHienId AND t.MucDich = 'TechnicianDocument')
+        ) THROW 51003, N'Ảnh giấy tờ phải thuộc người nộp hồ sơ.', 1;
+        INSERT INTO dbo.HoSoKTV(NguoiDungId, NhomTayNghe, KhuVucPhucVu, KinhNghiem, HoSoJSON, GiayToMatTruocId, GiayToMatSauId)
+        VALUES (@NguoiThucHienId, @NhomTayNghe, @KhuVucPhucVu, @KinhNghiem, @HoSoJSON, @GiayToMatTruocId, @GiayToMatSauId);
         DECLARE @Id INT = CONVERT(INT, SCOPE_IDENTITY());
         IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
         SELECT Id, NguoiDungId, NhomTayNghe, KhuVucPhucVu, KinhNghiem, TrangThai, LyDo, NgayTao, PhienBan FROM dbo.vw_HoSoKTV WHERE Id = @Id;
@@ -475,7 +484,7 @@ BEGIN
 
         IF @NgayHetHan <= SYSUTCDATETIME() OR @NgayHetHan > DATEADD(MINUTE, 15, SYSUTCDATETIME())
             THROW 51009, N'OTP chỉ có thời hạn tối đa 15 phút.', 1;
-        IF @MucDich NOT IN ('Register','ResetPassword') THROW 51009, N'Mục đích OTP không hợp lệ.', 1;
+        IF @MucDich NOT IN ('Register','ResetPassword','ChangePassword') THROW 51009, N'Mục đích OTP không hợp lệ.', 1;
         INSERT INTO dbo.XacThucOTP(Id, MucDich, DiaChiNhan, MaBam, NgayHetHan)
         VALUES (@Id, @MucDich, @DiaChiNhan, @MaBam, @NgayHetHan);
         IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
@@ -579,7 +588,7 @@ BEGIN
                 WHERE dh.Id = @DonHangId AND (dh.KhachHangId = @NguoiThucHienId OR dh.KyThuatVienId = @NguoiThucHienId OR nd.VaiTro IN ('DPV','CSKH','KT','ADMIN'))
             ) THROW 51003, N'Không được thêm tệp vào đơn của người khác.', 1;
         END;
-        IF @MucDich IN ('OrderFault','AcceptancePhoto','CustomerSignature','TechnicianSignature','PaymentProof') AND @DonHangId IS NULL
+        IF @MucDich IN ('MaterialEvidence','AcceptancePhoto','CustomerSignature','TechnicianSignature','PaymentProof') AND @DonHangId IS NULL
             THROW 51009, N'Tệp nghiệp vụ này cần gắn với đơn hàng.', 1;
         IF @MucDich IN ('CustomerSignature','TechnicianSignature') AND @KieuMIME NOT IN ('image/png','image/jpeg','image/webp')
             THROW 51009, N'Chữ ký phải là tệp ảnh.', 1;
@@ -816,6 +825,8 @@ BEGIN
 
         IF @Khoa = 'TyLeHoaHongMacDinh' AND (TRY_CONVERT(DECIMAL(5,2), @GiaTri) IS NULL OR TRY_CONVERT(DECIMAL(5,2), @GiaTri) NOT BETWEEN 0 AND 100)
             THROW 51009, N'Tỷ lệ hoa hồng phải từ 0 đến 100 phần trăm.', 1;
+        IF @Khoa = 'PhiHuyDon' AND (TRY_CONVERT(DECIMAL(18,2), @GiaTri) IS NULL OR TRY_CONVERT(DECIMAL(18,2), @GiaTri) NOT BETWEEN 1000 AND 1000000)
+            THROW 51009, N'Phí hủy đơn phải từ 1000 đến 1000000 đồng.', 1;
         IF @Khoa = 'TaiKhoanNganHangMacDinh' AND NOT EXISTS (
             SELECT 1 FROM dbo.TaiKhoanNganHang WHERE Id = TRY_CONVERT(INT, @GiaTri) AND DangHoatDong = 1
         ) THROW 51009, N'Tài khoản ngân hàng mặc định phải đang hoạt động.', 1;

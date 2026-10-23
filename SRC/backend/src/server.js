@@ -12,6 +12,7 @@ import { ordersRouter } from "./orders.js";
 import { financeRouter } from "./finance.js";
 import { adminRouter } from "./admin.js";
 import { supportRouter } from "./support.js";
+import { webRouter } from "./web.js";
 import { uploadsRouter } from "./uploads.js";
 import { ok, wrap, fail } from "./common.js";
 
@@ -77,6 +78,7 @@ app.use("/api", (req, res, next) => {
   ).catch(next);
 });
 app.use("/api/auth", profileRouter);
+app.use("/api/web", webRouter);
 app.use(
   "/api",
   ordersRouter,
@@ -99,9 +101,13 @@ if (fs.existsSync(frontend)) {
   );
 }
 app.use((error, _req, res, _next) => {
-  if (res.headersSent) return;
+  if (res.headersSent || res.destroyed) return;
   const number = error.number || error.originalError?.info?.number;
-  const sqlMessage = error.originalError?.info?.message || error.message || "";
+  const sqlMessage = (
+    error.originalError?.info?.message ||
+    error.message ||
+    ""
+  ).replace(/^(?:\[[^\]]+\])+\s*/, "");
   let status =
     error.status ||
     {
