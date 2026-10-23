@@ -372,56 +372,6 @@
         "output": false
       }
     ],
-    "sp_GhiNhatKyVaThongBao": [
-      {
-        "name": "NguoiThucHienId",
-        "type": "INT",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "ThaoTac",
-        "type": "NVARCHAR(100)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "DoiTuong",
-        "type": "NVARCHAR(100)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "DoiTuongId",
-        "type": "INT",
-        "optional": true,
-        "output": false
-      },
-      {
-        "name": "ChiTiet",
-        "type": "NVARCHAR(2000)",
-        "optional": true,
-        "output": false
-      },
-      {
-        "name": "NguoiNhanId",
-        "type": "INT",
-        "optional": true,
-        "output": false
-      },
-      {
-        "name": "TieuDe",
-        "type": "NVARCHAR(200)",
-        "optional": true,
-        "output": false
-      },
-      {
-        "name": "NoiDung",
-        "type": "NVARCHAR(2000)",
-        "optional": true,
-        "output": false
-      }
-    ],
     "sp_DanhDauThongBao": [
       {
         "name": "NguoiThucHienId",
@@ -821,50 +771,6 @@
         "name": "VatTu",
         "type": "NVARCHAR(MAX)",
         "optional": false,
-        "output": false
-      },
-      {
-        "name": "PhienBanDuKien",
-        "type": "BINARY(8)",
-        "optional": true,
-        "output": false
-      }
-    ],
-    "sp_ThemChiTietVatTu": [
-      {
-        "name": "NguoiThucHienId",
-        "type": "INT",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "BangKeVatTuId",
-        "type": "INT",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "Ten",
-        "type": "NVARCHAR(200)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "SoLuong",
-        "type": "DECIMAL(10,2)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "DonGia",
-        "type": "DECIMAL(18,2)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "SoThangBaoHanh",
-        "type": "INT",
-        "optional": true,
         "output": false
       },
       {
@@ -1506,8 +1412,7 @@
     "vw_DichVuCongKhai",
     "vw_DoanhThuNgay",
     "vw_ViKyThuatVien",
-    "vw_HieuSuatKyThuatVien",
-    "vw_HoTroCanXuLy"
+    "vw_HieuSuatKyThuatVien"
   ],
   "functions": {
     "fn_SoDuVi": [

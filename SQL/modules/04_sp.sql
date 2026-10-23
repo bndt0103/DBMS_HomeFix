@@ -593,53 +593,6 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE dbo.sp_GhiNhatKyVaThongBao
-    @NguoiThucHienId INT, @ThaoTac NVARCHAR(100), @DoiTuong NVARCHAR(100),
-    @DoiTuongId INT = NULL, @ChiTiet NVARCHAR(2000) = NULL, @NguoiNhanId INT = NULL,
-    @TieuDe NVARCHAR(200) = NULL, @NoiDung NVARCHAR(2000) = NULL
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SET XACT_ABORT ON;
-    DECLARE @GiaoDichNgoai INT = @@TRANCOUNT;
-    BEGIN TRY
-        IF @GiaoDichNgoai = 0 BEGIN TRANSACTION;
-        ELSE SAVE TRANSACTION s_GhiNhatKyVaThongBao;
-
-        IF NOT EXISTS (SELECT 1 FROM dbo.NguoiDung WHERE Id = @NguoiThucHienId AND DangHoatDong = 1)
-            THROW 51003, N'Tài khoản thực hiện không hợp lệ hoặc đã bị khóa.', 1;
-
-        -- Backend đặt actor vào SESSION_CONTEXT rồi mới EXECUTE AS USER hf_<VaiTro>.
-        -- Tham số Id không đủ để giả danh một người khác trong cùng role SQL.
-        IF USER_NAME() <> N'dbo'
-           AND (TRY_CONVERT(INT, SESSION_CONTEXT(N'NguoiDungId')) IS NULL
-             OR TRY_CONVERT(INT, SESSION_CONTEXT(N'NguoiDungId')) <> @NguoiThucHienId
-             OR USER_NAME() <> N'hf_' + (SELECT VaiTro FROM dbo.NguoiDung WHERE Id = @NguoiThucHienId))
-            THROW 51003, N'Ngữ cảnh người dùng không khớp tài khoản và vai trò thực hiện.', 1;
-
-        IF @NguoiNhanId IS NOT NULL AND @NguoiNhanId <> @NguoiThucHienId
-            AND NOT EXISTS (SELECT 1 FROM dbo.NguoiDung WHERE Id = @NguoiThucHienId AND VaiTro IN ('DPV','CSKH','KT','ADMIN'))
-            THROW 51003, N'Không được gửi thông báo tùy ý đến người dùng khác.', 1;
-        INSERT INTO dbo.NhatKy(NguoiThucHienId, ThaoTac, DoiTuong, DoiTuongId, ChiTiet)
-        VALUES (@NguoiThucHienId, @ThaoTac, @DoiTuong, @DoiTuongId, @ChiTiet);
-        IF @NguoiNhanId IS NOT NULL
-        BEGIN
-            IF NULLIF(LTRIM(RTRIM(@TieuDe)), N'') IS NULL OR NULLIF(LTRIM(RTRIM(@NoiDung)), N'') IS NULL
-                THROW 51009, N'Thông báo cần có tiêu đề và nội dung.', 1;
-            INSERT INTO dbo.ThongBao(NguoiDungId, TieuDe, NoiDung)
-            VALUES (@NguoiNhanId, @TieuDe, @NoiDung);
-        END;
-        IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
-        SELECT CONVERT(BIT, 1) AS DaGhiNhan;
-    END TRY
-    BEGIN CATCH
-        IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-        ELSE IF @GiaoDichNgoai > 0 AND XACT_STATE() = 1 ROLLBACK TRANSACTION s_GhiNhatKyVaThongBao;
-        THROW;
-    END CATCH;
-END;
-GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_DanhDauThongBao
     @NguoiThucHienId INT, @ThongBaoId INT
 AS

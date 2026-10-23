@@ -4,22 +4,21 @@
 
 ## Thành viên lấy bản mới và CSDL
 
-Nhánh dùng chung: **main**. Làm theo [hướng dẫn cài trên máy thành viên](SQL/CAI_DAT_THANH_VIEN.md) để pull/clone, tạo CSDL mới và nạp 10 đơn mẫu. Cấu hình `.env` là riêng từng máy. Tài liệu ôn tập được giữ riêng trong thư mục `thuc_hanh_nhom`, không thuộc bản mã nguồn trên GitHub.
+Nhánh dùng chung: **main**. Làm theo [hướng dẫn cài đặt ở mục 3](#3-cài-từ-database-trắng) để pull/clone, tạo CSDL mới và nạp 10 đơn mẫu. Cấu hình `.env` là riêng từng máy. Tài liệu ôn tập được giữ riêng trong thư mục `thuc_hanh_nhom`, không thuộc bản mã nguồn trên GitHub.
 
 ## 1. Cấu trúc
 
 ```text
 SQL/
   CSDL_HomeFix.sql          Bộ cài database mới, không chạy migration
-  seed_data.sql            Seed riêng, chỉ chạy khi các bảng còn trắng
   README.md                Giải thích SQL và câu lệnh thực hành trong SSMS
   modules/
     00_schema.sql          26 bảng và ràng buộc
     01_index.sql           Index truy vấn và UNIQUE có điều kiện
     02_function.sql        7 hàm
-    03_view.sql            32 view
-    04_sp.sql              17 SP tài khoản/tiện ích
-    05_transaction.sql     29 SP nghiệp vụ/báo cáo
+    03_view.sql            31 view
+    04_sp.sql              16 SP tài khoản/tiện ích
+    05_transaction.sql     28 SP nghiệp vụ/báo cáo
     06_trigger.sql         7 trigger
     07_security.sql        Quyền của các role
     08_seed.sql            Dữ liệu sạch
@@ -44,7 +43,7 @@ Thư mục DOC, SLIDES, HELP, bản hướng dẫn vấn đáp cũ và các bộ
 - Đọc dùng `queryView()` hoặc `queryFunction()`. Tên đối tượng có trong danh sách đăng ký; điều kiện lọc được dựng từ các toán tử cho phép và giá trị được tham số hóa.
 - Không có SELECT/INSERT/UPDATE/DELETE bảng trong controller. Các câu SELECT dữ liệu trong `db.js` chỉ nhắm đến view/TVF đã đăng ký. Công cụ cài đặt và kiểm thử quản trị có quyền khác với API vận hành.
 - Mỗi SP ghi kiểm tra vai trò, quyền sở hữu, dữ liệu, trạng thái và phiên bản trước khi cập nhật. Có transaction, savepoint khi nằm trong transaction ngoài, TRY/CATCH và XACT_STATE.
-- Có **47 SP**: 45 SP ghi có giao dịch; `sp_BaoCaoTongHop` chỉ đọc; `sp_SaoLuuHeThong` dành cho DBA và không mở transaction vì SQL Server không cho BACKUP nằm trong transaction. [Quy định BACKUP của Microsoft](https://learn.microsoft.com/en-us/sql/t-sql/statements/backup-transact-sql).
+- Có **45 SP**: 43 SP ghi có giao dịch; `sp_BaoCaoTongHop` chỉ đọc; `sp_SaoLuuHeThong` dành cho DBA và không mở transaction vì SQL Server không cho BACKUP nằm trong transaction. [Quy định BACKUP của Microsoft](https://learn.microsoft.com/en-us/sql/t-sql/statements/backup-transact-sql).
 - Số dư ví được SP duyệt ví/đối soát cập nhật cùng giao dịch ghi sổ cái. View ví đối chiếu số dư với SUM sổ. Trigger sổ cái ngăn UPDATE/DELETE; không có cơ chế cập nhật số dư lần hai bằng trigger.
 - Tỷ lệ hoa hồng lưu theo phần trăm: `15` nghĩa là **15%** của tiền công, không phải `0.15`.
 
@@ -95,7 +94,7 @@ npm.cmd start
 
 Mở **http://localhost:3000**. Khi phát triển, `npm.cmd run dev` mở API và Vite ở http://localhost:5173.
 
-**Bộ cài chỉ tạo database mới:** nếu DB_NAME đã tồn tại, chương trình dừng và yêu cầu tên khác. Không tự DROP database hoặc chạy seed để xóa giao dịch. Muốn bắt đầu một lần demo trắng, đổi DB_NAME sang tên mới bắt đầu `HomeFix_`, cài lại và khởi động lại server. `seed_data.sql` từ chối database đã có tài khoản; không chạy seed lần hai sau bộ cài tổng.
+**Bộ cài chỉ tạo database mới:** nếu DB_NAME đã tồn tại, chương trình dừng và yêu cầu tên khác. Không tự DROP database hoặc chạy seed để xóa giao dịch. Muốn bắt đầu một lần demo trắng, đổi DB_NAME sang tên mới bắt đầu `HomeFix_`, cài lại và khởi động lại server. Dữ liệu gốc của module `08_seed.sql` đã nằm trong bộ cài tổng; không chạy seed lần hai.
 
 Máy được bàn giao đang dùng database **`HomeFix_DBMS_Clean_20261022`**. Cấu hình `.env` cục bộ trỏ đúng database đó; tên này khác tên mặc định của bộ cài để giữ bản trước tái cấu trúc phục vụ khôi phục khi cần.
 
@@ -111,7 +110,7 @@ npm.cmd run build
 npm.cmd start
 ```
 
-`db:upgrade` đọc đúng `DB_NAME` trong `.env` và cập nhật các cột/ràng buộc, function, view, SP, trigger, quyền của khung 26 bảng hiện hành. Công cụ dừng nếu còn bảng ngoài cấu trúc; với database phiên bản cũ, hãy sao lưu và dùng bộ cài hoàn chỉnh tạo tên database mới. Không chạy `00_schema` hay `08_seed` lên database đang sử dụng.
+`db:upgrade` đọc đúng `DB_NAME` trong `.env` và cập nhật các cột/ràng buộc, function, view, SP, trigger và quyền của khung 26 bảng hiện hành; gỡ ba đối tượng cũ đã xác định không còn dùng trong cùng giao dịch. Công cụ dừng nếu còn bảng ngoài cấu trúc; với database phiên bản cũ, hãy sao lưu và dùng bộ cài hoàn chỉnh tạo tên database mới. Không chạy `00_schema` hay `08_seed` lên database đang sử dụng.
 
 ## 4. Seed sạch và đăng nhập
 

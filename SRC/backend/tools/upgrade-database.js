@@ -54,6 +54,10 @@ try {
   await new sql.Request(transaction).query(
     "SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON; SET ANSI_WARNINGS ON; SET ARITHABORT ON; SET CONCAT_NULL_YIELDS_NULL ON; SET NUMERIC_ROUNDABORT OFF;",
   );
+  // Ba đối tượng đã ngừng dùng; giữ nguyên các đối tượng tự tạo khác.
+  await new sql.Request(transaction).batch(
+    "DROP PROCEDURE IF EXISTS dbo.sp_GhiNhatKyVaThongBao; DROP PROCEDURE IF EXISTS dbo.sp_ThemChiTietVatTu; DROP VIEW IF EXISTS dbo.vw_HoTroCanXuLy;",
+  );
   for (const name of modules) {
     const source = fs.readFileSync(
       path.join(root, "SQL/modules", name),

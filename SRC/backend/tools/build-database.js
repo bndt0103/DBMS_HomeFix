@@ -62,10 +62,6 @@ fs.writeFileSync(
   installer.trimEnd() + "\n",
 );
 fs.writeFileSync(
-  path.join(root, "SQL", "seed_data.sql"),
-  sources[moduleNames.indexOf("08_seed.sql")],
-);
-fs.writeFileSync(
   path.join(root, "SRC", "backend", "src", "db-contract.json"),
   JSON.stringify(registry, null, 2) + "\n",
 );

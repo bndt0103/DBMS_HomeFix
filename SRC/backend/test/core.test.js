@@ -137,14 +137,6 @@ test("Kiến trúc: controller không chứa SQL trực tiếp và các SP/View 
   assert.ok(Object.keys(registry.procedures).length >= 40);
   assert.ok(registry.views.length >= 25);
   assert.ok(registry.functions.fn_ThongKeDon);
-  assert.equal(
-    fs.readFileSync(path.join(project, "SQL", "seed_data.sql"), "utf8"),
-    fs.readFileSync(
-      path.join(project, "SQL", "modules", "08_seed.sql"),
-      "utf8",
-    ),
-    "Standalone seed must match the clean seed module",
-  );
 });
 
 test("Seed: đúng 7 vai trò, danh mục gốc, số dư 0 và không có giao dịch mẫu", async () => {
@@ -576,7 +568,7 @@ test("CSDL đồng bộ: đã gỡ bảng, thủ tục, view và cột của tí
   const p = await pool();
   const result = await p.request().query(`
     SELECT name FROM sys.objects
-    WHERE is_ms_shipped = 0 AND (name LIKE '%OTP%' OR name LIKE '%ViTriKhachHang%');
+    WHERE is_ms_shipped = 0 AND (name LIKE '%OTP%' OR name LIKE '%ViTriKhachHang%' OR name IN ('vw_HoTroCanXuLy','sp_GhiNhatKyVaThongBao','sp_ThemChiTietVatTu'));
     SELECT name FROM sys.columns
     WHERE object_id = OBJECT_ID('dbo.KyThuatVien') AND name IN ('ViDo','KinhDo');
   `);
@@ -585,7 +577,10 @@ test("CSDL đồng bộ: đã gỡ bảng, thủ tục, view và cột của tí
     path.join(source, "backend/src/db-contract.json"),
     "utf8",
   );
-  assert.doesNotMatch(contract, /OTP|ViTriKhachHang|ViDo|KinhDo/);
+  assert.doesNotMatch(
+    contract,
+    /OTP|ViTriKhachHang|ViDo|KinhDo|vw_HoTroCanXuLy|sp_GhiNhatKyVaThongBao|sp_ThemChiTietVatTu/,
+  );
   const technician = await api("GET", "/web/users/me", "KTV");
   assert.equal(technician.latitude, undefined);
   assert.equal(technician.longitude, undefined);

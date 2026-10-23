@@ -199,11 +199,3 @@ LEFT JOIN dbo.DonHang AS dh ON dh.KyThuatVienId = ktv.Id
 LEFT JOIN dbo.ThanhToan AS tt ON tt.DonHangId = dh.Id
 GROUP BY ktv.Id, nd.HoTen;
 GO
-CREATE OR ALTER VIEW dbo.vw_HoTroCanXuLy
-AS
-SELECT ht.Id, ht.DonHangId, ht.KhachHangId, nd.HoTen AS TenKhachHang,
-    ht.Loai, ht.MoTa, ht.TrangThai, ht.KetQuaXuLy, ht.NguoiXuLyId, ht.NgayTao, ht.PhienBan
-FROM dbo.YeuCauHoTro AS ht
-INNER JOIN dbo.NguoiDung AS nd ON nd.Id = ht.KhachHangId
-WHERE ht.TrangThai IN ('Open','InProgress');
-GO
