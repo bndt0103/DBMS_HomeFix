@@ -25,7 +25,7 @@ BEGIN TRY
            (N'Giám đốc mẫu', '0900000006', @MatKhauBam, 'GD'),
            (N'Quản trị viên mẫu', '0900000007', @MatKhauBam, 'ADMIN');
     INSERT INTO dbo.KyThuatVien(Id, NhomTayNghe, KhuVucPhucVu, TrangThaiSanSang, SoDu)
-    SELECT Id, N'Điện, Nước, Điện lạnh', N'Thành phố Hồ Chí Minh', 'SanSang', 0 FROM dbo.NguoiDung WHERE VaiTro = 'KTV';
+    SELECT Id, 'DIEN', N'Thành phố Hồ Chí Minh', 'SanSang', 0 FROM dbo.NguoiDung WHERE VaiTro = 'KTV';
     INSERT INTO dbo.DanhMucDichVu(Ten, Ma)
     VALUES (N'Điện', 'DIEN'), (N'Nước', 'NUOC'), (N'Điện lạnh', 'DIEN_LANH'), (N'Đồ gỗ', 'DO_GO'), (N'Khóa', 'KHOA');
     INSERT INTO dbo.DichVu(DanhMucId, Ten, MoTa, PhiKiemTra, TienCong, TyLeHoaHong)

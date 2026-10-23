@@ -2101,12 +2101,34 @@ BEGIN
         SELECT @GiaTri = GiaTri FROM dbo.CauHinh WITH (UPDLOCK, HOLDLOCK) WHERE Khoa = @Khoa;
         IF @GiaTri IS NULL OR ISJSON(@GiaTri) <> 1 THROW 51004, N'Không tìm thấy đề xuất.', 1;
         IF JSON_VALUE(@GiaTri, '$.status') <> 'Pending' THROW 51009, N'Đề xuất đã được xử lý.', 1;
-        SET @GiaTri = JSON_MODIFY(@GiaTri, '$.status', @QuyetDinh);
-        SET @GiaTri = JSON_MODIFY(@GiaTri, '$.directorNote', @GhiChu);
-        SET @GiaTri = JSON_MODIFY(@GiaTri, '$.effectiveAt', CONVERT(VARCHAR(33), @NgayHieuLuc, 126));
-        UPDATE dbo.CauHinh SET GiaTri = @GiaTri WHERE Khoa = @Khoa;
+        IF @QuyetDinh = 'Approved'
+        BEGIN
+            DECLARE @LoaiDeXuat VARCHAR(40) = JSON_VALUE(@GiaTri, '$.payload.type');
+            IF @LoaiDeXuat = 'ServicePricing'
+            BEGIN
+                DECLARE @DichVuId INT = TRY_CONVERT(INT, JSON_VALUE(@GiaTri, '$.payload.serviceId'));
+                IF @DichVuId IS NULL OR NOT EXISTS (SELECT 1 FROM dbo.DichVu WITH (UPDLOCK, HOLDLOCK) WHERE Id = @DichVuId)
+                    THROW 51004, N'Dịch vụ trong đề xuất không còn tồn tại.', 1;
+                UPDATE dbo.DichVu
+                SET PhiKiemTra = TRY_CONVERT(DECIMAL(18,2), JSON_VALUE(@GiaTri, '$.payload.inspectionFee')),
+                    TienCong = TRY_CONVERT(DECIMAL(18,2), JSON_VALUE(@GiaTri, '$.payload.laborFee')),
+                    TyLeHoaHong = TRY_CONVERT(DECIMAL(5,2), JSON_VALUE(@GiaTri, '$.payload.commissionRatePercent'))
+                WHERE Id = @DichVuId;
+            END
+            ELSE IF @LoaiDeXuat = 'Configuration'
+            BEGIN
+                DECLARE @KhoaCauHinh VARCHAR(80) = JSON_VALUE(@GiaTri, '$.payload.key');
+                DECLARE @GiaTriMoi NVARCHAR(1000) = JSON_VALUE(@GiaTri, '$.payload.value');
+                IF @KhoaCauHinh NOT IN ('TyLeHoaHongMacDinh', 'PhiHuyDon') OR @GiaTriMoi IS NULL
+                    THROW 51009, N'Đề xuất cấu hình không hợp lệ.', 1;
+                UPDATE dbo.CauHinh SET GiaTri = @GiaTriMoi WHERE Khoa = @KhoaCauHinh;
+            END;
+        END;
         INSERT INTO dbo.NhatKy(NguoiThucHienId, ThaoTac, DoiTuong, ChiTiet)
         VALUES (@NguoiThucHienId, N'Duyệt chính sách', @Khoa, @QuyetDinh);
+        -- Đề xuất chỉ là hàng chờ phê duyệt. Sau khi có quyết định, xóa khỏi
+        -- CauHinh; nhật ký bên trên vẫn lưu dấu vết của quyết định.
+        DELETE FROM dbo.CauHinh WHERE Khoa = @Khoa;
         IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH

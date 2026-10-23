@@ -1,5 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import { randomUUID } from "node:crypto";
 import {
   queryView,
   queryFunction,
@@ -23,6 +24,25 @@ const actor = (req) => ({
 });
 const run = async (req, name, params) =>
   shape(await exec(name, { ...params, ...actor(req) }));
+const submitPolicyProposal = async (req, proposal) => {
+  const { policyKey, ...content } = proposal;
+  // Mỗi lần gửi luôn là một đề xuất mới. Thủ tục SQL xóa đề xuất đang chờ
+  // cùng policyKey trong một giao dịch trước khi lưu bản mới này.
+  const id = randomUUID();
+  await run(req, "sp_LuuCauHinh", {
+    Khoa: "DeXuatChinhSach_" + id,
+    GiaTri: JSON.stringify({
+      status: "Pending",
+      proposalCode: "CS-" + id.slice(0, 8).toUpperCase(),
+      department: "Quản trị",
+      submittedAt: new Date().toISOString(),
+      policySubject: policyKey,
+      ...content,
+    }),
+    NhanHienThi: "Đề xuất chính sách chờ duyệt",
+  });
+  return { id, status: "Pending" };
+};
 const get = (path, allowed, fn) =>
   webRouter.get(
     path,
@@ -105,6 +125,7 @@ function paginate(req, res, rows) {
     "technicianName",
     "address",
     "description",
+    "skillGroup",
   ];
   rows = rows.filter((row) => {
     const roles = {
@@ -173,9 +194,34 @@ get("/app-config", all, async () => {
 webRouter.get(
   "/users",
   roles("ADMIN"),
-  wrap(async (req, res) => paginate(req, res, await read("vw_NguoiDung"))),
+  wrap(async (req, res) => {
+    const [users, technicians] = await Promise.all([
+      read("vw_NguoiDung"),
+      read("vw_KyThuatVien"),
+    ]);
+    const skillByUserId = new Map(
+      technicians.map((technician) => [
+        technician.id,
+        technician.skillGroup,
+      ]),
+    );
+    paginate(
+      req,
+      res,
+      users.map((user) => ({
+        ...user,
+        skillGroup:
+          user.role === "KTV" ? skillByUserId.get(user.id) || null : null,
+      })),
+    );
+  }),
 );
-get("/users/me", all, (req) => one("vw_NguoiDung", { Id: req.user.Id }));
+get("/users/me", all, async (req) => {
+  const user = await one("vw_NguoiDung", { Id: req.user.Id });
+  if (user.role !== "KTV") return user;
+  const technician = await one("vw_KyThuatVien", { Id: req.user.Id });
+  return { ...user, skillGroup: technician?.skillGroup || null };
+});
 change("patch", "/users/me", all, async (req) => {
   if ((req.body.email || null) !== (req.user.Email || null)) {
     const current = await withDatabaseRole(null, () =>
@@ -218,6 +264,17 @@ change("patch", "/users/:id/role", ["ADMIN"], (req) =>
     VaiTro: req.body.role,
   }),
 );
+change("patch", "/users/:id", ["ADMIN"], (req) =>
+  run(req, "sp_AdminCapNhatTaiKhoan", {
+    NguoiDungId: positiveId(req.params.id),
+    HoTen: req.body.fullName,
+    SoDienThoai: req.body.phone,
+    Email: req.body.email || null,
+    VaiTro: req.body.role,
+    NhomTayNghe: req.body.skillGroup || null,
+    DangHoatDong: req.body.isActive,
+  }),
+);
 for (const method of ["post", "patch"])
   change(
     method,
@@ -228,8 +285,42 @@ for (const method of ["post", "patch"])
         Ma: req.body.groupCode,
       });
       if (!category) fail(400, "Nhóm dịch vụ không hợp lệ.");
+      const id = req.params.id ? positiveId(req.params.id) : null;
+      const current = id ? await first("vw_DichVu", { Id: id }) : null;
+      if (id && !current) fail(404, "Không tìm thấy dịch vụ.");
+      const proposed = {
+        inspectionFee: Number(req.body.inspectionFee),
+        laborFee: Number(req.body.laborFee),
+        commissionRatePercent: Number(req.body.commissionRatePercent),
+      };
+      const changes = current && [
+        ["Phí kiểm tra", current.PhiKiemTra, proposed.inspectionFee],
+        ["Tiền công", current.TienCong, proposed.laborFee],
+        ["Tỷ lệ hoa hồng (%)", current.TyLeHoaHong, proposed.commissionRatePercent],
+      ].filter(([, before, after]) => Number(before) !== Number(after));
+      if (changes?.length)
+        return submitPolicyProposal(req, {
+          policyKey: "DichVu_" + id,
+          title: "Điều chỉnh giá và hoa hồng dịch vụ: " + current.Ten,
+          impact: "Chỉ áp dụng cho các báo giá tạo sau khi Giám đốc phê duyệt.",
+          reason: "Admin đề xuất điều chỉnh biểu giá dịch vụ.",
+          changes: changes.map(([label, current, proposed]) => ({
+            label,
+            current,
+            proposed,
+          })),
+          payload: {
+            type: "ServicePricing",
+            serviceId: id,
+            expectedVersion: current.PhienBan,
+            currentInspectionFee: Number(current.PhiKiemTra),
+            currentLaborFee: Number(current.TienCong),
+            currentCommissionRatePercent: Number(current.TyLeHoaHong),
+            ...proposed,
+          },
+        });
       return run(req, "sp_LuuDichVu", {
-        Id: req.params.id ? positiveId(req.params.id) : null,
+        Id: id,
         DanhMucId: category.Id,
         Ten: req.body.name,
         MoTa: req.body.description,
@@ -251,6 +342,30 @@ change("patch", "/settings/:key", ["ADMIN"], async (req) => {
     { Khoa: req.params.key },
     { order: "Khoa" },
   );
+  if (
+    ["TyLeHoaHongMacDinh", "PhiHuyDon"].includes(req.params.key) &&
+    existing &&
+    String(existing.GiaTri) !== String(req.body.value)
+  )
+    return submitPolicyProposal(req, {
+      policyKey: "CauHinh_" + req.params.key,
+      title: "Điều chỉnh chính sách: " + existing.NhanHienThi,
+      impact: "Chỉ áp dụng sau khi Giám đốc phê duyệt.",
+      reason: "Admin đề xuất điều chỉnh cấu hình chính sách.",
+      changes: [
+        {
+          label: existing.NhanHienThi,
+          current: existing.GiaTri,
+          proposed: String(req.body.value),
+        },
+      ],
+      payload: {
+        type: "Configuration",
+        key: req.params.key,
+        currentValue: existing.GiaTri,
+        value: String(req.body.value),
+      },
+    });
   return run(req, "sp_LuuCauHinh", {
     Khoa: req.params.key,
     GiaTri: String(req.body.value),
@@ -268,22 +383,40 @@ async function details(req) {
   const raw = await orderFor(req.user, req.params.id),
     o = shape(raw),
     filter = { DonHangId: raw.Id };
-  const [quotes, assignments, acceptances, payments, service] =
+  const [quotes, assignments, acceptances, payments, service, history] =
     await Promise.all([
       read("vw_BaoGiaSoBo", filter),
       read("vw_LenhDieuPhoi", filter),
       read("vw_PhieuNghiemThu", filter),
       read("vw_ThanhToan", filter),
       one("vw_DichVu", { Id: raw.DichVuId }),
+      read("vw_LichSuDonHang", filter),
     ]);
   const a = acceptances.find((a) => a.status !== "Rejected"),
     q = quotes.find((q) => q.status === "Approved") || quotes[0];
+  let preliminary = quotes[0] || null;
+  if (preliminary && preliminary.status === "Rejected") {
+    const rejection = history
+      .filter((h) => h.fromStatus === "ChoDuyetSoBo")
+      .sort((h1, h2) => new Date(h2.createdAt) - new Date(h1.createdAt))[0];
+    if (rejection?.reason) {
+      preliminary = { ...preliminary, reason: rejection.reason.trim() };
+    }
+  }
+  let cancelReason = null;
+  if (o.status === "Huy") {
+    const cancelLog = history
+      .filter((h) => h.toStatus === "Huy")
+      .sort((h1, h2) => new Date(h2.createdAt) - new Date(h1.createdAt))[0];
+    if (cancelLog?.reason) cancelReason = cancelLog.reason.trim();
+  }
   return {
     ...o,
+    cancelReason,
     currentAcceptance: a,
     contactName: o.customerName,
     contactPhone: o.customerPhone,
-    currentPreliminaryQuote: quotes[0] || null,
+    currentPreliminaryQuote: preliminary,
     currentAssignment: assignments[0] || null,
     paymentStatus: payments.length ? "Paid" : "Unpaid",
     paymentMethod:

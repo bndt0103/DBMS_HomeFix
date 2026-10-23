@@ -260,7 +260,11 @@ export function OrderDetail() {
         (dispatcher || currentTech) && <AssignmentNotice />}
       {customer && o.status === "ChoDuyetSoBo" && preliminary && (
         <Card title="Báo giá sơ bộ cần bạn xác nhận" className="highlight">
-          <p>{preliminary.diagnosis}</p>
+          {preliminary.diagnosis && (
+            <p>
+              <b>Chẩn đoán sơ bộ:</b> {preliminary.diagnosis}
+            </p>
+          )}
           <MoneyBreakdown value={preliminary} />
           <div className="actions">
             <button
@@ -363,9 +367,17 @@ export function OrderDetail() {
               }
             >
               <Badge value={preliminary.status} />
-              <p>{preliminary.diagnosis}</p>
+              {preliminary.status === "Rejected" ? (
+                <p>
+                  Lý do hủy:{" "}
+                  {preliminary.reason
+                    ? preliminary.reason.trim()
+                    : "Khách hàng từ chối báo giá"}
+                </p>
+              ) : (
+                preliminary.diagnosis && <p>{preliminary.diagnosis}</p>
+              )}
               <MoneyBreakdown value={preliminary} />
-              {preliminary.reason && <p>Lý do: {preliminary.reason}</p>}
             </Card>
           )}
           {materials.data?.map((m) => (
@@ -508,7 +520,22 @@ export function OrderDetail() {
             )}
           {o.status === "Huy" && (
             <Card title="Thông tin hủy đơn">
-              <p>Đơn đã được hủy. Xem lý do trong lịch sử xử lý.</p>
+              <p>
+                <b>Lý do hủy:</b>{" "}
+                {o.cancelReason ||
+                  history.data
+                    ?.slice()
+                    ?.reverse()
+                    ?.find(
+                      (h) => h.toStatus === "Huy" || h.nextStatus === "Huy",
+                    )?.reason ||
+                  "Khách hàng hủy đơn."}
+              </p>
+              {o.cancellationFee > 0 && (
+                <p>
+                  <b>Phí hủy đơn:</b> {money(o.cancellationFee)}
+                </p>
+              )}
             </Card>
           )}
         </div>

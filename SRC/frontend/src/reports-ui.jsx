@@ -288,7 +288,7 @@ function QualityPerformance({ tab, allowedQuality, allowedPerformance }) {
         ],
         ...rows.map((t) => [
           t.fullName,
-          groups[t.skillGroup],
+          groups[t.skillGroup] || t.skillGroup || "Chưa cập nhật",
           t.assignedOrders,
           t.finishedOrders,
           t.completionRate,
@@ -398,7 +398,7 @@ function QualityPerformance({ tab, allowedQuality, allowedPerformance }) {
             <Metric
               title="Điểm hài lòng"
               value={rating(q.averageRating)}
-              detail={q.reviews + " đánh giá trong kỳ"}
+              detail={q.reviews.length + " đánh giá trong kỳ"}
             />
             <Metric
               title="Tỷ lệ đơn có khiếu nại"
@@ -489,7 +489,7 @@ function QualityPerformance({ tab, allowedQuality, allowedPerformance }) {
                     return (
                       <div key={star}>
                         <b>{star} sao</b>
-                        <progress max={Math.max(1, q.reviews)} value={count} />
+                        <progress max={Math.max(1, q.reviews.length)} value={count} />
                         <span>{count}</span>
                       </div>
                     );

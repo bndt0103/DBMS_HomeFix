@@ -156,6 +156,62 @@
         "output": false
       }
     ],
+    "sp_AdminCapNhatTaiKhoan": [
+      {
+        "name": "NguoiThucHienId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NguoiDungId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "HoTen",
+        "type": "NVARCHAR(120)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "SoDienThoai",
+        "type": "VARCHAR(15)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "Email",
+        "type": "NVARCHAR(254)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "VaiTro",
+        "type": "VARCHAR(5)",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "NhomTayNghe",
+        "type": "VARCHAR(30)",
+        "optional": true,
+        "output": false
+      },
+      {
+        "name": "DangHoatDong",
+        "type": "BIT",
+        "optional": false,
+        "output": false
+      },
+      {
+        "name": "PhienBanDuKien",
+        "type": "BINARY(8)",
+        "optional": false,
+        "output": false
+      }
+    ],
     "sp_CapNhatTho": [
       {
         "name": "NguoiThucHienId",

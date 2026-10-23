@@ -110,6 +110,13 @@ function CustomerHome() {
   const { user } = useApp(),
     services = useData("/services"),
     orders = useData("/orders?pageSize=5", 10000);
+  const popularServices = (services.data || []).filter((s) => s.isPopular);
+  // CSDL hiện không lưu cờ "phổ biến" cho dịch vụ. Hiển thị các dịch vụ
+  // đầu tiên đang cung cấp làm lựa chọn mặc định thay vì để trống trang chủ.
+  const featuredServices = (popularServices.length
+    ? popularServices
+    : services.data || []
+  ).slice(0, 6);
   return (
     <>
       <section className="customer-hero">
@@ -171,11 +178,7 @@ function CustomerHome() {
       {services.loading ? (
         <Loading />
       ) : (
-        services.data && (
-          <ServiceCards
-            services={services.data.filter((s) => s.isPopular).slice(0, 6)}
-          />
-        )
+        services.data && <ServiceCards services={featuredServices} />
       )}
       <div className="section-head">
         <h2>Đơn dịch vụ gần đây</h2>
@@ -931,6 +934,9 @@ export function PolicyApproval() {
       });
       setNote("");
       setSelectedId(null);
+      proposalData.setData((items) =>
+        (items || []).filter((proposal) => proposal.id !== selected.id),
+      );
       proposalData.reload();
       toast(
         decision === "Approved"
@@ -997,35 +1003,26 @@ export function PolicyApproval() {
             <div className="policy-detail-head">
               <div>
                 <h2>Chi tiết đề xuất {selected.proposalCode}</h2>
-                <small>Bảng so sánh giá & chiết khấu</small>
+                <small>Bảng so sánh thay đổi chính sách</small>
               </div>
               <small>Ngày gửi: {date(selected.submittedAt)}</small>
             </div>
-            <div className="policy-compare">
-              <div className="policy-compare-head">
-                <span>Hạng mục</span>
-                <span>Hiện tại</span>
-                <span>Đề xuất mới</span>
+            {selected.changes?.length > 0 && (
+              <div className="policy-compare">
+                <div className="policy-compare-head">
+                  <span>Hạng mục</span>
+                  <span>Hiện tại</span>
+                  <span>Đề xuất mới</span>
+                </div>
+                {selected.changes.map((change) => (
+                  <div key={change.label}>
+                    <b>{change.label}</b>
+                    <span>{change.current}</span>
+                    <strong>{change.proposed}</strong>
+                  </div>
+                ))}
               </div>
-              <div>
-                <b>Chiết khấu dịch vụ</b>
-                <span>
-                  {selected.currentDiscount == null
-                    ? "—"
-                    : `${Number(selected.currentDiscount)}%`}
-                </span>
-                <strong>
-                  {selected.proposedDiscount == null
-                    ? "—"
-                    : `${Number(selected.proposedDiscount)}%`}
-                </strong>
-              </div>
-              <div>
-                <b>Thưởng hiệu suất</b>
-                <span>{selected.currentBonus || "—"}</span>
-                <strong>{selected.proposedBonus || "—"}</strong>
-              </div>
-            </div>
+            )}
             <div className="policy-impact">
               <b>Tác động dự kiến</b>
               <p>{selected.impact}</p>
@@ -1535,6 +1532,7 @@ export function Orders() {
 export function Profile() {
   const { user, setUser, logout } = useApp(),
     r = useData("/users/me"),
+    technician = useData(user.role === "KTV" ? "/technicians/me" : null),
     a = useAction();
   const [form, setForm] = useState(null),
     [contactPassword, setContactPassword] = useState("");
@@ -1599,6 +1597,19 @@ export function Profile() {
               <Field label="Số điện thoại đăng nhập">
                 <input readOnly value={user.phone} />
               </Field>
+              {user.role === "KTV" && (
+                <Field label="Chuyên môn">
+                  <input
+                    readOnly
+                    value={
+                      groups[technician.data?.skillGroup || r.data?.skillGroup] ||
+                      technician.data?.skillGroup ||
+                      r.data?.skillGroup ||
+                      "Chưa cập nhật"
+                    }
+                  />
+                </Field>
+              )}
               <Field label="Email">
                 <input
                   type="email"

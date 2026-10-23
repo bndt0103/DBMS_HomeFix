@@ -79,7 +79,7 @@ END;
 GO
 
 -- Cùng một bộ lọc được dùng khi hiển thị danh sách và khi ghi lệnh phân công.
--- Khu vực/tay nghề có thể ngăn cách bằng dấu phẩy hoặc chấm phẩy.
+-- Mỗi KTV có đúng một chuyên môn; khu vực vẫn có thể ngăn cách bằng dấu phẩy hoặc chấm phẩy.
 -- So từng thành phần địa chỉ để Quận 1 không bị nhầm với Quận 10.
 CREATE OR ALTER FUNCTION dbo.fn_KyThuatVienPhuHop (@DonHangId INT)
 RETURNS TABLE
@@ -103,11 +103,7 @@ RETURN (
           SELECT 1 FROM dbo.DonHang AS d
           WHERE d.KyThuatVienId = ktv.Id AND d.TrangThai NOT IN ('HoanThanh', 'Huy')
       )
-      AND EXISTS (
-          SELECT 1 FROM STRING_SPLIT(REPLACE(ktv.NhomTayNghe, N';', N','), N',') AS t
-          WHERE LTRIM(RTRIM(t.value)) COLLATE Latin1_General_100_CI_AI
-              IN (dm.Ten COLLATE Latin1_General_100_CI_AI, dm.Ma COLLATE Latin1_General_100_CI_AI)
-      )
+      AND ktv.NhomTayNghe = dm.Ma
       AND EXISTS (
           SELECT 1
           FROM STRING_SPLIT(REPLACE(ktv.KhuVucPhucVu, N';', N','), N',') AS k

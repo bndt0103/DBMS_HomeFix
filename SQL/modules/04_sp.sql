@@ -277,6 +277,75 @@ BEGIN
 END;
 GO
 
+CREATE OR ALTER PROCEDURE dbo.sp_AdminCapNhatTaiKhoan
+    @NguoiThucHienId INT, @NguoiDungId INT, @HoTen NVARCHAR(120),
+    @SoDienThoai VARCHAR(15), @Email NVARCHAR(254) = NULL,
+    @VaiTro VARCHAR(5), @NhomTayNghe VARCHAR(30) = NULL,
+    @DangHoatDong BIT, @PhienBanDuKien BINARY(8)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    DECLARE @GiaoDichNgoai INT = @@TRANCOUNT, @VaiTroCu VARCHAR(5);
+    BEGIN TRY
+        IF @GiaoDichNgoai = 0 BEGIN TRANSACTION;
+        ELSE SAVE TRANSACTION s_AdminCapNhatTaiKhoan;
+        IF NOT EXISTS (SELECT 1 FROM dbo.NguoiDung WHERE Id = @NguoiThucHienId AND VaiTro = 'ADMIN' AND DangHoatDong = 1)
+            THROW 51003, N'Vai trò không được phép thực hiện thao tác này.', 1;
+        IF USER_NAME() <> N'dbo' AND (
+            TRY_CONVERT(INT, SESSION_CONTEXT(N'NguoiDungId')) <> @NguoiThucHienId
+            OR USER_NAME() <> N'hf_ADMIN'
+        ) THROW 51003, N'Ngữ cảnh tài khoản không khớp.', 1;
+        IF @PhienBanDuKien IS NULL
+            THROW 51009, N'Phải gửi phiên bản dữ liệu đang xem trước khi cập nhật.', 1;
+        SELECT @VaiTroCu = VaiTro FROM dbo.NguoiDung WITH (UPDLOCK, HOLDLOCK) WHERE Id = @NguoiDungId;
+        IF @VaiTroCu IS NULL THROW 51004, N'Không tìm thấy tài khoản cần cập nhật.', 1;
+        IF NOT EXISTS (SELECT 1 FROM dbo.NguoiDung WHERE Id = @NguoiDungId AND PhienBan = @PhienBanDuKien)
+            THROW 51009, N'Dữ liệu đã thay đổi; hãy tải lại và thử lại.', 1;
+        IF NULLIF(LTRIM(RTRIM(@HoTen)), N'') IS NULL OR @SoDienThoai LIKE '%[^0-9]%' OR LEN(@SoDienThoai) NOT BETWEEN 9 AND 15
+            THROW 51009, N'Họ tên hoặc số điện thoại không hợp lệ.', 1;
+        IF @VaiTro NOT IN ('KH','KTV','DPV','CSKH','KT','GD','ADMIN')
+            THROW 51009, N'Vai trò không hợp lệ.', 1;
+        IF @VaiTro = 'KTV' AND (@NhomTayNghe IS NULL OR @NhomTayNghe NOT IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA'))
+            THROW 51009, N'KTV phải có đúng một chuyên môn hợp lệ.', 1;
+        IF @NguoiDungId = @NguoiThucHienId AND (@VaiTro <> 'ADMIN' OR @DangHoatDong = 0)
+            THROW 51009, N'Không được tự bỏ quyền hoặc khóa tài khoản quản trị đang dùng.', 1;
+        IF (@VaiTroCu = 'ADMIN' AND (@VaiTro <> 'ADMIN' OR @DangHoatDong = 0))
+           AND NOT EXISTS (SELECT 1 FROM dbo.NguoiDung WITH (UPDLOCK, HOLDLOCK) WHERE VaiTro = 'ADMIN' AND DangHoatDong = 1 AND Id <> @NguoiDungId)
+            THROW 51009, N'Phải duy trì ít nhất một quản trị viên đang hoạt động.', 1;
+        IF @DangHoatDong = 0 AND EXISTS (SELECT 1 FROM dbo.DonHang WHERE KyThuatVienId = @NguoiDungId AND TrangThai NOT IN ('HoanThanh','Huy'))
+            THROW 51009, N'KTV còn đơn đang thực hiện; cần xử lý trước khi khóa.', 1;
+        IF @VaiTro <> 'KTV' AND EXISTS (SELECT 1 FROM dbo.KyThuatVien WHERE Id = @NguoiDungId)
+        BEGIN
+            IF EXISTS (SELECT 1 FROM dbo.DonHang WHERE KyThuatVienId = @NguoiDungId)
+               OR EXISTS (SELECT 1 FROM dbo.GiaoDichVi WHERE KyThuatVienId = @NguoiDungId)
+               OR EXISTS (SELECT 1 FROM dbo.YeuCauVi WHERE KyThuatVienId = @NguoiDungId)
+               OR EXISTS (SELECT 1 FROM dbo.LenhDieuPhoi WHERE KyThuatVienId = @NguoiDungId)
+                THROW 51009, N'KTV đã có chứng từ; hãy giữ vai trò KTV hoặc khóa tài khoản.', 1;
+            DELETE FROM dbo.KyThuatVien WHERE Id = @NguoiDungId;
+        END;
+        UPDATE dbo.NguoiDung
+        SET HoTen = LTRIM(RTRIM(@HoTen)), SoDienThoai = @SoDienThoai,
+            Email = NULLIF(LTRIM(RTRIM(@Email)), N''), VaiTro = @VaiTro, DangHoatDong = @DangHoatDong
+        WHERE Id = @NguoiDungId;
+        IF @VaiTro = 'KTV' AND NOT EXISTS (SELECT 1 FROM dbo.KyThuatVien WHERE Id = @NguoiDungId)
+            INSERT INTO dbo.KyThuatVien(Id, NhomTayNghe) VALUES (@NguoiDungId, @NhomTayNghe);
+        ELSE IF @VaiTro = 'KTV'
+            UPDATE dbo.KyThuatVien SET NhomTayNghe = @NhomTayNghe WHERE Id = @NguoiDungId;
+        INSERT INTO dbo.NhatKy(NguoiThucHienId, ThaoTac, DoiTuong, DoiTuongId, ChiTiet)
+        VALUES (@NguoiThucHienId, N'Cập nhật tài khoản', N'NguoiDung', @NguoiDungId, @VaiTro);
+        IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
+        SELECT Id, HoTen, SoDienThoai, Email, VaiTro, DangHoatDong, DiaChi, NgayTao, PhienBan
+        FROM dbo.vw_NguoiDung WHERE Id = @NguoiDungId;
+    END TRY
+    BEGIN CATCH
+        IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+        ELSE IF @GiaoDichNgoai > 0 AND XACT_STATE() = 1 ROLLBACK TRANSACTION s_AdminCapNhatTaiKhoan;
+        THROW;
+    END CATCH;
+END;
+GO
+
 CREATE OR ALTER PROCEDURE dbo.sp_CapNhatTho
     @NguoiThucHienId INT, @NhomTayNghe NVARCHAR(200), @KhuVucPhucVu NVARCHAR(200),
     @ViDo DECIMAL(10,7) = NULL, @KinhDo DECIMAL(10,7) = NULL
@@ -301,6 +370,8 @@ BEGIN
             THROW 51003, N'Ngữ cảnh người dùng không khớp tài khoản và vai trò thực hiện.', 1;
         IF NOT EXISTS (SELECT 1 FROM dbo.NguoiDung WHERE Id = @NguoiThucHienId AND VaiTro IN ('KTV') AND DangHoatDong = 1)
             THROW 51003, N'Vai trò không được phép thực hiện thao tác này.', 1;
+        IF @NhomTayNghe NOT IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA')
+            THROW 51009, N'Kỹ thuật viên chỉ được chọn một chuyên môn hợp lệ.', 1;
 
         UPDATE dbo.KyThuatVien SET NhomTayNghe = @NhomTayNghe, KhuVucPhucVu = @KhuVucPhucVu,
             ViDo = @ViDo, KinhDo = @KinhDo WHERE Id = @NguoiThucHienId;
@@ -390,6 +461,8 @@ BEGIN
 
         IF EXISTS (SELECT 1 FROM dbo.HoSoKTV WITH (UPDLOCK, HOLDLOCK) WHERE NguoiDungId = @NguoiThucHienId AND TrangThai = 'Pending')
             THROW 51009, N'Đã có hồ sơ đang chờ duyệt.', 1;
+        IF @NhomTayNghe NOT IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA')
+            THROW 51009, N'Kỹ thuật viên chỉ được chọn một chuyên môn hợp lệ.', 1;
         IF @HoSoJSON IS NOT NULL AND ISJSON(@HoSoJSON) <> 1
             THROW 51009, N'Nội dung hồ sơ phải là JSON hợp lệ.', 1;
         IF EXISTS (
@@ -834,6 +907,26 @@ BEGIN
         IF @Khoa = 'TaiKhoanNganHangMacDinh' AND NOT EXISTS (
             SELECT 1 FROM dbo.TaiKhoanNganHang WHERE Id = TRY_CONVERT(INT, @GiaTri) AND DangHoatDong = 1
         ) THROW 51009, N'Tài khoản ngân hàng mặc định phải đang hoạt động.', 1;
+        IF @Khoa LIKE 'DeXuatChinhSach[_]%'
+        BEGIN
+            IF ISJSON(@GiaTri) <> 1
+                THROW 51009, N'Đề xuất chính sách không hợp lệ.', 1;
+            DECLARE @DoiTuongDeXuat VARCHAR(100) = JSON_VALUE(@GiaTri, '$.policySubject');
+            IF NULLIF(@DoiTuongDeXuat, '') IS NULL
+                THROW 51009, N'Đề xuất chính sách không hợp lệ.', 1;
+            -- Bản gửi lại thay thế bằng cách xóa hẳn bản đang chờ cùng đối tượng,
+            -- sau đó chèn đề xuất mới với khóa/mã mới.
+            DELETE FROM dbo.CauHinh WITH (UPDLOCK, HOLDLOCK)
+            WHERE Khoa LIKE 'DeXuatChinhSach[_]%'
+              AND ISJSON(GiaTri) = 1
+              AND COALESCE(
+                    JSON_VALUE(GiaTri, '$.policySubject'),
+                    CASE JSON_VALUE(GiaTri, '$.payload.type')
+                        WHEN 'ServicePricing' THEN CONCAT('DichVu_', JSON_VALUE(GiaTri, '$.payload.serviceId'))
+                        WHEN 'Configuration' THEN CONCAT('CauHinh_', JSON_VALUE(GiaTri, '$.payload.key'))
+                    END
+                  ) = @DoiTuongDeXuat;
+        END;
         IF EXISTS (SELECT 1 FROM dbo.CauHinh WITH (UPDLOCK, HOLDLOCK) WHERE Khoa = @Khoa)
             UPDATE dbo.CauHinh SET GiaTri = @GiaTri, NhanHienThi = @NhanHienThi WHERE Khoa = @Khoa;
         ELSE INSERT INTO dbo.CauHinh(Khoa, GiaTri, NhanHienThi) VALUES (@Khoa, @GiaTri, @NhanHienThi);

@@ -61,6 +61,7 @@ function Table({
   render,
   empty = "Chưa có dữ liệu",
   searchable = true,
+  className = "",
 }) {
   const [query, setQuery] = useState("");
   const fields = [
@@ -118,7 +119,7 @@ function Table({
         </div>
       )}
       {filtered.length ? (
-        <div className="table-wrap">
+        <div className={"table-wrap " + className}>
           <table>
             <thead>
               <tr>
@@ -234,6 +235,7 @@ function AdminOrders() {
       ) : (
         <Card>
           <Table
+            className="users-table"
             headers={[
               "Mã đơn",
               "Dịch vụ",
@@ -297,6 +299,7 @@ function AdminUsers() {
   const r = useData("/users?pageSize=200&search=" + encodeURIComponent(search));
   const action = useAction();
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({
     fullName: "",
     phone: "",
@@ -334,11 +337,13 @@ function AdminUsers() {
       ) : (
         <Card>
           <Table
+            className="users-table"
             headers={[
               "Họ và tên",
               "Số điện thoại",
               "Email",
               "Vai trò",
+              "Chuyên môn",
               "Trạng thái",
               "Thao tác",
             ]}
@@ -358,7 +363,7 @@ function AdminUsers() {
                   <select
                     aria-label={"Vai trò của " + u.fullName}
                     value={u.role}
-                    disabled={action.busy}
+                    disabled
                     onChange={(e) =>
                       action.run(async () => {
                         await api("/users/" + u.id + "/role", {
@@ -380,11 +385,23 @@ function AdminUsers() {
                   </select>
                 </td>
                 <td>
+                  {u.role === "KTV"
+                    ? groups[u.skillGroup] || u.skillGroup || "Chưa cập nhật"
+                    : "—"}
+                </td>
+                <td>
                   <span className={"badge " + (u.isActive ? "green" : "red")}>
                     {u.isActive ? "Hoạt động" : "Bị khóa"}
                   </span>
                 </td>
                 <td>
+                  <button
+                    className="btn small"
+                    disabled={action.busy}
+                    onClick={() => setEditing({ ...u, email: u.email || "" })}
+                  >
+                    <Pencil size={14} /> Sửa
+                  </button>{" "}
                   <button
                     className={"btn small " + (u.isActive ? "danger" : "")}
                     disabled={action.busy}
@@ -464,6 +481,112 @@ function AdminUsers() {
                 Hủy
               </button>
               <Submit busy={action.busy}>Tạo tài khoản</Submit>
+            </div>
+          </form>
+        </Modal>
+      )}
+      {editing && (
+        <Modal title="Sửa thông tin tài khoản" onClose={() => setEditing(null)}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              action.run(async () => {
+                await api("/users/" + editing.id, {
+                  method: "PATCH",
+                  body: {
+                    ...editing,
+                    expectedVersion: editing.version,
+                  },
+                });
+                setEditing(null);
+                r.reload();
+              });
+            }}
+          >
+            <ErrorBox error={action.error} />
+            <Field label="Họ và tên">
+              <input
+                required
+                value={editing.fullName}
+                onChange={(e) =>
+                  setEditing({ ...editing, fullName: e.target.value })
+                }
+              />
+            </Field>
+            <Field label="Số điện thoại">
+              <input
+                required
+                inputMode="numeric"
+                value={editing.phone}
+                onChange={(e) =>
+                  setEditing({ ...editing, phone: e.target.value })
+                }
+              />
+            </Field>
+            <Field label="Email">
+              <input
+                type="email"
+                value={editing.email}
+                onChange={(e) => setEditing({ ...editing, email: e.target.value })}
+              />
+            </Field>
+            <Field label="Vai trò">
+              <select
+                value={editing.role}
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    role: e.target.value,
+                    skillGroup:
+                      e.target.value === "KTV"
+                        ? editing.skillGroup || "DIEN"
+                        : "",
+                  })
+                }
+              >
+                {Object.entries(roleNames).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            {editing.role === "KTV" && (
+              <Field label="Chuyên môn">
+                <select
+                  required
+                  value={editing.skillGroup || ""}
+                  onChange={(e) =>
+                    setEditing({ ...editing, skillGroup: e.target.value })
+                  }
+                >
+                  {Object.entries(groups).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
+            <Field label="Trạng thái">
+              <select
+                value={editing.isActive ? "active" : "inactive"}
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    isActive: e.target.value === "active",
+                  })
+                }
+              >
+                <option value="active">Hoạt động</option>
+                <option value="inactive">Bị khóa</option>
+              </select>
+            </Field>
+            <div className="form-actions">
+              <button type="button" className="btn" onClick={() => setEditing(null)}>
+                Hủy
+              </button>
+              <Submit busy={action.busy}>Lưu thay đổi</Submit>
             </div>
           </form>
         </Modal>

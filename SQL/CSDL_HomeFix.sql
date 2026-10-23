@@ -48,7 +48,7 @@ CREATE TABLE dbo.NguoiDung (
 );
 CREATE TABLE dbo.KyThuatVien (
     Id INT CONSTRAINT PK_KyThuatVien PRIMARY KEY CONSTRAINT FK_KyThuatVien_NguoiDung REFERENCES dbo.NguoiDung(Id),
-    NhomTayNghe NVARCHAR(200) NOT NULL CONSTRAINT DF_KyThuatVien_TayNghe DEFAULT N'Chưa cập nhật',
+    NhomTayNghe VARCHAR(30) NOT NULL CONSTRAINT DF_KyThuatVien_TayNghe DEFAULT 'DIEN',
     KhuVucPhucVu NVARCHAR(200) NOT NULL CONSTRAINT DF_KyThuatVien_KhuVuc DEFAULT N'Chưa cập nhật',
     TrangThaiSanSang VARCHAR(12) NOT NULL CONSTRAINT DF_KyThuatVien_SanSang DEFAULT 'TamBan',
     SoDu DECIMAL(18,2) NOT NULL CONSTRAINT DF_KyThuatVien_SoDu DEFAULT 0,
@@ -56,6 +56,7 @@ CREATE TABLE dbo.KyThuatVien (
     KinhDo DECIMAL(10,7) NULL,
     PhienBan ROWVERSION,
     CONSTRAINT CK_KyThuatVien_TrangThai CHECK (TrangThaiSanSang IN ('TamBan','SanSang','DangBan')),
+    CONSTRAINT CK_KyThuatVien_MotChuyenMon CHECK (NhomTayNghe IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA')),
     CONSTRAINT CK_KyThuatVien_SoDu CHECK (SoDu >= 0),
     CONSTRAINT CK_KyThuatVien_GPS CHECK ((ViDo IS NULL AND KinhDo IS NULL) OR (ViDo IS NOT NULL AND KinhDo IS NOT NULL AND ViDo BETWEEN -90 AND 90 AND KinhDo BETWEEN -180 AND 180))
 );
@@ -280,10 +281,11 @@ CREATE TABLE dbo.GiaoDichVi (
 CREATE TABLE dbo.HoSoKTV (
     Id INT IDENTITY CONSTRAINT PK_HoSoKTV PRIMARY KEY,
     NguoiDungId INT NOT NULL CONSTRAINT FK_HoSoKTV_NguoiDung REFERENCES dbo.NguoiDung(Id),
-    NhomTayNghe NVARCHAR(200) NOT NULL,
+    NhomTayNghe VARCHAR(30) NOT NULL,
     KhuVucPhucVu NVARCHAR(200) NOT NULL,
     KinhNghiem NVARCHAR(2000) NOT NULL,
     HoSoJSON NVARCHAR(MAX) NULL CONSTRAINT CK_HoSoKTV_JSON CHECK (HoSoJSON IS NULL OR ISJSON(HoSoJSON) = 1),
+    CONSTRAINT CK_HoSoKTV_MotChuyenMon CHECK (NhomTayNghe IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA')),
     GiayToMatTruocId INT NULL CONSTRAINT FK_HoSoKTV_MatTruoc REFERENCES dbo.TepDinhKem(Id),
     GiayToMatSauId INT NULL CONSTRAINT FK_HoSoKTV_MatSau REFERENCES dbo.TepDinhKem(Id),
     TrangThai VARCHAR(10) NOT NULL CONSTRAINT DF_HoSoKTV_TrangThai DEFAULT 'Pending',
@@ -505,7 +507,7 @@ END;
 GO
 
 -- Cùng một bộ lọc được dùng khi hiển thị danh sách và khi ghi lệnh phân công.
--- Khu vực/tay nghề có thể ngăn cách bằng dấu phẩy hoặc chấm phẩy.
+-- Mỗi KTV có đúng một chuyên môn; khu vực vẫn có thể ngăn cách bằng dấu phẩy hoặc chấm phẩy.
 -- So từng thành phần địa chỉ để Quận 1 không bị nhầm với Quận 10.
 CREATE OR ALTER FUNCTION dbo.fn_KyThuatVienPhuHop (@DonHangId INT)
 RETURNS TABLE
@@ -529,11 +531,7 @@ RETURN (
           SELECT 1 FROM dbo.DonHang AS d
           WHERE d.KyThuatVienId = ktv.Id AND d.TrangThai NOT IN ('HoanThanh', 'Huy')
       )
-      AND EXISTS (
-          SELECT 1 FROM STRING_SPLIT(REPLACE(ktv.NhomTayNghe, N';', N','), N',') AS t
-          WHERE LTRIM(RTRIM(t.value)) COLLATE Latin1_General_100_CI_AI
-              IN (dm.Ten COLLATE Latin1_General_100_CI_AI, dm.Ma COLLATE Latin1_General_100_CI_AI)
-      )
+      AND ktv.NhomTayNghe = dm.Ma
       AND EXISTS (
           SELECT 1
           FROM STRING_SPLIT(REPLACE(ktv.KhuVucPhucVu, N';', N','), N',') AS k
@@ -1061,6 +1059,75 @@ BEGIN
 END;
 GO
 
+CREATE OR ALTER PROCEDURE dbo.sp_AdminCapNhatTaiKhoan
+    @NguoiThucHienId INT, @NguoiDungId INT, @HoTen NVARCHAR(120),
+    @SoDienThoai VARCHAR(15), @Email NVARCHAR(254) = NULL,
+    @VaiTro VARCHAR(5), @NhomTayNghe VARCHAR(30) = NULL,
+    @DangHoatDong BIT, @PhienBanDuKien BINARY(8)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    DECLARE @GiaoDichNgoai INT = @@TRANCOUNT, @VaiTroCu VARCHAR(5);
+    BEGIN TRY
+        IF @GiaoDichNgoai = 0 BEGIN TRANSACTION;
+        ELSE SAVE TRANSACTION s_AdminCapNhatTaiKhoan;
+        IF NOT EXISTS (SELECT 1 FROM dbo.NguoiDung WHERE Id = @NguoiThucHienId AND VaiTro = 'ADMIN' AND DangHoatDong = 1)
+            THROW 51003, N'Vai trò không được phép thực hiện thao tác này.', 1;
+        IF USER_NAME() <> N'dbo' AND (
+            TRY_CONVERT(INT, SESSION_CONTEXT(N'NguoiDungId')) <> @NguoiThucHienId
+            OR USER_NAME() <> N'hf_ADMIN'
+        ) THROW 51003, N'Ngữ cảnh tài khoản không khớp.', 1;
+        IF @PhienBanDuKien IS NULL
+            THROW 51009, N'Phải gửi phiên bản dữ liệu đang xem trước khi cập nhật.', 1;
+        SELECT @VaiTroCu = VaiTro FROM dbo.NguoiDung WITH (UPDLOCK, HOLDLOCK) WHERE Id = @NguoiDungId;
+        IF @VaiTroCu IS NULL THROW 51004, N'Không tìm thấy tài khoản cần cập nhật.', 1;
+        IF NOT EXISTS (SELECT 1 FROM dbo.NguoiDung WHERE Id = @NguoiDungId AND PhienBan = @PhienBanDuKien)
+            THROW 51009, N'Dữ liệu đã thay đổi; hãy tải lại và thử lại.', 1;
+        IF NULLIF(LTRIM(RTRIM(@HoTen)), N'') IS NULL OR @SoDienThoai LIKE '%[^0-9]%' OR LEN(@SoDienThoai) NOT BETWEEN 9 AND 15
+            THROW 51009, N'Họ tên hoặc số điện thoại không hợp lệ.', 1;
+        IF @VaiTro NOT IN ('KH','KTV','DPV','CSKH','KT','GD','ADMIN')
+            THROW 51009, N'Vai trò không hợp lệ.', 1;
+        IF @VaiTro = 'KTV' AND (@NhomTayNghe IS NULL OR @NhomTayNghe NOT IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA'))
+            THROW 51009, N'KTV phải có đúng một chuyên môn hợp lệ.', 1;
+        IF @NguoiDungId = @NguoiThucHienId AND (@VaiTro <> 'ADMIN' OR @DangHoatDong = 0)
+            THROW 51009, N'Không được tự bỏ quyền hoặc khóa tài khoản quản trị đang dùng.', 1;
+        IF (@VaiTroCu = 'ADMIN' AND (@VaiTro <> 'ADMIN' OR @DangHoatDong = 0))
+           AND NOT EXISTS (SELECT 1 FROM dbo.NguoiDung WITH (UPDLOCK, HOLDLOCK) WHERE VaiTro = 'ADMIN' AND DangHoatDong = 1 AND Id <> @NguoiDungId)
+            THROW 51009, N'Phải duy trì ít nhất một quản trị viên đang hoạt động.', 1;
+        IF @DangHoatDong = 0 AND EXISTS (SELECT 1 FROM dbo.DonHang WHERE KyThuatVienId = @NguoiDungId AND TrangThai NOT IN ('HoanThanh','Huy'))
+            THROW 51009, N'KTV còn đơn đang thực hiện; cần xử lý trước khi khóa.', 1;
+        IF @VaiTro <> 'KTV' AND EXISTS (SELECT 1 FROM dbo.KyThuatVien WHERE Id = @NguoiDungId)
+        BEGIN
+            IF EXISTS (SELECT 1 FROM dbo.DonHang WHERE KyThuatVienId = @NguoiDungId)
+               OR EXISTS (SELECT 1 FROM dbo.GiaoDichVi WHERE KyThuatVienId = @NguoiDungId)
+               OR EXISTS (SELECT 1 FROM dbo.YeuCauVi WHERE KyThuatVienId = @NguoiDungId)
+               OR EXISTS (SELECT 1 FROM dbo.LenhDieuPhoi WHERE KyThuatVienId = @NguoiDungId)
+                THROW 51009, N'KTV đã có chứng từ; hãy giữ vai trò KTV hoặc khóa tài khoản.', 1;
+            DELETE FROM dbo.KyThuatVien WHERE Id = @NguoiDungId;
+        END;
+        UPDATE dbo.NguoiDung
+        SET HoTen = LTRIM(RTRIM(@HoTen)), SoDienThoai = @SoDienThoai,
+            Email = NULLIF(LTRIM(RTRIM(@Email)), N''), VaiTro = @VaiTro, DangHoatDong = @DangHoatDong
+        WHERE Id = @NguoiDungId;
+        IF @VaiTro = 'KTV' AND NOT EXISTS (SELECT 1 FROM dbo.KyThuatVien WHERE Id = @NguoiDungId)
+            INSERT INTO dbo.KyThuatVien(Id, NhomTayNghe) VALUES (@NguoiDungId, @NhomTayNghe);
+        ELSE IF @VaiTro = 'KTV'
+            UPDATE dbo.KyThuatVien SET NhomTayNghe = @NhomTayNghe WHERE Id = @NguoiDungId;
+        INSERT INTO dbo.NhatKy(NguoiThucHienId, ThaoTac, DoiTuong, DoiTuongId, ChiTiet)
+        VALUES (@NguoiThucHienId, N'Cập nhật tài khoản', N'NguoiDung', @NguoiDungId, @VaiTro);
+        IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
+        SELECT Id, HoTen, SoDienThoai, Email, VaiTro, DangHoatDong, DiaChi, NgayTao, PhienBan
+        FROM dbo.vw_NguoiDung WHERE Id = @NguoiDungId;
+    END TRY
+    BEGIN CATCH
+        IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+        ELSE IF @GiaoDichNgoai > 0 AND XACT_STATE() = 1 ROLLBACK TRANSACTION s_AdminCapNhatTaiKhoan;
+        THROW;
+    END CATCH;
+END;
+GO
+
 CREATE OR ALTER PROCEDURE dbo.sp_CapNhatTho
     @NguoiThucHienId INT, @NhomTayNghe NVARCHAR(200), @KhuVucPhucVu NVARCHAR(200),
     @ViDo DECIMAL(10,7) = NULL, @KinhDo DECIMAL(10,7) = NULL
@@ -1085,6 +1152,8 @@ BEGIN
             THROW 51003, N'Ngữ cảnh người dùng không khớp tài khoản và vai trò thực hiện.', 1;
         IF NOT EXISTS (SELECT 1 FROM dbo.NguoiDung WHERE Id = @NguoiThucHienId AND VaiTro IN ('KTV') AND DangHoatDong = 1)
             THROW 51003, N'Vai trò không được phép thực hiện thao tác này.', 1;
+        IF @NhomTayNghe NOT IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA')
+            THROW 51009, N'Kỹ thuật viên chỉ được chọn một chuyên môn hợp lệ.', 1;
 
         UPDATE dbo.KyThuatVien SET NhomTayNghe = @NhomTayNghe, KhuVucPhucVu = @KhuVucPhucVu,
             ViDo = @ViDo, KinhDo = @KinhDo WHERE Id = @NguoiThucHienId;
@@ -1174,6 +1243,8 @@ BEGIN
 
         IF EXISTS (SELECT 1 FROM dbo.HoSoKTV WITH (UPDLOCK, HOLDLOCK) WHERE NguoiDungId = @NguoiThucHienId AND TrangThai = 'Pending')
             THROW 51009, N'Đã có hồ sơ đang chờ duyệt.', 1;
+        IF @NhomTayNghe NOT IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA')
+            THROW 51009, N'Kỹ thuật viên chỉ được chọn một chuyên môn hợp lệ.', 1;
         IF @HoSoJSON IS NOT NULL AND ISJSON(@HoSoJSON) <> 1
             THROW 51009, N'Nội dung hồ sơ phải là JSON hợp lệ.', 1;
         IF EXISTS (
@@ -1618,6 +1689,26 @@ BEGIN
         IF @Khoa = 'TaiKhoanNganHangMacDinh' AND NOT EXISTS (
             SELECT 1 FROM dbo.TaiKhoanNganHang WHERE Id = TRY_CONVERT(INT, @GiaTri) AND DangHoatDong = 1
         ) THROW 51009, N'Tài khoản ngân hàng mặc định phải đang hoạt động.', 1;
+        IF @Khoa LIKE 'DeXuatChinhSach[_]%'
+        BEGIN
+            IF ISJSON(@GiaTri) <> 1
+                THROW 51009, N'Đề xuất chính sách không hợp lệ.', 1;
+            DECLARE @DoiTuongDeXuat VARCHAR(100) = JSON_VALUE(@GiaTri, '$.policySubject');
+            IF NULLIF(@DoiTuongDeXuat, '') IS NULL
+                THROW 51009, N'Đề xuất chính sách không hợp lệ.', 1;
+            -- Bản gửi lại thay thế bằng cách xóa hẳn bản đang chờ cùng đối tượng,
+            -- sau đó chèn đề xuất mới với khóa/mã mới.
+            DELETE FROM dbo.CauHinh WITH (UPDLOCK, HOLDLOCK)
+            WHERE Khoa LIKE 'DeXuatChinhSach[_]%'
+              AND ISJSON(GiaTri) = 1
+              AND COALESCE(
+                    JSON_VALUE(GiaTri, '$.policySubject'),
+                    CASE JSON_VALUE(GiaTri, '$.payload.type')
+                        WHEN 'ServicePricing' THEN CONCAT('DichVu_', JSON_VALUE(GiaTri, '$.payload.serviceId'))
+                        WHEN 'Configuration' THEN CONCAT('CauHinh_', JSON_VALUE(GiaTri, '$.payload.key'))
+                    END
+                  ) = @DoiTuongDeXuat;
+        END;
         IF EXISTS (SELECT 1 FROM dbo.CauHinh WITH (UPDLOCK, HOLDLOCK) WHERE Khoa = @Khoa)
             UPDATE dbo.CauHinh SET GiaTri = @GiaTri, NhanHienThi = @NhanHienThi WHERE Khoa = @Khoa;
         ELSE INSERT INTO dbo.CauHinh(Khoa, GiaTri, NhanHienThi) VALUES (@Khoa, @GiaTri, @NhanHienThi);
@@ -3741,12 +3832,34 @@ BEGIN
         SELECT @GiaTri = GiaTri FROM dbo.CauHinh WITH (UPDLOCK, HOLDLOCK) WHERE Khoa = @Khoa;
         IF @GiaTri IS NULL OR ISJSON(@GiaTri) <> 1 THROW 51004, N'Không tìm thấy đề xuất.', 1;
         IF JSON_VALUE(@GiaTri, '$.status') <> 'Pending' THROW 51009, N'Đề xuất đã được xử lý.', 1;
-        SET @GiaTri = JSON_MODIFY(@GiaTri, '$.status', @QuyetDinh);
-        SET @GiaTri = JSON_MODIFY(@GiaTri, '$.directorNote', @GhiChu);
-        SET @GiaTri = JSON_MODIFY(@GiaTri, '$.effectiveAt', CONVERT(VARCHAR(33), @NgayHieuLuc, 126));
-        UPDATE dbo.CauHinh SET GiaTri = @GiaTri WHERE Khoa = @Khoa;
+        IF @QuyetDinh = 'Approved'
+        BEGIN
+            DECLARE @LoaiDeXuat VARCHAR(40) = JSON_VALUE(@GiaTri, '$.payload.type');
+            IF @LoaiDeXuat = 'ServicePricing'
+            BEGIN
+                DECLARE @DichVuId INT = TRY_CONVERT(INT, JSON_VALUE(@GiaTri, '$.payload.serviceId'));
+                IF @DichVuId IS NULL OR NOT EXISTS (SELECT 1 FROM dbo.DichVu WITH (UPDLOCK, HOLDLOCK) WHERE Id = @DichVuId)
+                    THROW 51004, N'Dịch vụ trong đề xuất không còn tồn tại.', 1;
+                UPDATE dbo.DichVu
+                SET PhiKiemTra = TRY_CONVERT(DECIMAL(18,2), JSON_VALUE(@GiaTri, '$.payload.inspectionFee')),
+                    TienCong = TRY_CONVERT(DECIMAL(18,2), JSON_VALUE(@GiaTri, '$.payload.laborFee')),
+                    TyLeHoaHong = TRY_CONVERT(DECIMAL(5,2), JSON_VALUE(@GiaTri, '$.payload.commissionRatePercent'))
+                WHERE Id = @DichVuId;
+            END
+            ELSE IF @LoaiDeXuat = 'Configuration'
+            BEGIN
+                DECLARE @KhoaCauHinh VARCHAR(80) = JSON_VALUE(@GiaTri, '$.payload.key');
+                DECLARE @GiaTriMoi NVARCHAR(1000) = JSON_VALUE(@GiaTri, '$.payload.value');
+                IF @KhoaCauHinh NOT IN ('TyLeHoaHongMacDinh', 'PhiHuyDon') OR @GiaTriMoi IS NULL
+                    THROW 51009, N'Đề xuất cấu hình không hợp lệ.', 1;
+                UPDATE dbo.CauHinh SET GiaTri = @GiaTriMoi WHERE Khoa = @KhoaCauHinh;
+            END;
+        END;
         INSERT INTO dbo.NhatKy(NguoiThucHienId, ThaoTac, DoiTuong, ChiTiet)
         VALUES (@NguoiThucHienId, N'Duyệt chính sách', @Khoa, @QuyetDinh);
+        -- Đề xuất chỉ là hàng chờ phê duyệt. Sau khi có quyết định, xóa khỏi
+        -- CauHinh; nhật ký bên trên vẫn lưu dấu vết của quyết định.
+        DELETE FROM dbo.CauHinh WHERE Khoa = @Khoa;
         IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
@@ -4225,6 +4338,7 @@ GRANT EXECUTE ON OBJECT::dbo.sp_DoiMatKhau TO HomeFix_KH, HomeFix_KTV, HomeFix_D
 GRANT EXECUTE ON OBJECT::dbo.sp_CapNhatThongTinNguoiDung TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN;
 GRANT EXECUTE ON OBJECT::dbo.sp_KhoaMoKhoaTaiKhoan TO HomeFix_ADMIN;
 GRANT EXECUTE ON OBJECT::dbo.sp_DoiVaiTroNguoiDung TO HomeFix_ADMIN;
+GRANT EXECUTE ON OBJECT::dbo.sp_AdminCapNhatTaiKhoan TO HomeFix_ADMIN;
 GRANT EXECUTE ON OBJECT::dbo.sp_CapNhatTho TO HomeFix_KTV;
 GRANT EXECUTE ON OBJECT::dbo.sp_CapNhatTrangThaiKTV TO HomeFix_KTV;
 GRANT EXECUTE ON OBJECT::dbo.sp_GuiHoSoKTV TO HomeFix_KH;
@@ -4337,7 +4451,7 @@ BEGIN TRY
            (N'Giám đốc mẫu', '0900000006', @MatKhauBam, 'GD'),
            (N'Quản trị viên mẫu', '0900000007', @MatKhauBam, 'ADMIN');
     INSERT INTO dbo.KyThuatVien(Id, NhomTayNghe, KhuVucPhucVu, TrangThaiSanSang, SoDu)
-    SELECT Id, N'Điện, Nước, Điện lạnh', N'Thành phố Hồ Chí Minh', 'SanSang', 0 FROM dbo.NguoiDung WHERE VaiTro = 'KTV';
+    SELECT Id, 'DIEN', N'Thành phố Hồ Chí Minh', 'SanSang', 0 FROM dbo.NguoiDung WHERE VaiTro = 'KTV';
     INSERT INTO dbo.DanhMucDichVu(Ten, Ma)
     VALUES (N'Điện', 'DIEN'), (N'Nước', 'NUOC'), (N'Điện lạnh', 'DIEN_LANH'), (N'Đồ gỗ', 'DO_GO'), (N'Khóa', 'KHOA');
     INSERT INTO dbo.DichVu(DanhMucId, Ten, MoTa, PhiKiemTra, TienCong, TyLeHoaHong)
@@ -4388,6 +4502,47 @@ BEGIN TRY
     IF COL_LENGTH('dbo.PhieuNghiemThu', 'TaiKhoanNganHangId') IS NULL
         ALTER TABLE dbo.PhieuNghiemThu ADD TaiKhoanNganHangId INT NULL
             CONSTRAINT FK_NghiemThu_NganHang REFERENCES dbo.TaiKhoanNganHang(Id);
+    -- Chuẩn hóa dữ liệu cũ: mỗi KTV/hồ sơ chỉ giữ một chuyên môn bằng mã danh mục.
+    -- Ưu tiên chuyên môn đứng trước trong chuỗi cũ, sau đó mới áp ràng buộc một giá trị.
+    UPDATE dbo.KyThuatVien
+    SET NhomTayNghe = CASE
+        WHEN NhomTayNghe = 'DIEN' THEN 'DIEN'
+        WHEN NhomTayNghe = 'NUOC' THEN 'NUOC'
+        WHEN NhomTayNghe = 'DIEN_LANH' THEN 'DIEN_LANH'
+        WHEN NhomTayNghe = 'DO_GO' THEN 'DO_GO'
+        WHEN NhomTayNghe = 'KHOA' THEN 'KHOA'
+        WHEN NhomTayNghe LIKE N'%Điện lạnh%' THEN 'DIEN_LANH'
+        WHEN NhomTayNghe LIKE N'%Đồ gỗ%' THEN 'DO_GO'
+        WHEN NhomTayNghe LIKE N'%Khóa%' THEN 'KHOA'
+        WHEN NhomTayNghe LIKE N'%Nước%' THEN 'NUOC'
+        ELSE 'DIEN'
+    END;
+    UPDATE dbo.HoSoKTV
+    SET NhomTayNghe = CASE
+        WHEN NhomTayNghe = 'DIEN' THEN 'DIEN'
+        WHEN NhomTayNghe = 'NUOC' THEN 'NUOC'
+        WHEN NhomTayNghe = 'DIEN_LANH' THEN 'DIEN_LANH'
+        WHEN NhomTayNghe = 'DO_GO' THEN 'DO_GO'
+        WHEN NhomTayNghe = 'KHOA' THEN 'KHOA'
+        WHEN NhomTayNghe LIKE N'%Điện lạnh%' THEN 'DIEN_LANH'
+        WHEN NhomTayNghe LIKE N'%Đồ gỗ%' THEN 'DO_GO'
+        WHEN NhomTayNghe LIKE N'%Khóa%' THEN 'KHOA'
+        WHEN NhomTayNghe LIKE N'%Nước%' THEN 'NUOC'
+        ELSE 'DIEN'
+    END;
+    IF OBJECT_ID('dbo.CK_KyThuatVien_MotChuyenMon', 'C') IS NOT NULL
+        ALTER TABLE dbo.KyThuatVien DROP CONSTRAINT CK_KyThuatVien_MotChuyenMon;
+    IF OBJECT_ID('dbo.CK_HoSoKTV_MotChuyenMon', 'C') IS NOT NULL
+        ALTER TABLE dbo.HoSoKTV DROP CONSTRAINT CK_HoSoKTV_MotChuyenMon;
+    IF OBJECT_ID('dbo.DF_KyThuatVien_TayNghe', 'D') IS NOT NULL
+        ALTER TABLE dbo.KyThuatVien DROP CONSTRAINT DF_KyThuatVien_TayNghe;
+    ALTER TABLE dbo.KyThuatVien ALTER COLUMN NhomTayNghe VARCHAR(30) NOT NULL;
+    ALTER TABLE dbo.HoSoKTV ALTER COLUMN NhomTayNghe VARCHAR(30) NOT NULL;
+    ALTER TABLE dbo.KyThuatVien ADD CONSTRAINT DF_KyThuatVien_TayNghe DEFAULT 'DIEN' FOR NhomTayNghe;
+    ALTER TABLE dbo.KyThuatVien WITH CHECK ADD CONSTRAINT CK_KyThuatVien_MotChuyenMon
+        CHECK (NhomTayNghe IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA'));
+    ALTER TABLE dbo.HoSoKTV WITH CHECK ADD CONSTRAINT CK_HoSoKTV_MotChuyenMon
+        CHECK (NhomTayNghe IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA'));
     ALTER TABLE dbo.YeuCauVi DROP CONSTRAINT CK_YeuCauVi_TrangThai;
     ALTER TABLE dbo.YeuCauVi WITH CHECK ADD CONSTRAINT CK_YeuCauVi_TrangThai
         CHECK (TrangThai IN ('Pending','Approved','Rejected','Cancelled'));
@@ -4551,9 +4706,9 @@ GO
 SELECT name, recovery_model_desc FROM sys.databases WHERE name = DB_NAME();
 -- Dùng đường dẫn tồn tại, service account SQL có quyền ghi. Ví dụ D:\SQLBackup.
 -- Không chạy trên database đang có giao dịch nghiệp vụ ngoài ý muốn.
-ALTER DATABASE HomeFix_DBMS_Clean_20261022 SET RECOVERY FULL;
+ALTER DATABASE HomeFix_DBMS SET RECOVERY FULL;
 GO
-USE HomeFix_DBMS_Clean_20261022;
+USE HomeFix_DBMS;
 GO
 EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Full_20261023.bak', @Loai = 'FULL';
 EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Diff_20261023.bak', @Loai = 'DIFF';
