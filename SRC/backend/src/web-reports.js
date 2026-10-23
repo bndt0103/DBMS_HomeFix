@@ -306,12 +306,60 @@ webReports.patch(
 // Đề xuất được lưu dưới khóa DeXuatChinhSach_*, không chèn chính sách mẫu.
 get("/director/policy-proposals", ["GD"], async () => {
   const rows = await read("vw_CauHinh", {}, { order: "Khoa" });
-  return rows
+  const proposals = rows
     .filter((r) => r.key.startsWith("DeXuatChinhSach_"))
-    .map((r) => ({
-      ...JSON.parse(r.value),
-      id: r.key.slice("DeXuatChinhSach_".length),
-    }));
+    .map((r) => {
+      const proposal = JSON.parse(r.value);
+      const payload = proposal.payload || {};
+      const changes = Array.isArray(proposal.changes)
+        ? proposal.changes
+        : payload.type === "Configuration"
+          ? [
+              {
+                label: proposal.title || payload.key,
+                current: payload.currentValue,
+                proposed: payload.value,
+              },
+            ]
+          : payload.type === "ServicePricing"
+            ? [
+                {
+                  label: "Phí kiểm tra",
+                  current: payload.currentInspectionFee,
+                  proposed: payload.inspectionFee,
+                },
+                {
+                  label: "Tiền công",
+                  current: payload.currentLaborFee,
+                  proposed: payload.laborFee,
+                },
+                {
+                  label: "Tỷ lệ hoa hồng (%)",
+                  current: payload.currentCommissionRatePercent,
+                  proposed: payload.commissionRatePercent,
+                },
+              ]
+            : [];
+      return {
+        ...proposal,
+        changes,
+        id: r.key.slice("DeXuatChinhSach_".length),
+      };
+    });
+  const latest = new Map();
+  for (const proposal of proposals
+    .filter((proposal) => proposal.status === "Pending")
+    .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))) {
+    const payload = proposal.payload || {};
+    const subject =
+      payload.type === "ServicePricing"
+        ? "DichVu:" + payload.serviceId
+        : payload.type === "Configuration"
+          ? "CauHinh:" + payload.key
+          : proposal.title;
+    if (!latest.has(subject)) latest.set(subject, proposal);
+  }
+  return [...latest.values()];
 });
 webReports.post(
   "/director/policy-proposals/:id/decision",

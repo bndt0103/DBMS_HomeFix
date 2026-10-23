@@ -40,6 +40,7 @@ export async function api(
       {
         method,
         headers,
+        cache: "no-store",
         body:
           body instanceof FormData
             ? body

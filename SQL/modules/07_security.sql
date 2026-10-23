@@ -283,6 +283,7 @@ GRANT EXECUTE ON OBJECT::dbo.sp_DoiMatKhau TO HomeFix_KH, HomeFix_KTV, HomeFix_D
 GRANT EXECUTE ON OBJECT::dbo.sp_CapNhatThongTinNguoiDung TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN;
 GRANT EXECUTE ON OBJECT::dbo.sp_KhoaMoKhoaTaiKhoan TO HomeFix_ADMIN;
 GRANT EXECUTE ON OBJECT::dbo.sp_DoiVaiTroNguoiDung TO HomeFix_ADMIN;
+GRANT EXECUTE ON OBJECT::dbo.sp_AdminCapNhatTaiKhoan TO HomeFix_ADMIN;
 GRANT EXECUTE ON OBJECT::dbo.sp_CapNhatTho TO HomeFix_KTV;
 GRANT EXECUTE ON OBJECT::dbo.sp_CapNhatTrangThaiKTV TO HomeFix_KTV;
 GRANT EXECUTE ON OBJECT::dbo.sp_GuiHoSoKTV TO HomeFix_KH;

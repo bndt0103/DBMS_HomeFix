@@ -50,9 +50,9 @@ GO
 SELECT name, recovery_model_desc FROM sys.databases WHERE name = DB_NAME();
 -- Dùng đường dẫn tồn tại, service account SQL có quyền ghi. Ví dụ D:\SQLBackup.
 -- Không chạy trên database đang có giao dịch nghiệp vụ ngoài ý muốn.
-ALTER DATABASE HomeFix_DBMS_Clean_20261022 SET RECOVERY FULL;
+ALTER DATABASE HomeFix_DBMS SET RECOVERY FULL;
 GO
-USE HomeFix_DBMS_Clean_20261022;
+USE HomeFix_DBMS;
 GO
 EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Full_20261023.bak', @Loai = 'FULL';
 EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Diff_20261023.bak', @Loai = 'DIFF';

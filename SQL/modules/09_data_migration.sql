@@ -14,6 +14,47 @@ BEGIN TRY
     IF COL_LENGTH('dbo.PhieuNghiemThu', 'TaiKhoanNganHangId') IS NULL
         ALTER TABLE dbo.PhieuNghiemThu ADD TaiKhoanNganHangId INT NULL
             CONSTRAINT FK_NghiemThu_NganHang REFERENCES dbo.TaiKhoanNganHang(Id);
+    -- Chuẩn hóa dữ liệu cũ: mỗi KTV/hồ sơ chỉ giữ một chuyên môn bằng mã danh mục.
+    -- Ưu tiên chuyên môn đứng trước trong chuỗi cũ, sau đó mới áp ràng buộc một giá trị.
+    UPDATE dbo.KyThuatVien
+    SET NhomTayNghe = CASE
+        WHEN NhomTayNghe = 'DIEN' THEN 'DIEN'
+        WHEN NhomTayNghe = 'NUOC' THEN 'NUOC'
+        WHEN NhomTayNghe = 'DIEN_LANH' THEN 'DIEN_LANH'
+        WHEN NhomTayNghe = 'DO_GO' THEN 'DO_GO'
+        WHEN NhomTayNghe = 'KHOA' THEN 'KHOA'
+        WHEN NhomTayNghe LIKE N'%Điện lạnh%' THEN 'DIEN_LANH'
+        WHEN NhomTayNghe LIKE N'%Đồ gỗ%' THEN 'DO_GO'
+        WHEN NhomTayNghe LIKE N'%Khóa%' THEN 'KHOA'
+        WHEN NhomTayNghe LIKE N'%Nước%' THEN 'NUOC'
+        ELSE 'DIEN'
+    END;
+    UPDATE dbo.HoSoKTV
+    SET NhomTayNghe = CASE
+        WHEN NhomTayNghe = 'DIEN' THEN 'DIEN'
+        WHEN NhomTayNghe = 'NUOC' THEN 'NUOC'
+        WHEN NhomTayNghe = 'DIEN_LANH' THEN 'DIEN_LANH'
+        WHEN NhomTayNghe = 'DO_GO' THEN 'DO_GO'
+        WHEN NhomTayNghe = 'KHOA' THEN 'KHOA'
+        WHEN NhomTayNghe LIKE N'%Điện lạnh%' THEN 'DIEN_LANH'
+        WHEN NhomTayNghe LIKE N'%Đồ gỗ%' THEN 'DO_GO'
+        WHEN NhomTayNghe LIKE N'%Khóa%' THEN 'KHOA'
+        WHEN NhomTayNghe LIKE N'%Nước%' THEN 'NUOC'
+        ELSE 'DIEN'
+    END;
+    IF OBJECT_ID('dbo.CK_KyThuatVien_MotChuyenMon', 'C') IS NOT NULL
+        ALTER TABLE dbo.KyThuatVien DROP CONSTRAINT CK_KyThuatVien_MotChuyenMon;
+    IF OBJECT_ID('dbo.CK_HoSoKTV_MotChuyenMon', 'C') IS NOT NULL
+        ALTER TABLE dbo.HoSoKTV DROP CONSTRAINT CK_HoSoKTV_MotChuyenMon;
+    IF OBJECT_ID('dbo.DF_KyThuatVien_TayNghe', 'D') IS NOT NULL
+        ALTER TABLE dbo.KyThuatVien DROP CONSTRAINT DF_KyThuatVien_TayNghe;
+    ALTER TABLE dbo.KyThuatVien ALTER COLUMN NhomTayNghe VARCHAR(30) NOT NULL;
+    ALTER TABLE dbo.HoSoKTV ALTER COLUMN NhomTayNghe VARCHAR(30) NOT NULL;
+    ALTER TABLE dbo.KyThuatVien ADD CONSTRAINT DF_KyThuatVien_TayNghe DEFAULT 'DIEN' FOR NhomTayNghe;
+    ALTER TABLE dbo.KyThuatVien WITH CHECK ADD CONSTRAINT CK_KyThuatVien_MotChuyenMon
+        CHECK (NhomTayNghe IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA'));
+    ALTER TABLE dbo.HoSoKTV WITH CHECK ADD CONSTRAINT CK_HoSoKTV_MotChuyenMon
+        CHECK (NhomTayNghe IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA'));
     ALTER TABLE dbo.YeuCauVi DROP CONSTRAINT CK_YeuCauVi_TrangThai;
     ALTER TABLE dbo.YeuCauVi WITH CHECK ADD CONSTRAINT CK_YeuCauVi_TrangThai
         CHECK (TrangThai IN ('Pending','Approved','Rejected','Cancelled'));

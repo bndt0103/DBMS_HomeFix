@@ -40,9 +40,9 @@ BEGIN TRY
            (3, N'Lê Hoàng Nam', '0900001003', 'KH', N'18 Đặng Văn Bi, phường Bình Thọ, TP. Hồ Chí Minh', NULL),
            (4, N'Phạm Ngọc Lan', '0900001004', 'KH', N'72 Lê Văn Việt, phường Hiệp Phú, TP. Hồ Chí Minh', NULL),
            (5, N'Võ Quốc Huy', '0900001005', 'KH', N'35 Dương Văn Cam, phường Linh Tây, TP. Hồ Chí Minh', NULL),
-           (6, N'Đặng Văn Dũng', '0900002001', 'KTV', N'12 Kha Vạn Cân, TP. Hồ Chí Minh', N'Điện, Nước'),
-           (7, N'Bùi Thành Đạt', '0900002002', 'KTV', N'48 Tô Ngọc Vân, TP. Hồ Chí Minh', N'Điện lạnh, Điện'),
-           (8, N'Nguyễn Đức Long', '0900002003', 'KTV', N'29 Đỗ Xuân Hợp, TP. Hồ Chí Minh', N'Đồ gỗ, Khóa');
+           (6, N'Đặng Văn Dũng', '0900002001', 'KTV', N'12 Kha Vạn Cân, TP. Hồ Chí Minh', N'DIEN'),
+           (7, N'Bùi Thành Đạt', '0900002002', 'KTV', N'48 Tô Ngọc Vân, TP. Hồ Chí Minh', N'DIEN_LANH'),
+           (8, N'Nguyễn Đức Long', '0900002003', 'KTV', N'29 Đỗ Xuân Hợp, TP. Hồ Chí Minh', N'DO_GO');
 
     IF EXISTS (SELECT 1 FROM dbo.NguoiDung nd INNER JOIN @NguoiMau m ON m.SDT = nd.SoDienThoai)
         THROW 51009, N'SĐT của bộ dữ liệu minh họa đã tồn tại. Không ghi đè tài khoản hiện có.', 1;

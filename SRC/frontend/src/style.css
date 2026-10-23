@@ -72,7 +72,9 @@
   font-size: 10px;
 }
 .policy-list > button em {
-  float: right;
+  position: absolute;
+  top: 13px;
+  right: 12px;
   font-style: normal;
 }
 .policy-list > button i {
@@ -121,7 +123,10 @@
 }
 .policy-compare strong {
   color: #087e4c;
-  text-align: right;
+  text-align: center;
+}
+.policy-compare b {
+  text-align: center;
 }
 .policy-compare span {
   text-align: center;
@@ -202,8 +207,8 @@
     justify-content: center;
   }
   .policy-list > button em {
-    float: none;
-    margin-left: 5px;
+    top: 13px;
+    right: 12px;
   }
 }
 
@@ -1578,6 +1583,30 @@ td small {
 
 td .btn {
   white-space: nowrap;
+}
+
+.users-table table {
+  table-layout: fixed;
+  min-width: 960px;
+}
+.users-table th:nth-child(4),
+.users-table td:nth-child(4) {
+  width: 170px;
+}
+.users-table th:nth-child(5),
+.users-table td:nth-child(5) {
+  width: 115px;
+}
+.users-table td:nth-child(4) select {
+  width: 100%;
+}
+.users-table td:nth-child(4) select:disabled {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 1;
+  padding: 0;
 }
 
 tr:last-child td {
