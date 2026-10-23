@@ -21,12 +21,11 @@ CREATE INDEX IX_DonHang_Khach_TrangThai ON dbo.DonHang(KhachHangId, TrangThai) I
 CREATE INDEX IX_DonHang_Tho_TrangThai ON dbo.DonHang(KyThuatVienId, TrangThai) INCLUDE (KhachHangId, NgayTao);
 CREATE INDEX IX_DonHang_TrangThai_Ngay ON dbo.DonHang(TrangThai, NgayTao DESC);
 CREATE INDEX IX_LichSuDonHang_Don_Ngay ON dbo.LichSuDonHang(DonHangId, NgayTao, Id);
-CREATE INDEX IX_ChiTietVatTu_DeXuat ON dbo.ChiTietVatTu(BangKeVatTuId) INCLUDE (ThanhTien, SoThangBaoHanh);
+CREATE INDEX IX_ChiTietVatTu_BangKe ON dbo.ChiTietVatTu(BangKeVatTuId) INCLUDE (ThanhTien, SoThangBaoHanh);
 CREATE INDEX IX_GiaoDichVi_Tho_Ngay ON dbo.GiaoDichVi(KyThuatVienId, NgayTao DESC) INCLUDE (SoTien, Loai);
 CREATE INDEX IX_YeuCauVi_TrangThai_Ngay ON dbo.YeuCauVi(TrangThai, NgayTao) INCLUDE (KyThuatVienId, SoTien);
 CREATE INDEX IX_YeuCauHoTro_TrangThai ON dbo.YeuCauHoTro(TrangThai, NgayTao) INCLUDE (DonHangId, KhachHangId);
 CREATE INDEX IX_TraoDoiHoTro_YeuCau ON dbo.TraoDoiHoTro(YeuCauHoTroId, NgayTao);
 CREATE INDEX IX_ThongBao_Nguoi_DaDoc ON dbo.ThongBao(NguoiDungId, DaDoc, NgayTao DESC);
 CREATE INDEX IX_TepDinhKem_Don ON dbo.TepDinhKem(DonHangId, MucDich) INCLUDE (ChuSoHuuId);
-CREATE INDEX IX_XacThucOTP_HetHan ON dbo.XacThucOTP(NgayHetHan);
 GO

@@ -52,13 +52,10 @@ CREATE TABLE dbo.KyThuatVien (
     KhuVucPhucVu NVARCHAR(200) NOT NULL CONSTRAINT DF_KyThuatVien_KhuVuc DEFAULT N'Chưa cập nhật',
     TrangThaiSanSang VARCHAR(12) NOT NULL CONSTRAINT DF_KyThuatVien_SanSang DEFAULT 'TamBan',
     SoDu DECIMAL(18,2) NOT NULL CONSTRAINT DF_KyThuatVien_SoDu DEFAULT 0,
-    ViDo DECIMAL(10,7) NULL,
-    KinhDo DECIMAL(10,7) NULL,
     PhienBan ROWVERSION,
     CONSTRAINT CK_KyThuatVien_TrangThai CHECK (TrangThaiSanSang IN ('TamBan','SanSang','DangBan')),
     CONSTRAINT CK_KyThuatVien_MotChuyenMon CHECK (NhomTayNghe IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA')),
-    CONSTRAINT CK_KyThuatVien_SoDu CHECK (SoDu >= 0),
-    CONSTRAINT CK_KyThuatVien_GPS CHECK ((ViDo IS NULL AND KinhDo IS NULL) OR (ViDo IS NOT NULL AND KinhDo IS NOT NULL AND ViDo BETWEEN -90 AND 90 AND KinhDo BETWEEN -180 AND 180))
+    CONSTRAINT CK_KyThuatVien_SoDu CHECK (SoDu >= 0)
 );
 CREATE TABLE dbo.DanhMucDichVu (
     Id INT IDENTITY CONSTRAINT PK_DanhMucDichVu PRIMARY KEY,
@@ -145,7 +142,7 @@ CREATE TABLE dbo.BangKeVatTu (
 );
 CREATE TABLE dbo.ChiTietVatTu (
     Id INT IDENTITY CONSTRAINT PK_ChiTietVatTu PRIMARY KEY,
-    BangKeVatTuId INT NOT NULL CONSTRAINT FK_ChiTietVatTu_DeXuat REFERENCES dbo.BangKeVatTu(Id),
+    BangKeVatTuId INT NOT NULL CONSTRAINT FK_ChiTietVatTu_BangKe REFERENCES dbo.BangKeVatTu(Id),
     Ten NVARCHAR(200) NOT NULL,
     SoLuong DECIMAL(10,2) NOT NULL,
     DonGia DECIMAL(18,2) NOT NULL,
@@ -335,14 +332,6 @@ CREATE TABLE dbo.GhiChuDon (
     NoiBo BIT NOT NULL CONSTRAINT DF_GhiChuDon_NoiBo DEFAULT 0,
     NgayTao DATETIME2(3) NOT NULL CONSTRAINT DF_GhiChuDon_Ngay DEFAULT SYSUTCDATETIME()
 );
-CREATE TABLE dbo.ViTriKhachHang (
-    DonHangId INT CONSTRAINT PK_ViTriKhachHang PRIMARY KEY CONSTRAINT FK_ViTriKhachHang_Don REFERENCES dbo.DonHang(Id),
-    KhachHangId INT NOT NULL CONSTRAINT FK_ViTriKhachHang_Khach REFERENCES dbo.NguoiDung(Id),
-    ViDo DECIMAL(10,7) NOT NULL,
-    KinhDo DECIMAL(10,7) NOT NULL,
-    NgayCapNhat DATETIME2(3) NOT NULL CONSTRAINT DF_ViTriKhachHang_Ngay DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT CK_ViTriKhachHang_GPS CHECK (ViDo BETWEEN -90 AND 90 AND KinhDo BETWEEN -180 AND 180)
-);
 CREATE TABLE dbo.ThongBao (
     Id INT IDENTITY CONSTRAINT PK_ThongBao PRIMARY KEY,
     NguoiDungId INT NOT NULL CONSTRAINT FK_ThongBao_NguoiDung REFERENCES dbo.NguoiDung(Id),
@@ -365,18 +354,6 @@ CREATE TABLE dbo.CauHinh (
     Khoa VARCHAR(80) CONSTRAINT PK_CauHinh PRIMARY KEY,
     GiaTri NVARCHAR(1000) NOT NULL,
     NhanHienThi NVARCHAR(150) NOT NULL
-);
-CREATE TABLE dbo.XacThucOTP (
-    Id UNIQUEIDENTIFIER CONSTRAINT PK_XacThucOTP PRIMARY KEY,
-    MucDich VARCHAR(30) NOT NULL,
-    DiaChiNhan NVARCHAR(254) NOT NULL,
-    MaBam CHAR(64) NOT NULL,
-    SoLanThu INT NOT NULL CONSTRAINT DF_XacThucOTP_LanThu DEFAULT 0,
-    DaSuDung BIT NOT NULL CONSTRAINT DF_XacThucOTP_DaSuDung DEFAULT 0,
-    NgayHetHan DATETIME2(3) NOT NULL,
-    NgayTao DATETIME2(3) NOT NULL CONSTRAINT DF_XacThucOTP_Ngay DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT CK_XacThucOTP_LanThu CHECK (SoLanThu BETWEEN 0 AND 5),
-    CONSTRAINT CK_XacThucOTP_MaBam CHECK (LEN(MaBam) = 64 AND MaBam NOT LIKE '%[^0-9a-f]%')
 );
 GO
 
@@ -412,14 +389,13 @@ CREATE INDEX IX_DonHang_Khach_TrangThai ON dbo.DonHang(KhachHangId, TrangThai) I
 CREATE INDEX IX_DonHang_Tho_TrangThai ON dbo.DonHang(KyThuatVienId, TrangThai) INCLUDE (KhachHangId, NgayTao);
 CREATE INDEX IX_DonHang_TrangThai_Ngay ON dbo.DonHang(TrangThai, NgayTao DESC);
 CREATE INDEX IX_LichSuDonHang_Don_Ngay ON dbo.LichSuDonHang(DonHangId, NgayTao, Id);
-CREATE INDEX IX_ChiTietVatTu_DeXuat ON dbo.ChiTietVatTu(BangKeVatTuId) INCLUDE (ThanhTien, SoThangBaoHanh);
+CREATE INDEX IX_ChiTietVatTu_BangKe ON dbo.ChiTietVatTu(BangKeVatTuId) INCLUDE (ThanhTien, SoThangBaoHanh);
 CREATE INDEX IX_GiaoDichVi_Tho_Ngay ON dbo.GiaoDichVi(KyThuatVienId, NgayTao DESC) INCLUDE (SoTien, Loai);
 CREATE INDEX IX_YeuCauVi_TrangThai_Ngay ON dbo.YeuCauVi(TrangThai, NgayTao) INCLUDE (KyThuatVienId, SoTien);
 CREATE INDEX IX_YeuCauHoTro_TrangThai ON dbo.YeuCauHoTro(TrangThai, NgayTao) INCLUDE (DonHangId, KhachHangId);
 CREATE INDEX IX_TraoDoiHoTro_YeuCau ON dbo.TraoDoiHoTro(YeuCauHoTroId, NgayTao);
 CREATE INDEX IX_ThongBao_Nguoi_DaDoc ON dbo.ThongBao(NguoiDungId, DaDoc, NgayTao DESC);
 CREATE INDEX IX_TepDinhKem_Don ON dbo.TepDinhKem(DonHangId, MucDich) INCLUDE (ChuSoHuuId);
-CREATE INDEX IX_XacThucOTP_HetHan ON dbo.XacThucOTP(NgayHetHan);
 GO
 
 
@@ -573,7 +549,7 @@ GO
 CREATE OR ALTER VIEW dbo.vw_KyThuatVien
 AS
 SELECT ktv.Id, nd.HoTen, nd.SoDienThoai, ktv.NhomTayNghe, ktv.KhuVucPhucVu,
-    ktv.TrangThaiSanSang, ktv.SoDu, ktv.ViDo, ktv.KinhDo, ktv.PhienBan
+    ktv.TrangThaiSanSang, ktv.SoDu, ktv.PhienBan
 FROM dbo.KyThuatVien AS ktv
 INNER JOIN dbo.NguoiDung AS nd ON nd.Id = ktv.Id;
 GO
@@ -677,11 +653,6 @@ AS
 SELECT Id, DonHangId, NguoiVietId, NoiDung, NoiBo, NgayTao
 FROM dbo.GhiChuDon;
 GO
-CREATE OR ALTER VIEW dbo.vw_ViTriKhachHang
-AS
-SELECT DonHangId, KhachHangId, ViDo, KinhDo, NgayCapNhat
-FROM dbo.ViTriKhachHang;
-GO
 CREATE OR ALTER VIEW dbo.vw_TepDinhKem
 AS
 SELECT Id, ChuSoHuuId, DonHangId, MucDich, KhoaLuuTru, TenTepGoc, KieuMIME, KichThuoc, NgayTao
@@ -746,7 +717,7 @@ CREATE OR ALTER VIEW dbo.vw_ViKyThuatVien
 AS
 SELECT ktv.Id, nd.HoTen, nd.SoDienThoai, ktv.NhomTayNghe, ktv.KhuVucPhucVu,
     ktv.TrangThaiSanSang, ktv.SoDu, (SELECT SoDu FROM dbo.fn_SoDuVi(ktv.Id)) AS SoDuSoCai,
-    ktv.SoDu - (SELECT SoDu FROM dbo.fn_SoDuVi(ktv.Id)) AS ChenhLech, ktv.ViDo, ktv.KinhDo, ktv.PhienBan
+    ktv.SoDu - (SELECT SoDu FROM dbo.fn_SoDuVi(ktv.Id)) AS ChenhLech, ktv.PhienBan
 FROM dbo.KyThuatVien AS ktv
 INNER JOIN dbo.NguoiDung AS nd ON nd.Id = ktv.Id;
 GO
@@ -770,11 +741,6 @@ FROM dbo.YeuCauHoTro AS ht
 INNER JOIN dbo.NguoiDung AS nd ON nd.Id = ht.KhachHangId
 WHERE ht.TrangThai IN ('Open','InProgress');
 GO
-CREATE OR ALTER VIEW dbo.vw_XacThucOTP
-AS
-SELECT Id, MucDich, DiaChiNhan, SoLanThu, DaSuDung, NgayHetHan, NgayTao
-FROM dbo.XacThucOTP;
-GO
 
 
 GO
@@ -791,7 +757,7 @@ GO
 /* Thủ tục tài khoản và tiện ích.
    Mỗi lệnh ghi là một giao dịch nguyên tử. Nếu được gọi trong giao dịch khác,
    SAVE TRANSACTION giữ điểm quay lui; không COMMIT giao dịch của bên gọi.
-   Các hàm băm bcrypt/OTP được tính ở backend; SQL không lưu mật khẩu/OTP rõ. */
+   Mật khẩu được băm bcrypt ở backend; SQL chỉ lưu chuỗi băm. */
 CREATE OR ALTER PROCEDURE dbo.sp_DangKyKhachHang
     @HoTen NVARCHAR(120), @SoDienThoai VARCHAR(15), @MatKhauBam VARCHAR(100),
     @Email NVARCHAR(254) = NULL
@@ -1129,8 +1095,7 @@ END;
 GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_CapNhatTho
-    @NguoiThucHienId INT, @NhomTayNghe NVARCHAR(200), @KhuVucPhucVu NVARCHAR(200),
-    @ViDo DECIMAL(10,7) = NULL, @KinhDo DECIMAL(10,7) = NULL
+    @NguoiThucHienId INT, @NhomTayNghe NVARCHAR(200), @KhuVucPhucVu NVARCHAR(200)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1155,11 +1120,10 @@ BEGIN
         IF @NhomTayNghe NOT IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA')
             THROW 51009, N'Kỹ thuật viên chỉ được chọn một chuyên môn hợp lệ.', 1;
 
-        UPDATE dbo.KyThuatVien SET NhomTayNghe = @NhomTayNghe, KhuVucPhucVu = @KhuVucPhucVu,
-            ViDo = @ViDo, KinhDo = @KinhDo WHERE Id = @NguoiThucHienId;
+        UPDATE dbo.KyThuatVien SET NhomTayNghe = @NhomTayNghe, KhuVucPhucVu = @KhuVucPhucVu WHERE Id = @NguoiThucHienId;
         IF @@ROWCOUNT = 0 THROW 51004, N'Chưa có hồ sơ kỹ thuật viên.', 1;
         IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
-        SELECT Id, NhomTayNghe, KhuVucPhucVu, TrangThaiSanSang, SoDu, ViDo, KinhDo, PhienBan FROM dbo.vw_KyThuatVien WHERE Id = @NguoiThucHienId;
+        SELECT Id, NhomTayNghe, KhuVucPhucVu, TrangThaiSanSang, SoDu, PhienBan FROM dbo.vw_KyThuatVien WHERE Id = @NguoiThucHienId;
     END TRY
     BEGIN CATCH
         IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
@@ -1205,7 +1169,7 @@ BEGIN
             THROW 51009, N'Đang có phân công; không được đổi trạng thái thủ công.', 1;
         UPDATE dbo.KyThuatVien SET TrangThaiSanSang = @TrangThaiSanSang WHERE Id = @NguoiThucHienId;
         IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
-        SELECT Id, NhomTayNghe, KhuVucPhucVu, TrangThaiSanSang, SoDu, ViDo, KinhDo, PhienBan FROM dbo.vw_KyThuatVien WHERE Id = @NguoiThucHienId;
+        SELECT Id, NhomTayNghe, KhuVucPhucVu, TrangThaiSanSang, SoDu, PhienBan FROM dbo.vw_KyThuatVien WHERE Id = @NguoiThucHienId;
     END TRY
     BEGIN CATCH
         IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
@@ -1320,90 +1284,6 @@ BEGIN
     BEGIN CATCH
         IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
         ELSE IF @GiaoDichNgoai > 0 AND XACT_STATE() = 1 ROLLBACK TRANSACTION s_DuyetHoSoKTV;
-        THROW;
-    END CATCH;
-END;
-GO
-
-CREATE OR ALTER PROCEDURE dbo.sp_TaoMaOTP
-    @Id UNIQUEIDENTIFIER, @MucDich VARCHAR(30), @DiaChiNhan NVARCHAR(254),
-    @MaBam CHAR(64), @NgayHetHan DATETIME2(3)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SET XACT_ABORT ON;
-    DECLARE @GiaoDichNgoai INT = @@TRANCOUNT;
-    BEGIN TRY
-        IF @GiaoDichNgoai = 0 BEGIN TRANSACTION;
-        ELSE SAVE TRANSACTION s_TaoMaOTP;
-
-        IF @NgayHetHan <= SYSUTCDATETIME() OR @NgayHetHan > DATEADD(MINUTE, 15, SYSUTCDATETIME())
-            THROW 51009, N'OTP chỉ có thời hạn tối đa 15 phút.', 1;
-        IF @MucDich NOT IN ('Register','ResetPassword','ChangePassword') THROW 51009, N'Mục đích OTP không hợp lệ.', 1;
-        INSERT INTO dbo.XacThucOTP(Id, MucDich, DiaChiNhan, MaBam, NgayHetHan)
-        VALUES (@Id, @MucDich, @DiaChiNhan, @MaBam, @NgayHetHan);
-        IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
-        SELECT Id, MucDich, DiaChiNhan, NgayHetHan, DaSuDung FROM dbo.vw_XacThucOTP WHERE Id = @Id;
-    END TRY
-    BEGIN CATCH
-        IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-        ELSE IF @GiaoDichNgoai > 0 AND XACT_STATE() = 1 ROLLBACK TRANSACTION s_TaoMaOTP;
-        THROW;
-    END CATCH;
-END;
-GO
-
-CREATE OR ALTER PROCEDURE dbo.sp_XacThucOTP
-    @Id UNIQUEIDENTIFIER, @MaBam CHAR(64)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SET XACT_ABORT ON;
-    DECLARE @GiaoDichNgoai INT = @@TRANCOUNT;
-    BEGIN TRY
-        IF @GiaoDichNgoai = 0 BEGIN TRANSACTION;
-        ELSE SAVE TRANSACTION s_XacThucOTP;
-
-        DECLARE @DaXacThuc BIT = 0;
-        DECLARE @MaDung CHAR(64), @SoLanThu INT, @DaSuDung BIT, @HetHan DATETIME2(3);
-        SELECT @MaDung = MaBam, @SoLanThu = SoLanThu, @DaSuDung = DaSuDung, @HetHan = NgayHetHan
-        FROM dbo.XacThucOTP WITH (UPDLOCK, HOLDLOCK) WHERE Id = @Id;
-        IF @MaDung IS NOT NULL AND @DaSuDung = 0 AND @SoLanThu < 5 AND @HetHan > SYSUTCDATETIME()
-        BEGIN
-            SET @DaXacThuc = CASE WHEN @MaDung = @MaBam THEN 1 ELSE 0 END;
-            UPDATE dbo.XacThucOTP SET SoLanThu = SoLanThu + 1, DaSuDung = @DaXacThuc WHERE Id = @Id;
-        END;
-        -- Sai OTP vẫn COMMIT số lần thử. Không THROW làm mất bộ đếm chống dò mã.
-        IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
-        SELECT @DaXacThuc AS DaXacThuc;
-    END TRY
-    BEGIN CATCH
-        IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-        ELSE IF @GiaoDichNgoai > 0 AND XACT_STATE() = 1 ROLLBACK TRANSACTION s_XacThucOTP;
-        THROW;
-    END CATCH;
-END;
-GO
-
-CREATE OR ALTER PROCEDURE dbo.sp_DonDepOTPHetHan
-
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SET XACT_ABORT ON;
-    DECLARE @GiaoDichNgoai INT = @@TRANCOUNT;
-    BEGIN TRY
-        IF @GiaoDichNgoai = 0 BEGIN TRANSACTION;
-        ELSE SAVE TRANSACTION s_DonDepOTPHetHan;
-
-        DELETE FROM dbo.XacThucOTP WHERE NgayHetHan <= SYSUTCDATETIME() OR DaSuDung = 1;
-        DECLARE @SoDong INT = @@ROWCOUNT;
-        IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
-        SELECT @SoDong AS SoDongDaXoa;
-    END TRY
-    BEGIN CATCH
-        IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-        ELSE IF @GiaoDichNgoai > 0 AND XACT_STATE() = 1 ROLLBACK TRANSACTION s_DonDepOTPHetHan;
         THROW;
     END CATCH;
 END;
@@ -2302,72 +2182,6 @@ BEGIN
             ROLLBACK TRANSACTION;
         ELSE IF @SoGiaoDichBanDau > 0 AND XACT_STATE() = 1 AND @DaTaoDiemLuu = 1
             ROLLBACK TRANSACTION sp_ThemGhiChuDon;
-        THROW;
-    END CATCH;
-END;
-GO
-
-CREATE OR ALTER PROCEDURE dbo.sp_LuuViTriKhachHang
-    @NguoiThucHienId INT,
-    @DonHangId INT,
-    @ViDo DECIMAL(10,7),
-    @KinhDo DECIMAL(10,7)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SET XACT_ABORT ON;
-    SET ANSI_WARNINGS ON;
-    SET CONCAT_NULL_YIELDS_NULL ON;
-    SET ARITHABORT ON;
-    SET NUMERIC_ROUNDABORT OFF;
-    DECLARE @SoGiaoDichBanDau INT = @@TRANCOUNT;
-    DECLARE @DaTaoDiemLuu BIT = 0;
-    BEGIN TRY
-        IF @SoGiaoDichBanDau = 0
-            BEGIN TRANSACTION;
-        ELSE
-        BEGIN
-            SAVE TRANSACTION sp_LuuViTriKhachHang;
-            SET @DaTaoDiemLuu = 1;
-        END;
-        DECLARE @VaiTro VARCHAR(10);
-        SELECT @VaiTro = VaiTro
-        FROM dbo.NguoiDung
-        WHERE Id = @NguoiThucHienId AND DangHoatDong = 1;
-        IF @VaiTro IS NULL OR @VaiTro NOT IN ('KH')
-            THROW 51003, N'Khong co quyen thuc hien thao tac nay.', 1;
-        -- Tai khoan ung dung hf_* phai khop actor da xac thuc trong JWT.
-        -- SESSION_CONTEXT duoc backend dat read_only tren ket noi rieng cua yeu cau.
-        IF USER_NAME() LIKE N'hf[_]%' AND (
-            TRY_CONVERT(INT, SESSION_CONTEXT(N'NguoiDungId')) IS NULL
-            OR TRY_CONVERT(INT, SESSION_CONTEXT(N'NguoiDungId')) <> @NguoiThucHienId
-            OR USER_NAME() <> N'hf_' + @VaiTro)
-            THROW 51003, N'Nguoi thuc hien khong khop phien CSDL da xac thuc.', 1;
-
-        IF @ViDo IS NULL OR @KinhDo IS NULL OR @ViDo NOT BETWEEN -90 AND 90 OR @KinhDo NOT BETWEEN -180 AND 180
-            THROW 51009, N'Toa do GPS khong hop le.', 1;
-        DECLARE @KhachHangId INT, @TrangThai VARCHAR(30);
-        SELECT @KhachHangId = KhachHangId, @TrangThai = TrangThai FROM dbo.DonHang WITH (UPDLOCK, HOLDLOCK) WHERE Id = @DonHangId;
-        IF @KhachHangId IS NULL THROW 51004, N'Khong tim thay don hang.', 1;
-        IF @KhachHangId <> @NguoiThucHienId THROW 51003, N'Chi chu don hang duoc chia se vi tri.', 1;
-        IF @TrangThai IN ('HoanThanh', 'Huy') THROW 51009, N'Don hang da ket thuc.', 1;
-        IF EXISTS (SELECT 1 FROM dbo.ViTriKhachHang WHERE DonHangId = @DonHangId)
-            UPDATE dbo.ViTriKhachHang
-            SET ViDo = @ViDo, KinhDo = @KinhDo, NgayCapNhat = SYSUTCDATETIME() WHERE DonHangId = @DonHangId;
-        ELSE
-            INSERT INTO dbo.ViTriKhachHang (DonHangId, KhachHangId, ViDo, KinhDo)
-            VALUES (@DonHangId, @NguoiThucHienId, @ViDo, @KinhDo);
-        IF @SoGiaoDichBanDau = 0
-            COMMIT TRANSACTION;
-        SELECT DonHangId, KhachHangId, ViDo, KinhDo, NgayCapNhat
-        FROM dbo.ViTriKhachHang
-        WHERE DonHangId = @DonHangId;
-    END TRY
-    BEGIN CATCH
-        IF @SoGiaoDichBanDau = 0 AND XACT_STATE() <> 0
-            ROLLBACK TRANSACTION;
-        ELSE IF @SoGiaoDichBanDau > 0 AND XACT_STATE() = 1 AND @DaTaoDiemLuu = 1
-            ROLLBACK TRANSACTION sp_LuuViTriKhachHang;
         THROW;
     END CATCH;
 END;
@@ -4056,7 +3870,7 @@ GO
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
 GO
-/* 7 role nghiệp vụ + role kỹ thuật nội bộ phục vụ đăng nhập/OTP.
+/* 7 role nghiệp vụ + role kỹ thuật nội bộ phục vụ đăng nhập và đăng ký.
    Tài khoản hf_* WITHOUT LOGIN dùng để EXECUTE AS USER khi demo hoặc từ backend.
    Không cấp db_owner/db_datareader/db_datawriter cho tài khoản ứng dụng.
    Backend lọc phạm vi dữ liệu theo JWT; role SQL giới hạn đối tượng được đọc/chạy.
@@ -4113,11 +3927,9 @@ DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.YeuCauHoTro TO HomeFix_KH, Ho
 DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.TraoDoiHoTro TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.DanhGia TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.GhiChuDon TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
-DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.ViTriKhachHang TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.ThongBao TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.NhatKy TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.CauHinh TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
-DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.XacThucOTP TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 DENY SELECT ON OBJECT::dbo.NguoiDung(MatKhauBam) TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 GO
@@ -4136,7 +3948,6 @@ GRANT SELECT ON OBJECT::dbo.vw_ChiTietVatTu TO HomeFix_KH;
 GRANT SELECT ON OBJECT::dbo.vw_PhieuNghiemThu TO HomeFix_KH;
 GRANT SELECT ON OBJECT::dbo.vw_ThanhToan TO HomeFix_KH;
 GRANT SELECT ON OBJECT::dbo.vw_GhiChuDon TO HomeFix_KH;
-GRANT SELECT ON OBJECT::dbo.vw_ViTriKhachHang TO HomeFix_KH;
 GRANT SELECT ON OBJECT::dbo.vw_TepDinhKem TO HomeFix_KH;
 GRANT SELECT ON OBJECT::dbo.vw_DanhGia TO HomeFix_KH;
 GRANT SELECT ON OBJECT::dbo.vw_YeuCauHoTro TO HomeFix_KH;
@@ -4161,7 +3972,6 @@ GRANT SELECT ON OBJECT::dbo.vw_ChiTietVatTu TO HomeFix_KTV;
 GRANT SELECT ON OBJECT::dbo.vw_PhieuNghiemThu TO HomeFix_KTV;
 GRANT SELECT ON OBJECT::dbo.vw_ThanhToan TO HomeFix_KTV;
 GRANT SELECT ON OBJECT::dbo.vw_GhiChuDon TO HomeFix_KTV;
-GRANT SELECT ON OBJECT::dbo.vw_ViTriKhachHang TO HomeFix_KTV;
 GRANT SELECT ON OBJECT::dbo.vw_TepDinhKem TO HomeFix_KTV;
 GRANT SELECT ON OBJECT::dbo.vw_DanhGia TO HomeFix_KTV;
 GRANT SELECT ON OBJECT::dbo.vw_YeuCauHoTro TO HomeFix_KTV;
@@ -4192,7 +4002,6 @@ GRANT SELECT ON OBJECT::dbo.vw_ChiTietVatTu TO HomeFix_DPV;
 GRANT SELECT ON OBJECT::dbo.vw_PhieuNghiemThu TO HomeFix_DPV;
 GRANT SELECT ON OBJECT::dbo.vw_ThanhToan TO HomeFix_DPV;
 GRANT SELECT ON OBJECT::dbo.vw_GhiChuDon TO HomeFix_DPV;
-GRANT SELECT ON OBJECT::dbo.vw_ViTriKhachHang TO HomeFix_DPV;
 GRANT SELECT ON OBJECT::dbo.vw_TepDinhKem TO HomeFix_DPV;
 GRANT SELECT ON OBJECT::dbo.vw_DanhGia TO HomeFix_DPV;
 GRANT SELECT ON OBJECT::dbo.vw_YeuCauHoTro TO HomeFix_DPV;
@@ -4218,7 +4027,6 @@ GRANT SELECT ON OBJECT::dbo.vw_ChiTietVatTu TO HomeFix_CSKH;
 GRANT SELECT ON OBJECT::dbo.vw_PhieuNghiemThu TO HomeFix_CSKH;
 GRANT SELECT ON OBJECT::dbo.vw_ThanhToan TO HomeFix_CSKH;
 GRANT SELECT ON OBJECT::dbo.vw_GhiChuDon TO HomeFix_CSKH;
-GRANT SELECT ON OBJECT::dbo.vw_ViTriKhachHang TO HomeFix_CSKH;
 GRANT SELECT ON OBJECT::dbo.vw_TepDinhKem TO HomeFix_CSKH;
 GRANT SELECT ON OBJECT::dbo.vw_DanhGia TO HomeFix_CSKH;
 GRANT SELECT ON OBJECT::dbo.vw_YeuCauHoTro TO HomeFix_CSKH;
@@ -4241,7 +4049,6 @@ GRANT SELECT ON OBJECT::dbo.vw_ChiTietVatTu TO HomeFix_KT;
 GRANT SELECT ON OBJECT::dbo.vw_PhieuNghiemThu TO HomeFix_KT;
 GRANT SELECT ON OBJECT::dbo.vw_ThanhToan TO HomeFix_KT;
 GRANT SELECT ON OBJECT::dbo.vw_GhiChuDon TO HomeFix_KT;
-GRANT SELECT ON OBJECT::dbo.vw_ViTriKhachHang TO HomeFix_KT;
 GRANT SELECT ON OBJECT::dbo.vw_TepDinhKem TO HomeFix_KT;
 GRANT SELECT ON OBJECT::dbo.vw_DanhGia TO HomeFix_KT;
 GRANT SELECT ON OBJECT::dbo.vw_YeuCauHoTro TO HomeFix_KT;
@@ -4273,7 +4080,6 @@ GRANT SELECT ON OBJECT::dbo.vw_ChiTietVatTu TO HomeFix_GD;
 GRANT SELECT ON OBJECT::dbo.vw_PhieuNghiemThu TO HomeFix_GD;
 GRANT SELECT ON OBJECT::dbo.vw_ThanhToan TO HomeFix_GD;
 GRANT SELECT ON OBJECT::dbo.vw_GhiChuDon TO HomeFix_GD;
-GRANT SELECT ON OBJECT::dbo.vw_ViTriKhachHang TO HomeFix_GD;
 GRANT SELECT ON OBJECT::dbo.vw_TepDinhKem TO HomeFix_GD;
 GRANT SELECT ON OBJECT::dbo.vw_DanhGia TO HomeFix_GD;
 GRANT SELECT ON OBJECT::dbo.vw_YeuCauHoTro TO HomeFix_GD;
@@ -4305,7 +4111,6 @@ GRANT SELECT ON OBJECT::dbo.vw_ChiTietVatTu TO HomeFix_ADMIN;
 GRANT SELECT ON OBJECT::dbo.vw_PhieuNghiemThu TO HomeFix_ADMIN;
 GRANT SELECT ON OBJECT::dbo.vw_ThanhToan TO HomeFix_ADMIN;
 GRANT SELECT ON OBJECT::dbo.vw_GhiChuDon TO HomeFix_ADMIN;
-GRANT SELECT ON OBJECT::dbo.vw_ViTriKhachHang TO HomeFix_ADMIN;
 GRANT SELECT ON OBJECT::dbo.vw_TepDinhKem TO HomeFix_ADMIN;
 GRANT SELECT ON OBJECT::dbo.vw_DanhGia TO HomeFix_ADMIN;
 GRANT SELECT ON OBJECT::dbo.vw_YeuCauHoTro TO HomeFix_ADMIN;
@@ -4326,7 +4131,6 @@ GRANT SELECT ON OBJECT::dbo.vw_CauHinh TO HomeFix_ADMIN;
 GO
 -- Đọc dữ liệu: UngDung
 GRANT SELECT ON OBJECT::dbo.vw_XacThucDangNhap TO HomeFix_UngDung;
-GRANT SELECT ON OBJECT::dbo.vw_XacThucOTP TO HomeFix_UngDung;
 GRANT SELECT ON OBJECT::dbo.vw_NguoiDung TO HomeFix_UngDung;
 GRANT SELECT ON OBJECT::dbo.vw_DichVuCongKhai TO HomeFix_UngDung;
 GRANT SELECT ON OBJECT::dbo.vw_DichVu TO HomeFix_UngDung;
@@ -4343,9 +4147,6 @@ GRANT EXECUTE ON OBJECT::dbo.sp_CapNhatTho TO HomeFix_KTV;
 GRANT EXECUTE ON OBJECT::dbo.sp_CapNhatTrangThaiKTV TO HomeFix_KTV;
 GRANT EXECUTE ON OBJECT::dbo.sp_GuiHoSoKTV TO HomeFix_KH;
 GRANT EXECUTE ON OBJECT::dbo.sp_DuyetHoSoKTV TO HomeFix_ADMIN;
-GRANT EXECUTE ON OBJECT::dbo.sp_TaoMaOTP TO HomeFix_UngDung;
-GRANT EXECUTE ON OBJECT::dbo.sp_XacThucOTP TO HomeFix_UngDung;
-GRANT EXECUTE ON OBJECT::dbo.sp_DonDepOTPHetHan TO HomeFix_UngDung;
 GRANT EXECUTE ON OBJECT::dbo.sp_LuuTepDinhKem TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN;
 GRANT EXECUTE ON OBJECT::dbo.sp_GhiNhatKyVaThongBao TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN;
 GRANT EXECUTE ON OBJECT::dbo.sp_DanhDauThongBao TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN;
@@ -4359,7 +4160,6 @@ GRANT EXECUTE ON OBJECT::dbo.sp_TaoLenhDieuPhoi TO HomeFix_DPV, HomeFix_ADMIN;
 GRANT EXECUTE ON OBJECT::dbo.sp_KTVPhanHoiDieuPhoi TO HomeFix_KTV;
 GRANT EXECUTE ON OBJECT::dbo.sp_ChuyenTrangThaiDon TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_ADMIN;
 GRANT EXECUTE ON OBJECT::dbo.sp_ThemGhiChuDon TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_ADMIN;
-GRANT EXECUTE ON OBJECT::dbo.sp_LuuViTriKhachHang TO HomeFix_KH;
 GRANT EXECUTE ON OBJECT::dbo.sp_LuuBangKeVatTu TO HomeFix_KTV;
 GRANT EXECUTE ON OBJECT::dbo.sp_ThemChiTietVatTu TO HomeFix_KTV;
 GRANT EXECUTE ON OBJECT::dbo.sp_TaoPhieuNghiemThu TO HomeFix_KTV;
@@ -4433,7 +4233,7 @@ SET ARITHABORT ON;
 SET NUMERIC_ROUNDABORT OFF;
 GO
 /* DỮ LIỆU BAN ĐẦU SẠCH: 7 người dùng, 1 hồ sơ thợ, 5 nhóm/5 dịch vụ,
-   1 tài khoản ngân hàng MÔ PHỎNG và cấu hình. KHÔNG có đơn/OTP/sổ cái/nhật ký.
+   1 tài khoản ngân hàng MÔ PHỎNG và cấu hình. KHÔNG có đơn/sổ cái/nhật ký.
    Mật khẩu cả 7 tài khoản: 123456. Chỉ dùng cho học tập trên máy cá nhân.
    Script chỉ chèn khi database còn trắng; không xóa giao dịch đang có. */
 SET XACT_ABORT ON;
@@ -4480,174 +4280,6 @@ BEGIN CATCH
 END CATCH;
 GO
 SELECT Id, HoTen, SoDienThoai, VaiTro, DangHoatDong FROM dbo.vw_NguoiDung ORDER BY Id;
-GO
-
-
-GO
-
--- MODULE: 09_data_migration.sql
-/* Nâng cấu trúc hiện có, giữ dữ liệu. Chạy trước các module định nghĩa lại đối tượng. */
-SET XACT_ABORT ON;
-BEGIN TRY
-    BEGIN TRANSACTION;
-    IF COL_LENGTH('dbo.HoSoKTV', 'HoSoJSON') IS NULL
-        ALTER TABLE dbo.HoSoKTV ADD HoSoJSON NVARCHAR(MAX) NULL
-            CONSTRAINT CK_HoSoKTV_JSON CHECK (HoSoJSON IS NULL OR ISJSON(HoSoJSON) = 1);
-    IF COL_LENGTH('dbo.HoSoKTV', 'GiayToMatTruocId') IS NULL
-        ALTER TABLE dbo.HoSoKTV ADD GiayToMatTruocId INT NULL
-            CONSTRAINT FK_HoSoKTV_MatTruoc REFERENCES dbo.TepDinhKem(Id);
-    IF COL_LENGTH('dbo.HoSoKTV', 'GiayToMatSauId') IS NULL
-        ALTER TABLE dbo.HoSoKTV ADD GiayToMatSauId INT NULL
-            CONSTRAINT FK_HoSoKTV_MatSau REFERENCES dbo.TepDinhKem(Id);
-    IF COL_LENGTH('dbo.PhieuNghiemThu', 'TaiKhoanNganHangId') IS NULL
-        ALTER TABLE dbo.PhieuNghiemThu ADD TaiKhoanNganHangId INT NULL
-            CONSTRAINT FK_NghiemThu_NganHang REFERENCES dbo.TaiKhoanNganHang(Id);
-    -- Chuẩn hóa dữ liệu cũ: mỗi KTV/hồ sơ chỉ giữ một chuyên môn bằng mã danh mục.
-    -- Ưu tiên chuyên môn đứng trước trong chuỗi cũ, sau đó mới áp ràng buộc một giá trị.
-    UPDATE dbo.KyThuatVien
-    SET NhomTayNghe = CASE
-        WHEN NhomTayNghe = 'DIEN' THEN 'DIEN'
-        WHEN NhomTayNghe = 'NUOC' THEN 'NUOC'
-        WHEN NhomTayNghe = 'DIEN_LANH' THEN 'DIEN_LANH'
-        WHEN NhomTayNghe = 'DO_GO' THEN 'DO_GO'
-        WHEN NhomTayNghe = 'KHOA' THEN 'KHOA'
-        WHEN NhomTayNghe LIKE N'%Điện lạnh%' THEN 'DIEN_LANH'
-        WHEN NhomTayNghe LIKE N'%Đồ gỗ%' THEN 'DO_GO'
-        WHEN NhomTayNghe LIKE N'%Khóa%' THEN 'KHOA'
-        WHEN NhomTayNghe LIKE N'%Nước%' THEN 'NUOC'
-        ELSE 'DIEN'
-    END;
-    UPDATE dbo.HoSoKTV
-    SET NhomTayNghe = CASE
-        WHEN NhomTayNghe = 'DIEN' THEN 'DIEN'
-        WHEN NhomTayNghe = 'NUOC' THEN 'NUOC'
-        WHEN NhomTayNghe = 'DIEN_LANH' THEN 'DIEN_LANH'
-        WHEN NhomTayNghe = 'DO_GO' THEN 'DO_GO'
-        WHEN NhomTayNghe = 'KHOA' THEN 'KHOA'
-        WHEN NhomTayNghe LIKE N'%Điện lạnh%' THEN 'DIEN_LANH'
-        WHEN NhomTayNghe LIKE N'%Đồ gỗ%' THEN 'DO_GO'
-        WHEN NhomTayNghe LIKE N'%Khóa%' THEN 'KHOA'
-        WHEN NhomTayNghe LIKE N'%Nước%' THEN 'NUOC'
-        ELSE 'DIEN'
-    END;
-    IF OBJECT_ID('dbo.CK_KyThuatVien_MotChuyenMon', 'C') IS NOT NULL
-        ALTER TABLE dbo.KyThuatVien DROP CONSTRAINT CK_KyThuatVien_MotChuyenMon;
-    IF OBJECT_ID('dbo.CK_HoSoKTV_MotChuyenMon', 'C') IS NOT NULL
-        ALTER TABLE dbo.HoSoKTV DROP CONSTRAINT CK_HoSoKTV_MotChuyenMon;
-    IF OBJECT_ID('dbo.DF_KyThuatVien_TayNghe', 'D') IS NOT NULL
-        ALTER TABLE dbo.KyThuatVien DROP CONSTRAINT DF_KyThuatVien_TayNghe;
-    ALTER TABLE dbo.KyThuatVien ALTER COLUMN NhomTayNghe VARCHAR(30) NOT NULL;
-    ALTER TABLE dbo.HoSoKTV ALTER COLUMN NhomTayNghe VARCHAR(30) NOT NULL;
-    ALTER TABLE dbo.KyThuatVien ADD CONSTRAINT DF_KyThuatVien_TayNghe DEFAULT 'DIEN' FOR NhomTayNghe;
-    ALTER TABLE dbo.KyThuatVien WITH CHECK ADD CONSTRAINT CK_KyThuatVien_MotChuyenMon
-        CHECK (NhomTayNghe IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA'));
-    ALTER TABLE dbo.HoSoKTV WITH CHECK ADD CONSTRAINT CK_HoSoKTV_MotChuyenMon
-        CHECK (NhomTayNghe IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA'));
-    ALTER TABLE dbo.YeuCauVi DROP CONSTRAINT CK_YeuCauVi_TrangThai;
-    ALTER TABLE dbo.YeuCauVi WITH CHECK ADD CONSTRAINT CK_YeuCauVi_TrangThai
-        CHECK (TrangThai IN ('Pending','Approved','Rejected','Cancelled'));
-    ALTER TABLE dbo.TepDinhKem DROP CONSTRAINT CK_TepDinhKem_MucDich;
-    ALTER TABLE dbo.TepDinhKem WITH CHECK ADD CONSTRAINT CK_TepDinhKem_MucDich
-        CHECK (MucDich IN ('OrderFault','AcceptancePhoto','CustomerSignature','TechnicianSignature',
-            'WalletProof','MaterialEvidence','PaymentProof','TechnicianDocument','Avatar'));
-    COMMIT TRANSACTION;
-END TRY
-BEGIN CATCH
-    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-    THROW;
-END CATCH;
-GO
-
-
-/* Chuyển đề xuất vật tư sang bảng kê chi phí. Giữ nguyên Id, chi tiết và
-   liên kết nghiệm thu; bảng kê bị từ chối trước đây không tự tính vào đơn. */
-SET XACT_ABORT ON;
-BEGIN TRY
-    BEGIN TRANSACTION;
-    IF OBJECT_ID(N'dbo.DeXuatVatTu', N'U') IS NOT NULL
-    BEGIN
-        DROP TRIGGER IF EXISTS dbo.tr_ChiTietVatTu_KhoaDaDuyet;
-        DROP PROCEDURE IF EXISTS dbo.sp_KhachDuyetDeXuatVatTu;
-        DROP PROCEDURE IF EXISTS dbo.sp_TaoDeXuatVatTu;
-        DROP VIEW IF EXISTS dbo.vw_ChiTietDeXuatVatTu;
-        DROP VIEW IF EXISTS dbo.vw_DeXuatVatTu;
-
-        EXEC(N'UPDATE dbo.DeXuatVatTu SET DangApDung = 0 WHERE TrangThai = ''Rejected'';');
-        ALTER TABLE dbo.DeXuatVatTu DROP CONSTRAINT CK_DeXuatVatTu_TrangThai;
-        ALTER TABLE dbo.DeXuatVatTu DROP CONSTRAINT DF_DeXuatVatTu_TrangThai;
-        ALTER TABLE dbo.DeXuatVatTu DROP COLUMN TrangThai;
-        EXEC sys.sp_rename N'dbo.DeXuatVatTu', N'BangKeVatTu';
-        EXEC sys.sp_rename N'dbo.ChiTietDeXuatVatTu', N'ChiTietVatTu';
-        EXEC sys.sp_rename N'dbo.ChiTietVatTu.DeXuatVatTuId', N'BangKeVatTuId', N'COLUMN';
-        EXEC sys.sp_rename N'dbo.PhieuNghiemThu.DeXuatVatTuId', N'BangKeVatTuId', N'COLUMN';
-
-        DECLARE @TenCu SYSNAME, @TenMoi SYSNAME, @DoiTuong NVARCHAR(776);
-        DECLARE TenRangBuoc CURSOR LOCAL FAST_FORWARD FOR
-            SELECT name FROM sys.objects
-            WHERE parent_object_id IN (OBJECT_ID(N'dbo.BangKeVatTu'), OBJECT_ID(N'dbo.ChiTietVatTu'))
-                AND name LIKE N'%DeXuatVatTu%';
-        OPEN TenRangBuoc;
-        FETCH NEXT FROM TenRangBuoc INTO @TenCu;
-        WHILE @@FETCH_STATUS = 0
-        BEGIN
-            SET @TenMoi = REPLACE(REPLACE(@TenCu, N'ChiTietDeXuatVatTu', N'ChiTietVatTu'), N'DeXuatVatTu', N'BangKeVatTu');
-            SET @DoiTuong = N'dbo.' + QUOTENAME(@TenCu);
-            EXEC sys.sp_rename @DoiTuong, @TenMoi, N'OBJECT';
-            FETCH NEXT FROM TenRangBuoc INTO @TenCu;
-        END;
-        CLOSE TenRangBuoc;
-        DEALLOCATE TenRangBuoc;
-        EXEC sys.sp_rename N'dbo.BangKeVatTu.UX_DeXuatVatTu_DangApDung', N'UX_BangKeVatTu_DangApDung', N'INDEX';
-        EXEC sys.sp_rename N'dbo.ChiTietVatTu.IX_ChiTietDeXuatVatTu_DeXuat', N'IX_ChiTietVatTu_DeXuat', N'INDEX';
-    END;
-    COMMIT TRANSACTION;
-END TRY
-BEGIN CATCH
-    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-    THROW;
-END CATCH;
-GO
-
-
--- Phí hủy không lập nghiệm thu giả; dùng lại thanh toán BANK và đối soát.
-IF COL_LENGTH('dbo.DonHang', 'PhiHuyDon') IS NULL
-    ALTER TABLE dbo.DonHang ADD PhiHuyDon DECIMAL(18,2) NOT NULL CONSTRAINT DF_DonHang_PhiHuy DEFAULT 0 WITH VALUES;
-IF COL_LENGTH('dbo.ThanhToan', 'LoaiThanhToan') IS NULL
-    ALTER TABLE dbo.ThanhToan ADD LoaiThanhToan VARCHAR(12) NOT NULL CONSTRAINT DF_ThanhToan_Loai DEFAULT 'DichVu' WITH VALUES;
-IF COL_LENGTH('dbo.YeuCauThanhToan', 'LoaiThanhToan') IS NULL
-    ALTER TABLE dbo.YeuCauThanhToan ADD LoaiThanhToan VARCHAR(12) NOT NULL CONSTRAINT DF_YeuCauThanhToan_Loai DEFAULT 'DichVu' WITH VALUES;
-IF COL_LENGTH('dbo.YeuCauHoTro', 'NgayCapNhat') IS NULL
-BEGIN
-    ALTER TABLE dbo.YeuCauHoTro ADD NgayCapNhat DATETIME2(3) NULL;
-    EXEC(N'UPDATE dbo.YeuCauHoTro SET NgayCapNhat = NgayTao;');
-    ALTER TABLE dbo.YeuCauHoTro ALTER COLUMN NgayCapNhat DATETIME2(3) NOT NULL;
-    ALTER TABLE dbo.YeuCauHoTro ADD CONSTRAINT DF_YeuCauHoTro_CapNhat DEFAULT SYSUTCDATETIME() FOR NgayCapNhat;
-END;
-IF COL_LENGTH('dbo.TraoDoiHoTro', 'TrangThai') IS NULL
-    ALTER TABLE dbo.TraoDoiHoTro ADD TrangThai VARCHAR(12) NULL;
-IF OBJECT_ID('dbo.UQ_ThanhToan_NghiemThu', 'UQ') IS NOT NULL
-    ALTER TABLE dbo.ThanhToan DROP CONSTRAINT UQ_ThanhToan_NghiemThu;
-IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ThanhToan') AND name = 'NghiemThuId' AND is_nullable = 0)
-    ALTER TABLE dbo.ThanhToan ALTER COLUMN NghiemThuId INT NULL;
-IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.YeuCauThanhToan') AND name = 'NghiemThuId' AND is_nullable = 0)
-    ALTER TABLE dbo.YeuCauThanhToan ALTER COLUMN NghiemThuId INT NULL;
-GO
-IF OBJECT_ID('dbo.CK_DonHang_PhiHuy', 'C') IS NULL
-    ALTER TABLE dbo.DonHang WITH CHECK ADD CONSTRAINT CK_DonHang_PhiHuy
-        CHECK (PhiHuyDon >= 0 AND (PhiHuyDon = 0 OR (TrangThai = 'Huy' AND KyThuatVienId IS NOT NULL)));
-IF OBJECT_ID('dbo.CK_ThanhToan_Loai', 'C') IS NULL
-    ALTER TABLE dbo.ThanhToan WITH CHECK ADD CONSTRAINT CK_ThanhToan_Loai
-        CHECK ((LoaiThanhToan = 'DichVu' AND NghiemThuId IS NOT NULL) OR (LoaiThanhToan = 'PhiHuyDon' AND NghiemThuId IS NULL AND PhuongThuc = 'BANK'));
-IF OBJECT_ID('dbo.CK_YeuCauThanhToan_Loai', 'C') IS NULL
-    ALTER TABLE dbo.YeuCauThanhToan WITH CHECK ADD CONSTRAINT CK_YeuCauThanhToan_Loai
-        CHECK ((LoaiThanhToan = 'DichVu' AND NghiemThuId IS NOT NULL) OR (LoaiThanhToan = 'PhiHuyDon' AND NghiemThuId IS NULL));
-IF OBJECT_ID('dbo.CK_TraoDoiHoTro_TrangThai', 'C') IS NULL
-    ALTER TABLE dbo.TraoDoiHoTro WITH CHECK ADD CONSTRAINT CK_TraoDoiHoTro_TrangThai
-        CHECK (TrangThai IN ('InProgress','Resolved','Rejected'));
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.ThanhToan') AND name = 'UX_ThanhToan_NghiemThu')
-    CREATE UNIQUE INDEX UX_ThanhToan_NghiemThu ON dbo.ThanhToan(NghiemThuId) WHERE NghiemThuId IS NOT NULL;
-IF NOT EXISTS (SELECT 1 FROM dbo.CauHinh WHERE Khoa = 'PhiHuyDon')
-    INSERT INTO dbo.CauHinh(Khoa, GiaTri, NhanHienThi) VALUES ('PhiHuyDon', N'60000', N'Phí hủy khi KTV đã di chuyển');
 GO
 
 
@@ -4700,56 +4332,3 @@ BEGIN
     END CATCH;
 END;
 GO
-/* CÁCH DEMO TRONG SSMS - chạy từng khối sau khi sửa tên database/đường dẫn:
-
--- 1. Chọn database muốn sao lưu, ghi nhận recovery model trước khi thay đổi.
-SELECT name, recovery_model_desc FROM sys.databases WHERE name = DB_NAME();
--- Dùng đường dẫn tồn tại, service account SQL có quyền ghi. Ví dụ D:\SQLBackup.
--- Không chạy trên database đang có giao dịch nghiệp vụ ngoài ý muốn.
-ALTER DATABASE HomeFix_DBMS SET RECOVERY FULL;
-GO
-USE HomeFix_DBMS;
-GO
-EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Full_20261023.bak', @Loai = 'FULL';
-EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Diff_20261023.bak', @Loai = 'DIFF';
-EXEC dbo.sp_SaoLuuHeThong @DuongDan = N'D:\SQLBackup\HomeFix_Log_20261023.trn', @Loai = 'LOG';
-
--- 2. Xem thông tin backup set/logical name và kiểm tra backup có đọc được.
--- FILE = 1 phù hợp tập tin mới. Nếu đã backup nhiều lần cùng tập tin,
--- RESTORE HEADERONLY để chọn đúng Position, không mặc định bản mới nhất ở số 1.
-RESTORE HEADERONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261023.bak';
-RESTORE FILELISTONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261023.bak' WITH FILE = 1;
-RESTORE VERIFYONLY FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261023.bak' WITH FILE = 1, CHECKSUM;
--- VERIFYONLY kiểm tra backup; chưa chứng minh toàn bộ CSDL phục hồi hoạt động.
-
--- 3. Khôi phục ra TÊN MỚI, không WITH REPLACE. Sửa logical name theo FILELISTONLY.
-USE master;
-GO
-RESTORE DATABASE HomeFix_KiemTraPhucHoi
-FROM DISK = N'D:\SQLBackup\HomeFix_Full_20261023.bak'
-WITH FILE = 1, NORECOVERY,
-    MOVE N'HomeFix_DBMS_Clean_20261022' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi.mdf',
-    MOVE N'HomeFix_DBMS_Clean_20261022_log' TO N'D:\SQLData\HomeFix_KiemTraPhucHoi_log.ldf';
-RESTORE DATABASE HomeFix_KiemTraPhucHoi
-FROM DISK = N'D:\SQLBackup\HomeFix_Diff_20261023.bak' WITH FILE = 1, NORECOVERY;
-RESTORE LOG HomeFix_KiemTraPhucHoi
-FROM DISK = N'D:\SQLBackup\HomeFix_Log_20261023.trn' WITH FILE = 1, RECOVERY;
--- Nếu chỉ phục hồi FULL: thay NORECOVERY bằng RECOVERY ở lệnh FULL và bỏ DIFF/LOG.
--- Nếu cần tới một thời điểm: thêm STOPAT = '2026-10-22T14:30:00' vào RESTORE LOG.
--- FULL/DIFF/LOG phải cùng chuỗi hợp lệ. COPY_ONLY FULL không lập nền cho DIFF.
-
--- 4. Kiểm tra CSDL được khôi phục. Không chạy web lên bản này ngoài ý muốn.
-DBCC CHECKDB(N'HomeFix_KiemTraPhucHoi') WITH NO_INFOMSGS;
-USE HomeFix_KiemTraPhucHoi;
-SELECT Id, HoTen, VaiTro FROM dbo.vw_NguoiDung;
-SELECT Id, TrangThai FROM dbo.vw_DonHangTongHop;
-SELECT Id, SoDu, SoDuSoCai, ChenhLech FROM dbo.vw_ViKyThuatVien;
-
-LỖI THƯỜNG GẶP:
-- 3201/Operating system error 3: sai đường dẫn trên máy SQL Server.
-- Operating system error 5: service account SQL Server thiếu quyền thư mục.
-- 4214: LOG chưa có full backup đầu tiên sau khi chuyển recovery model.
-- 3117/4305: sai thứ tự hoặc thiếu mắt xích LOG, phải kiểm tra HEADERONLY.
-- 3154: file thuộc database khác; dùng tên đích mới và MOVE đúng logical name.
-- 'database is in use': cần dùng master và đóng kết nối tới bản phục hồi.
-*/

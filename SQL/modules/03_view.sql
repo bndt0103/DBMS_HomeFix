@@ -15,7 +15,7 @@ GO
 CREATE OR ALTER VIEW dbo.vw_KyThuatVien
 AS
 SELECT ktv.Id, nd.HoTen, nd.SoDienThoai, ktv.NhomTayNghe, ktv.KhuVucPhucVu,
-    ktv.TrangThaiSanSang, ktv.SoDu, ktv.ViDo, ktv.KinhDo, ktv.PhienBan
+    ktv.TrangThaiSanSang, ktv.SoDu, ktv.PhienBan
 FROM dbo.KyThuatVien AS ktv
 INNER JOIN dbo.NguoiDung AS nd ON nd.Id = ktv.Id;
 GO
@@ -119,11 +119,6 @@ AS
 SELECT Id, DonHangId, NguoiVietId, NoiDung, NoiBo, NgayTao
 FROM dbo.GhiChuDon;
 GO
-CREATE OR ALTER VIEW dbo.vw_ViTriKhachHang
-AS
-SELECT DonHangId, KhachHangId, ViDo, KinhDo, NgayCapNhat
-FROM dbo.ViTriKhachHang;
-GO
 CREATE OR ALTER VIEW dbo.vw_TepDinhKem
 AS
 SELECT Id, ChuSoHuuId, DonHangId, MucDich, KhoaLuuTru, TenTepGoc, KieuMIME, KichThuoc, NgayTao
@@ -188,7 +183,7 @@ CREATE OR ALTER VIEW dbo.vw_ViKyThuatVien
 AS
 SELECT ktv.Id, nd.HoTen, nd.SoDienThoai, ktv.NhomTayNghe, ktv.KhuVucPhucVu,
     ktv.TrangThaiSanSang, ktv.SoDu, (SELECT SoDu FROM dbo.fn_SoDuVi(ktv.Id)) AS SoDuSoCai,
-    ktv.SoDu - (SELECT SoDu FROM dbo.fn_SoDuVi(ktv.Id)) AS ChenhLech, ktv.ViDo, ktv.KinhDo, ktv.PhienBan
+    ktv.SoDu - (SELECT SoDu FROM dbo.fn_SoDuVi(ktv.Id)) AS ChenhLech, ktv.PhienBan
 FROM dbo.KyThuatVien AS ktv
 INNER JOIN dbo.NguoiDung AS nd ON nd.Id = ktv.Id;
 GO
@@ -211,9 +206,4 @@ SELECT ht.Id, ht.DonHangId, ht.KhachHangId, nd.HoTen AS TenKhachHang,
 FROM dbo.YeuCauHoTro AS ht
 INNER JOIN dbo.NguoiDung AS nd ON nd.Id = ht.KhachHangId
 WHERE ht.TrangThai IN ('Open','InProgress');
-GO
-CREATE OR ALTER VIEW dbo.vw_XacThucOTP
-AS
-SELECT Id, MucDich, DiaChiNhan, SoLanThu, DaSuDung, NgayHetHan, NgayTao
-FROM dbo.XacThucOTP;
 GO

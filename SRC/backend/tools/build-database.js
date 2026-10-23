@@ -53,7 +53,9 @@ for (const block of text.split(/^GO\s*$/im)) {
 const installer =
   `-- HomeFix: cài đặt vào database MỚI, không ghi đè dữ liệu.\n-- Bật Query > SQLCMD Mode trong SSMS và sửa TenCSDL nếu cần.\n:on error exit\n:setvar TenCSDL "HomeFix_DBMS_Nhom08"\nUSE master;\nGO\nIF DB_ID(N'$(TenCSDL)') IS NOT NULL\n    THROW 51009, 'DATABASE_ALREADY_EXISTS_CHOOSE_NEW_NAME', 1;\nCREATE DATABASE [$(TenCSDL)];\nGO\nUSE [$(TenCSDL)];\nGO\n` +
   sources
-    .map((source, index) => `\n-- MODULE: ${moduleNames[index]}\n${source}\n`)
+    .map((source, index) => ({ source, name: moduleNames[index] }))
+    .filter(({ name }) => name !== "09_data_migration.sql")
+    .map(({ source, name }) => `\n-- MODULE: ${name}\n${source}\n`)
     .join("\nGO\n");
 fs.writeFileSync(
   path.join(root, "SQL", "CSDL_HomeFix.sql"),

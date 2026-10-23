@@ -14,34 +14,34 @@ BEGIN TRY
     IF COL_LENGTH('dbo.PhieuNghiemThu', 'TaiKhoanNganHangId') IS NULL
         ALTER TABLE dbo.PhieuNghiemThu ADD TaiKhoanNganHangId INT NULL
             CONSTRAINT FK_NghiemThu_NganHang REFERENCES dbo.TaiKhoanNganHang(Id);
-    -- Chuẩn hóa dữ liệu cũ: mỗi KTV/hồ sơ chỉ giữ một chuyên môn bằng mã danh mục.
-    -- Ưu tiên chuyên môn đứng trước trong chuỗi cũ, sau đó mới áp ràng buộc một giá trị.
-    UPDATE dbo.KyThuatVien
+    -- Một thợ/hồ sơ giữ chuyên môn đầu tiên trong dữ liệu cũ.
+    -- Không UPDATE dòng đã có mã hợp lệ để giữ nguyên ROWVERSION.
+    UPDATE t
     SET NhomTayNghe = CASE
-        WHEN NhomTayNghe = 'DIEN' THEN 'DIEN'
-        WHEN NhomTayNghe = 'NUOC' THEN 'NUOC'
-        WHEN NhomTayNghe = 'DIEN_LANH' THEN 'DIEN_LANH'
-        WHEN NhomTayNghe = 'DO_GO' THEN 'DO_GO'
-        WHEN NhomTayNghe = 'KHOA' THEN 'KHOA'
-        WHEN NhomTayNghe LIKE N'%Điện lạnh%' THEN 'DIEN_LANH'
-        WHEN NhomTayNghe LIKE N'%Đồ gỗ%' THEN 'DO_GO'
-        WHEN NhomTayNghe LIKE N'%Khóa%' THEN 'KHOA'
-        WHEN NhomTayNghe LIKE N'%Nước%' THEN 'NUOC'
-        ELSE 'DIEN'
-    END;
-    UPDATE dbo.HoSoKTV
+        WHEN c.ChuyenMon IN ('DIEN', N'Điện') THEN 'DIEN'
+        WHEN c.ChuyenMon IN ('NUOC', N'Nước') THEN 'NUOC'
+        WHEN c.ChuyenMon IN ('DIEN_LANH', N'Điện lạnh') THEN 'DIEN_LANH'
+        WHEN c.ChuyenMon IN ('DO_GO', N'Đồ gỗ') THEN 'DO_GO'
+        WHEN c.ChuyenMon IN ('KHOA', N'Khóa') THEN 'KHOA'
+        ELSE CONVERT(VARCHAR(30), c.ChuyenMon)
+    END
+    FROM dbo.KyThuatVien AS t
+    CROSS APPLY (SELECT REPLACE(t.NhomTayNghe, N';', N',') AS Chuoi) AS s
+    CROSS APPLY (SELECT LTRIM(RTRIM(LEFT(s.Chuoi, CHARINDEX(N',', s.Chuoi + N',') - 1))) AS ChuyenMon) AS c
+    WHERE t.NhomTayNghe NOT IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA');
+    UPDATE t
     SET NhomTayNghe = CASE
-        WHEN NhomTayNghe = 'DIEN' THEN 'DIEN'
-        WHEN NhomTayNghe = 'NUOC' THEN 'NUOC'
-        WHEN NhomTayNghe = 'DIEN_LANH' THEN 'DIEN_LANH'
-        WHEN NhomTayNghe = 'DO_GO' THEN 'DO_GO'
-        WHEN NhomTayNghe = 'KHOA' THEN 'KHOA'
-        WHEN NhomTayNghe LIKE N'%Điện lạnh%' THEN 'DIEN_LANH'
-        WHEN NhomTayNghe LIKE N'%Đồ gỗ%' THEN 'DO_GO'
-        WHEN NhomTayNghe LIKE N'%Khóa%' THEN 'KHOA'
-        WHEN NhomTayNghe LIKE N'%Nước%' THEN 'NUOC'
-        ELSE 'DIEN'
-    END;
+        WHEN c.ChuyenMon IN ('DIEN', N'Điện') THEN 'DIEN'
+        WHEN c.ChuyenMon IN ('NUOC', N'Nước') THEN 'NUOC'
+        WHEN c.ChuyenMon IN ('DIEN_LANH', N'Điện lạnh') THEN 'DIEN_LANH'
+        WHEN c.ChuyenMon IN ('DO_GO', N'Đồ gỗ') THEN 'DO_GO'
+        WHEN c.ChuyenMon IN ('KHOA', N'Khóa') THEN 'KHOA'
+        ELSE CONVERT(VARCHAR(30), c.ChuyenMon)
+    END
+    FROM dbo.HoSoKTV AS t
+    CROSS APPLY (SELECT REPLACE(t.NhomTayNghe, N';', N',') AS Chuoi) AS s
+    CROSS APPLY (SELECT LTRIM(RTRIM(LEFT(s.Chuoi, CHARINDEX(N',', s.Chuoi + N',') - 1))) AS ChuyenMon) AS c
+    WHERE t.NhomTayNghe NOT IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA');
     IF OBJECT_ID('dbo.CK_KyThuatVien_MotChuyenMon', 'C') IS NOT NULL
         ALTER TABLE dbo.KyThuatVien DROP CONSTRAINT CK_KyThuatVien_MotChuyenMon;
     IF OBJECT_ID('dbo.CK_HoSoKTV_MotChuyenMon', 'C') IS NOT NULL
@@ -69,57 +69,6 @@ BEGIN CATCH
     THROW;
 END CATCH;
 GO
-
-
-/* Chuyển đề xuất vật tư sang bảng kê chi phí. Giữ nguyên Id, chi tiết và
-   liên kết nghiệm thu; bảng kê bị từ chối trước đây không tự tính vào đơn. */
-SET XACT_ABORT ON;
-BEGIN TRY
-    BEGIN TRANSACTION;
-    IF OBJECT_ID(N'dbo.DeXuatVatTu', N'U') IS NOT NULL
-    BEGIN
-        DROP TRIGGER IF EXISTS dbo.tr_ChiTietVatTu_KhoaDaDuyet;
-        DROP PROCEDURE IF EXISTS dbo.sp_KhachDuyetDeXuatVatTu;
-        DROP PROCEDURE IF EXISTS dbo.sp_TaoDeXuatVatTu;
-        DROP VIEW IF EXISTS dbo.vw_ChiTietDeXuatVatTu;
-        DROP VIEW IF EXISTS dbo.vw_DeXuatVatTu;
-
-        EXEC(N'UPDATE dbo.DeXuatVatTu SET DangApDung = 0 WHERE TrangThai = ''Rejected'';');
-        ALTER TABLE dbo.DeXuatVatTu DROP CONSTRAINT CK_DeXuatVatTu_TrangThai;
-        ALTER TABLE dbo.DeXuatVatTu DROP CONSTRAINT DF_DeXuatVatTu_TrangThai;
-        ALTER TABLE dbo.DeXuatVatTu DROP COLUMN TrangThai;
-        EXEC sys.sp_rename N'dbo.DeXuatVatTu', N'BangKeVatTu';
-        EXEC sys.sp_rename N'dbo.ChiTietDeXuatVatTu', N'ChiTietVatTu';
-        EXEC sys.sp_rename N'dbo.ChiTietVatTu.DeXuatVatTuId', N'BangKeVatTuId', N'COLUMN';
-        EXEC sys.sp_rename N'dbo.PhieuNghiemThu.DeXuatVatTuId', N'BangKeVatTuId', N'COLUMN';
-
-        DECLARE @TenCu SYSNAME, @TenMoi SYSNAME, @DoiTuong NVARCHAR(776);
-        DECLARE TenRangBuoc CURSOR LOCAL FAST_FORWARD FOR
-            SELECT name FROM sys.objects
-            WHERE parent_object_id IN (OBJECT_ID(N'dbo.BangKeVatTu'), OBJECT_ID(N'dbo.ChiTietVatTu'))
-                AND name LIKE N'%DeXuatVatTu%';
-        OPEN TenRangBuoc;
-        FETCH NEXT FROM TenRangBuoc INTO @TenCu;
-        WHILE @@FETCH_STATUS = 0
-        BEGIN
-            SET @TenMoi = REPLACE(REPLACE(@TenCu, N'ChiTietDeXuatVatTu', N'ChiTietVatTu'), N'DeXuatVatTu', N'BangKeVatTu');
-            SET @DoiTuong = N'dbo.' + QUOTENAME(@TenCu);
-            EXEC sys.sp_rename @DoiTuong, @TenMoi, N'OBJECT';
-            FETCH NEXT FROM TenRangBuoc INTO @TenCu;
-        END;
-        CLOSE TenRangBuoc;
-        DEALLOCATE TenRangBuoc;
-        EXEC sys.sp_rename N'dbo.BangKeVatTu.UX_DeXuatVatTu_DangApDung', N'UX_BangKeVatTu_DangApDung', N'INDEX';
-        EXEC sys.sp_rename N'dbo.ChiTietVatTu.IX_ChiTietDeXuatVatTu_DeXuat', N'IX_ChiTietVatTu_DeXuat', N'INDEX';
-    END;
-    COMMIT TRANSACTION;
-END TRY
-BEGIN CATCH
-    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-    THROW;
-END CATCH;
-GO
-
 
 -- Phí hủy không lập nghiệm thu giả; dùng lại thanh toán BANK và đối soát.
 IF COL_LENGTH('dbo.DonHang', 'PhiHuyDon') IS NULL

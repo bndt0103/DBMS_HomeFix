@@ -6,6 +6,7 @@ import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { splitSqlBatches } from "../tools/sql-batches.js";
 
 const source = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -104,6 +105,18 @@ after(async () => {
   }
 });
 
+test("Nâng cấp: GO trong comment, chuỗi hoặc tên cột không tách nhầm batch", () => {
+  const source =
+    "SELECT 1;\nGO\n/* Ví dụ:\nGO\n/* lồng */\n*/\nSELECT 'một\nGO\nhai';\nGO -- hết batch\nSELECT [cột\nGO\ncuối];";
+  const batches = splitSqlBatches(source);
+  assert.equal(batches.length, 3);
+  assert.ok(batches[1].includes("/* lồng */"));
+  assert.ok(batches[1].includes("GO\nhai'"));
+  assert.ok(batches[2].includes("[cột\nGO\ncuối]"));
+  assert.throws(() => splitSqlBatches("SELECT 'chưa đóng"));
+  assert.throws(() => splitSqlBatches("/* chưa đóng"));
+});
+
 test("Kiến trúc: controller không chứa SQL trực tiếp và các SP/View đều có registry", () => {
   const folder = path.join(source, "backend/src");
   for (const file of fs
@@ -139,11 +152,11 @@ test("Seed: đúng 7 vai trò, danh mục gốc, số dư 0 và không có giao 
   const result = await p
     .request()
     .query(
-      `SELECT COUNT(*) AS N FROM dbo.NguoiDung; SELECT COUNT(*) AS N FROM dbo.DanhMucDichVu; SELECT COUNT(*) AS N FROM dbo.DonHang; SELECT COUNT(*) AS N FROM dbo.GiaoDichVi; SELECT COUNT(*) AS N FROM dbo.NhatKy; SELECT COUNT(*) AS N FROM dbo.XacThucOTP; SELECT COUNT(*) AS N FROM dbo.KyThuatVien WHERE SoDu<>0;`,
+      `SELECT COUNT(*) AS N FROM dbo.NguoiDung; SELECT COUNT(*) AS N FROM dbo.DanhMucDichVu; SELECT COUNT(*) AS N FROM dbo.DonHang; SELECT COUNT(*) AS N FROM dbo.GiaoDichVi; SELECT COUNT(*) AS N FROM dbo.NhatKy; SELECT COUNT(*) AS N FROM dbo.KyThuatVien WHERE SoDu<>0;`,
     );
   assert.deepEqual(
     result.recordsets.map((rows) => rows[0].N),
-    [7, 5, 0, 0, 0, 0, 0],
+    [7, 5, 0, 0, 0, 0],
   );
 });
 
@@ -559,34 +572,23 @@ test("Tài khoản: đăng ký, đổi mật khẩu và chặn KH xem đơn củ
   );
 });
 
-test("OTP: lưu số lần sai, dùng một lần và không cung cấp mã băm qua view công khai", async () => {
-  const { exec, first, withDatabaseRole } = await import("../src/db.js");
-  const { randomUUID } = await import("node:crypto");
-  const Id = randomUUID();
-  await withDatabaseRole(null, async () => {
-    await exec("sp_TaoMaOTP", {
-      Id,
-      MucDich: "ResetPassword",
-      DiaChiNhan: "homefix-test@example.invalid",
-      MaBam: "a".repeat(64),
-      NgayHetHan: new Date(Date.now() + 60000),
-    });
-    assert.equal(
-      (await exec("sp_XacThucOTP", { Id, MaBam: "b".repeat(64) }))[0].DaXacThuc,
-      false,
-    );
-    const metadata = await first("vw_XacThucOTP", { Id });
-    assert.equal(metadata.SoLanThu, 1);
-    assert.equal(metadata.MaBam, undefined);
-    assert.equal(
-      (await exec("sp_XacThucOTP", { Id, MaBam: "a".repeat(64) }))[0].DaXacThuc,
-      true,
-    );
-    assert.equal(
-      (await exec("sp_XacThucOTP", { Id, MaBam: "a".repeat(64) }))[0].DaXacThuc,
-      false,
-    );
-  });
+test("CSDL đồng bộ: đã gỡ bảng, thủ tục, view và cột của tính năng cũ", async () => {
+  const p = await pool();
+  const result = await p.request().query(`
+    SELECT name FROM sys.objects
+    WHERE is_ms_shipped = 0 AND (name LIKE '%OTP%' OR name LIKE '%ViTriKhachHang%');
+    SELECT name FROM sys.columns
+    WHERE object_id = OBJECT_ID('dbo.KyThuatVien') AND name IN ('ViDo','KinhDo');
+  `);
+  assert.deepEqual(result.recordsets, [[], []]);
+  const contract = fs.readFileSync(
+    path.join(source, "backend/src/db-contract.json"),
+    "utf8",
+  );
+  assert.doesNotMatch(contract, /OTP|ViTriKhachHang|ViDo|KinhDo/);
+  const technician = await api("GET", "/web/users/me", "KTV");
+  assert.equal(technician.latitude, undefined);
+  assert.equal(technician.longitude, undefined);
 });
 
 test("SQL roles: DENY bảng nhạy cảm; trigger từ chối nguyên lệnh nhiều dòng sai", async () => {
@@ -877,10 +879,10 @@ test("Giao diện gốc: ảnh đặt đơn, nghiệm thu có chữ ký, ngân h
   );
 });
 
-test("Web DBMS: đăng ký không OTP, chặn giả vai trò và thu hồi phiên sau đổi mật khẩu", async () => {
+test("Web DBMS: đăng ký trực tiếp, chặn giả vai trò và thu hồi phiên sau đổi mật khẩu", async () => {
   const phone = "0998888777";
   const created = await api("POST", "/auth/register", null, {
-    fullName: "Khách hàng kiểm thử không OTP",
+    fullName: "Khách hàng kiểm thử đăng ký",
     phone,
     password: "123456",
     VaiTro: "ADMIN",
@@ -892,21 +894,21 @@ test("Web DBMS: đăng ký không OTP, chặn giả vai trò và thu hồi phiê
     identifier: phone,
     password: "123456",
   });
-  tokens.NOOTP = login.token;
+  tokens.REGISTERED = login.token;
   assert.equal(login.user.email, null);
   await api(
     "POST",
     "/web/users/me/password",
-    "NOOTP",
+    "REGISTERED",
     { currentPassword: "wrong", newPassword: "654321" },
     400,
   );
-  await api("GET", "/web/users/me", "NOOTP");
-  await api("POST", "/web/users/me/password", "NOOTP", {
+  await api("GET", "/web/users/me", "REGISTERED");
+  await api("POST", "/web/users/me/password", "REGISTERED", {
     currentPassword: "123456",
     newPassword: "654321",
   });
-  await api("GET", "/web/users/me", "NOOTP", null, 401);
+  await api("GET", "/web/users/me", "REGISTERED", null, 401);
   await api(
     "POST",
     "/auth/login",
@@ -918,12 +920,12 @@ test("Web DBMS: đăng ký không OTP, chặn giả vai trò và thu hồi phiê
     identifier: phone,
     password: "654321",
   });
-  tokens.NOOTP = changed.token;
-  await api("GET", "/web/users/me", "NOOTP");
+  tokens.REGISTERED = changed.token;
+  await api("GET", "/web/users/me", "REGISTERED");
   await api(
     "PATCH",
     "/web/users/me",
-    "NOOTP",
+    "REGISTERED",
     {
       fullName: changed.user.fullName,
       email: "changed@example.invalid",
@@ -939,7 +941,7 @@ test("Web DBMS: đăng ký không OTP, chặn giả vai trò và thu hồi phiê
   assert.ok(summary.trend.some((row) => row.day === localDay));
   const report = await api("GET", "/reports", "KT");
   assert.ok(report.DoanhThu.some((row) => row.Ngay.slice(0, 10) === localDay));
-  const publicConfig = await api("GET", "/web/app-config", "NOOTP");
+  const publicConfig = await api("GET", "/web/app-config", "REGISTERED");
   assert.ok(
     !Object.keys(publicConfig).some((k) =>
       /^(GiamSat_|DeXuatChinhSach_)/.test(k),

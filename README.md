@@ -4,26 +4,26 @@
 
 ## Thành viên lấy bản mới và CSDL
 
-Nhánh dùng chung: **main**. Làm theo [hướng dẫn cài trên máy thành viên](SQL/CAI_DAT_THANH_VIEN.md) để pull/clone, tạo CSDL mới và nạp 10 đơn mẫu. Cấu hình `.env` là riêng từng máy. [Bảng phân công Word](SQL/thuc_hanh_nhom/BangPhanCong_SQL_Nhom08.docx), [PDF](SQL/thuc_hanh_nhom/BangPhanCong_SQL_Nhom08.pdf) và [bài học SQL cho 4 thành viên](SQL/thuc_hanh_nhom/HUONG_DAN.md) đã có trong repo.
+Nhánh dùng chung: **main**. Làm theo [hướng dẫn cài trên máy thành viên](SQL/CAI_DAT_THANH_VIEN.md) để pull/clone, tạo CSDL mới và nạp 10 đơn mẫu. Cấu hình `.env` là riêng từng máy. Tài liệu ôn tập được giữ riêng trong thư mục `thuc_hanh_nhom`, không thuộc bản mã nguồn trên GitHub.
 
 ## 1. Cấu trúc
 
 ```text
 SQL/
-  CSDL_HomeFix.sql          Bộ cài database mới, đầy đủ module
+  CSDL_HomeFix.sql          Bộ cài database mới, không chạy migration
   seed_data.sql            Seed riêng, chỉ chạy khi các bảng còn trắng
   README.md                Giải thích SQL và câu lệnh thực hành trong SSMS
   modules/
-    00_schema.sql          28 bảng và ràng buộc
+    00_schema.sql          26 bảng và ràng buộc
     01_index.sql           Index truy vấn và UNIQUE có điều kiện
     02_function.sql        7 hàm
-    03_view.sql            34 view
-    04_sp.sql              19 SP tài khoản/tiện ích
-    05_transaction.sql     30 SP nghiệp vụ/báo cáo
+    03_view.sql            32 view
+    04_sp.sql              17 SP tài khoản/tiện ích
+    05_transaction.sql     29 SP nghiệp vụ/báo cáo
     06_trigger.sql         7 trigger
     07_security.sql        Quyền của các role
     08_seed.sql            Dữ liệu sạch
-    09_data_migration.sql  Nâng cấu trúc hiện có, giữ dữ liệu
+    09_data_migration.sql  Nâng cấp CSDL cũ, giữ dữ liệu nghiệp vụ
     10_backup_recovery.sql SP sao lưu và hướng dẫn phục hồi
 SRC/
   package.json             Lệnh cài, chạy và kiểm thử
@@ -44,7 +44,7 @@ Thư mục DOC, SLIDES, HELP, bản hướng dẫn vấn đáp cũ và các bộ
 - Đọc dùng `queryView()` hoặc `queryFunction()`. Tên đối tượng có trong danh sách đăng ký; điều kiện lọc được dựng từ các toán tử cho phép và giá trị được tham số hóa.
 - Không có SELECT/INSERT/UPDATE/DELETE bảng trong controller. Các câu SELECT dữ liệu trong `db.js` chỉ nhắm đến view/TVF đã đăng ký. Công cụ cài đặt và kiểm thử quản trị có quyền khác với API vận hành.
 - Mỗi SP ghi kiểm tra vai trò, quyền sở hữu, dữ liệu, trạng thái và phiên bản trước khi cập nhật. Có transaction, savepoint khi nằm trong transaction ngoài, TRY/CATCH và XACT_STATE.
-- Có **51 SP**: 49 SP ghi có giao dịch; `sp_BaoCaoTongHop` chỉ đọc; `sp_SaoLuuHeThong` dành cho DBA và không mở transaction vì SQL Server không cho BACKUP nằm trong transaction. [Quy định BACKUP của Microsoft](https://learn.microsoft.com/en-us/sql/t-sql/statements/backup-transact-sql).
+- Có **47 SP**: 45 SP ghi có giao dịch; `sp_BaoCaoTongHop` chỉ đọc; `sp_SaoLuuHeThong` dành cho DBA và không mở transaction vì SQL Server không cho BACKUP nằm trong transaction. [Quy định BACKUP của Microsoft](https://learn.microsoft.com/en-us/sql/t-sql/statements/backup-transact-sql).
 - Số dư ví được SP duyệt ví/đối soát cập nhật cùng giao dịch ghi sổ cái. View ví đối chiếu số dư với SUM sổ. Trigger sổ cái ngăn UPDATE/DELETE; không có cơ chế cập nhật số dư lần hai bằng trigger.
 - Tỷ lệ hoa hồng lưu theo phần trăm: `15` nghĩa là **15%** của tiền công, không phải `0.15`.
 
@@ -111,7 +111,7 @@ npm.cmd run build
 npm.cmd start
 ```
 
-`db:upgrade` đọc đúng `DB_NAME` trong `.env`, bổ sung các cột còn thiếu, chuyển DeXuatVatTu/ChiTietDeXuatVatTu sang BangKeVatTu/ChiTietVatTu, bỏ quyết định duyệt vật tư và cập nhật function, view, SP, trigger, quyền. Id và chứng từ cũ được giữ nguyên; bảng kê bị từ chối trước đây không tự tính tiền. Không chạy `00_schema` hay `08_seed` lên database đang sử dụng. Công cụ dành cho bản refactor có bảng `KyThuatVien`, không chuyển tự động database HomeFix đời trước.
+`db:upgrade` đọc đúng `DB_NAME` trong `.env` và cập nhật các cột/ràng buộc, function, view, SP, trigger, quyền của khung 26 bảng hiện hành. Công cụ dừng nếu còn bảng ngoài cấu trúc; với database phiên bản cũ, hãy sao lưu và dùng bộ cài hoàn chỉnh tạo tên database mới. Không chạy `00_schema` hay `08_seed` lên database đang sử dụng.
 
 ## 4. Seed sạch và đăng nhập
 
@@ -127,7 +127,7 @@ npm.cmd start
 
 Mật khẩu cả 7 tài khoản mẫu: **`123456`**. Database lưu bcrypt hash, không lưu mật khẩu rõ. Tài khoản mẫu dành cho bài học.
 
-Seed chỉ thêm: 7 người dùng, hồ sơ KTV số dư 0, 5 danh mục/5 dịch vụ gốc, tài khoản ngân hàng mô phỏng và cấu hình. Không có đơn, lịch sử, vật tư, nghiệm thu, thanh toán, sổ ví, đánh giá, OTP hoặc nhật ký chèn sẵn. Tài khoản ngân hàng `DEMO/000000000000` dùng minh họa, không chuyển tiền thật.
+Seed chỉ thêm: 7 người dùng, hồ sơ KTV số dư 0, 5 danh mục/5 dịch vụ gốc, tài khoản ngân hàng mô phỏng và cấu hình. Không có đơn, lịch sử, vật tư, nghiệm thu, thanh toán, sổ ví, đánh giá hoặc nhật ký chèn sẵn. Tài khoản ngân hàng `DEMO/000000000000` dùng minh họa, không chuyển tiền thật.
 
 ## 5. Chạy luồng nghiệp vụ sau khi cài
 
@@ -164,7 +164,7 @@ Giao diện Admin chỉ có danh sách tài khoản, tạo tài khoản bằng d
 
 ## 6. Demo SQL và giải thích lỗi
 
-Đọc [SQL/README.md](SQL/README.md), mở các module cần giải thích. Tài liệu có câu lệnh SELECT trên view, EXEC tạo đơn/báo giá/điều phối trong giao dịch rồi rollback, ví dụ trigger từ chối dữ liệu sai và EXECUTE AS kiểm quyền. Bài thực hành đã chia theo 4 thành viên trong [SQL/thuc_hanh_nhom](SQL/thuc_hanh_nhom/HUONG_DAN.md).
+Đọc [SQL/README.md](SQL/README.md), mở các module cần giải thích. Tài liệu có câu lệnh SELECT trên view, EXEC tạo đơn/báo giá/điều phối trong giao dịch rồi rollback, ví dụ trigger từ chối dữ liệu sai và EXECUTE AS kiểm quyền. Bài thực hành đã chia theo 4 thành viên trong tài liệu thực hành riêng.
 
 - `ROWVERSION` là 8 byte tự đổi, không phải ngày giờ; API trả chuỗi 0x… và gửi lại thành PhienBanDuKien.
 - 51003 → quyền không phù hợp; 51004 → không có đối tượng; 51009 → trạng thái/phiên bản/dữ liệu không hợp lệ; 547 → CHECK/FK; 2601/2627 → trùng khóa.
@@ -189,7 +189,7 @@ Kiểm thử tự tạo database tên `HomeFix_Test_<ngẫu nhiên>`, chạy API
 
 `node_modules`, `.env`, `dist`, `uploads`, ảnh chụp và test-results/log được bỏ qua bằng .gitignore. Chỉ giữ bộ kiểm thử cốt lõi ở `backend/test`, không cần các bộ ảnh/log cũ.
 
-Bản web DBMS không dùng OTP/SMTP hoặc Google Maps/GPS. Đăng ký bằng số điện thoại, email không bắt buộc. Đổi mật khẩu tại Hồ sơ yêu cầu mật khẩu hiện tại; đổi thành công sẽ thu hồi phiên đăng nhập cũ. Quên mật khẩu hiển thị hướng dẫn liên hệ quản trị viên, không mở API đổi mật khẩu công khai. Các đối tượng SQL OTP/vị trí cũ được giữ để tương thích cấu trúc và không được web gọi.
+Bản web DBMS không dùng OTP/SMTP hoặc Google Maps/GPS. Đăng ký bằng số điện thoại, email không bắt buộc. Đổi mật khẩu tại Hồ sơ yêu cầu mật khẩu hiện tại; đổi thành công sẽ thu hồi phiên đăng nhập cũ. Quên mật khẩu hiển thị hướng dẫn liên hệ quản trị viên, không mở API đổi mật khẩu công khai. Các bảng, cột và thủ tục của những tính năng này đã được gỡ khỏi CSDL và bộ cài.
 
 Bộ kiểm thử tích hợp gồm 20 nhóm: quyền của bảy vai trò, seed, COD/BANK, vật tư/nghiệm thu, sổ ví, hỗ trợ hai chiều và phí hủy đơn. Kiểm thử trình duyệt xác minh các màn hình theo vai trò và các nút trong luồng hỗ trợ, hủy, gửi chứng từ và đối soát. Thử nghiệm sử dụng database riêng và tự dọn sau khi chạy.
 
@@ -197,4 +197,4 @@ Bộ kiểm thử tích hợp gồm 20 nhóm: quyền của bảy vai trò, seed
 
 Bản local dùng `HomeFix_DBMS_Clean_20261022` trên `MSI\SQLEXPRESS`. Đã bổ sung 5 khách, 3 thợ, 20 dịch vụ và 10 đơn; giữ dữ liệu cũ. Tài khoản KH mới `0900001001`–`0900001005`, KTV mới `0900002001`–`0900002003`, mật khẩu `123456`. Danh tính, ảnh và chứng từ là giả lập.
 
-Trên bản cài mới, chạy `npm.cmd run db:demo` tại `SRC` để bổ sung một lần; không chạy lại seed trắng. Lệnh không đặt lại các đơn đã demo. Mở `SQL/truy_van_mau.sql` trong SSMS để chạy ví dụ SP/function/view/index/transaction/trigger/bảo mật; mở `SQL/sao_luu_mau.sql` để sao lưu. Xem hướng dẫn và kết quả mong đợi trong [SQL/README.md](SQL/README.md).
+Trên bản cài mới, chạy `npm.cmd run db:demo` tại `SRC` để bổ sung một lần; không chạy lại seed trắng. Lệnh không đặt lại các đơn đã demo. Truy vấn mẫu, sao lưu và bài tập bốn thành viên nằm trong bộ `thuc_hanh_nhom` riêng, được loại khỏi Git để có thể chuyển ra ngoài dự án. Xem hướng dẫn và kết quả mong đợi trong [SQL/README.md](SQL/README.md).

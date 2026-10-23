@@ -230,18 +230,6 @@
         "type": "NVARCHAR(200)",
         "optional": false,
         "output": false
-      },
-      {
-        "name": "ViDo",
-        "type": "DECIMAL(10,7)",
-        "optional": true,
-        "output": false
-      },
-      {
-        "name": "KinhDo",
-        "type": "DECIMAL(10,7)",
-        "optional": true,
-        "output": false
       }
     ],
     "sp_CapNhatTrangThaiKTV": [
@@ -340,53 +328,6 @@
         "output": false
       }
     ],
-    "sp_TaoMaOTP": [
-      {
-        "name": "Id",
-        "type": "UNIQUEIDENTIFIER",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "MucDich",
-        "type": "VARCHAR(30)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "DiaChiNhan",
-        "type": "NVARCHAR(254)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "MaBam",
-        "type": "CHAR(64)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "NgayHetHan",
-        "type": "DATETIME2",
-        "optional": false,
-        "output": false
-      }
-    ],
-    "sp_XacThucOTP": [
-      {
-        "name": "Id",
-        "type": "UNIQUEIDENTIFIER",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "MaBam",
-        "type": "CHAR(64)",
-        "optional": false,
-        "output": false
-      }
-    ],
-    "sp_DonDepOTPHetHan": [],
     "sp_LuuTepDinhKem": [
       {
         "name": "NguoiThucHienId",
@@ -860,32 +801,6 @@
         "name": "NoiBo",
         "type": "BIT",
         "optional": true,
-        "output": false
-      }
-    ],
-    "sp_LuuViTriKhachHang": [
-      {
-        "name": "NguoiThucHienId",
-        "type": "INT",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "DonHangId",
-        "type": "INT",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "ViDo",
-        "type": "DECIMAL(10,7)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "KinhDo",
-        "type": "DECIMAL(10,7)",
-        "optional": false,
         "output": false
       }
     ],
@@ -1582,7 +1497,6 @@
     "vw_TraoDoiHoTro",
     "vw_DanhGia",
     "vw_GhiChuDon",
-    "vw_ViTriKhachHang",
     "vw_TepDinhKem",
     "vw_ThongBao",
     "vw_NhatKy",
@@ -1593,8 +1507,7 @@
     "vw_DoanhThuNgay",
     "vw_ViKyThuatVien",
     "vw_HieuSuatKyThuatVien",
-    "vw_HoTroCanXuLy",
-    "vw_XacThucOTP"
+    "vw_HoTroCanXuLy"
   ],
   "functions": {
     "fn_SoDuVi": [

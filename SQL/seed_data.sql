@@ -7,7 +7,7 @@ SET ARITHABORT ON;
 SET NUMERIC_ROUNDABORT OFF;
 GO
 /* DỮ LIỆU BAN ĐẦU SẠCH: 7 người dùng, 1 hồ sơ thợ, 5 nhóm/5 dịch vụ,
-   1 tài khoản ngân hàng MÔ PHỎNG và cấu hình. KHÔNG có đơn/OTP/sổ cái/nhật ký.
+   1 tài khoản ngân hàng MÔ PHỎNG và cấu hình. KHÔNG có đơn/sổ cái/nhật ký.
    Mật khẩu cả 7 tài khoản: 123456. Chỉ dùng cho học tập trên máy cá nhân.
    Script chỉ chèn khi database còn trắng; không xóa giao dịch đang có. */
 SET XACT_ABORT ON;

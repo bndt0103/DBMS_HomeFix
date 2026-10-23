@@ -1,7 +1,7 @@
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
 GO
-/* 7 role nghiệp vụ + role kỹ thuật nội bộ phục vụ đăng nhập/OTP.
+/* 7 role nghiệp vụ + role kỹ thuật nội bộ phục vụ đăng nhập và đăng ký.
    Tài khoản hf_* WITHOUT LOGIN dùng để EXECUTE AS USER khi demo hoặc từ backend.
    Không cấp db_owner/db_datareader/db_datawriter cho tài khoản ứng dụng.
    Backend lọc phạm vi dữ liệu theo JWT; role SQL giới hạn đối tượng được đọc/chạy.
@@ -58,11 +58,9 @@ DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.YeuCauHoTro TO HomeFix_KH, Ho
 DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.TraoDoiHoTro TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.DanhGia TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.GhiChuDon TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
-DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.ViTriKhachHang TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.ThongBao TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.NhatKy TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.CauHinh TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
-DENY SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.XacThucOTP TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 DENY SELECT ON OBJECT::dbo.NguoiDung(MatKhauBam) TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 DENY UPDATE, DELETE ON OBJECT::dbo.GiaoDichVi TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN, HomeFix_UngDung;
 GO
@@ -81,7 +79,6 @@ GRANT SELECT ON OBJECT::dbo.vw_ChiTietVatTu TO HomeFix_KH;
 GRANT SELECT ON OBJECT::dbo.vw_PhieuNghiemThu TO HomeFix_KH;
 GRANT SELECT ON OBJECT::dbo.vw_ThanhToan TO HomeFix_KH;
 GRANT SELECT ON OBJECT::dbo.vw_GhiChuDon TO HomeFix_KH;
-GRANT SELECT ON OBJECT::dbo.vw_ViTriKhachHang TO HomeFix_KH;
 GRANT SELECT ON OBJECT::dbo.vw_TepDinhKem TO HomeFix_KH;
 GRANT SELECT ON OBJECT::dbo.vw_DanhGia TO HomeFix_KH;
 GRANT SELECT ON OBJECT::dbo.vw_YeuCauHoTro TO HomeFix_KH;
@@ -106,7 +103,6 @@ GRANT SELECT ON OBJECT::dbo.vw_ChiTietVatTu TO HomeFix_KTV;
 GRANT SELECT ON OBJECT::dbo.vw_PhieuNghiemThu TO HomeFix_KTV;
 GRANT SELECT ON OBJECT::dbo.vw_ThanhToan TO HomeFix_KTV;
 GRANT SELECT ON OBJECT::dbo.vw_GhiChuDon TO HomeFix_KTV;
-GRANT SELECT ON OBJECT::dbo.vw_ViTriKhachHang TO HomeFix_KTV;
 GRANT SELECT ON OBJECT::dbo.vw_TepDinhKem TO HomeFix_KTV;
 GRANT SELECT ON OBJECT::dbo.vw_DanhGia TO HomeFix_KTV;
 GRANT SELECT ON OBJECT::dbo.vw_YeuCauHoTro TO HomeFix_KTV;
@@ -137,7 +133,6 @@ GRANT SELECT ON OBJECT::dbo.vw_ChiTietVatTu TO HomeFix_DPV;
 GRANT SELECT ON OBJECT::dbo.vw_PhieuNghiemThu TO HomeFix_DPV;
 GRANT SELECT ON OBJECT::dbo.vw_ThanhToan TO HomeFix_DPV;
 GRANT SELECT ON OBJECT::dbo.vw_GhiChuDon TO HomeFix_DPV;
-GRANT SELECT ON OBJECT::dbo.vw_ViTriKhachHang TO HomeFix_DPV;
 GRANT SELECT ON OBJECT::dbo.vw_TepDinhKem TO HomeFix_DPV;
 GRANT SELECT ON OBJECT::dbo.vw_DanhGia TO HomeFix_DPV;
 GRANT SELECT ON OBJECT::dbo.vw_YeuCauHoTro TO HomeFix_DPV;
@@ -163,7 +158,6 @@ GRANT SELECT ON OBJECT::dbo.vw_ChiTietVatTu TO HomeFix_CSKH;
 GRANT SELECT ON OBJECT::dbo.vw_PhieuNghiemThu TO HomeFix_CSKH;
 GRANT SELECT ON OBJECT::dbo.vw_ThanhToan TO HomeFix_CSKH;
 GRANT SELECT ON OBJECT::dbo.vw_GhiChuDon TO HomeFix_CSKH;
-GRANT SELECT ON OBJECT::dbo.vw_ViTriKhachHang TO HomeFix_CSKH;
 GRANT SELECT ON OBJECT::dbo.vw_TepDinhKem TO HomeFix_CSKH;
 GRANT SELECT ON OBJECT::dbo.vw_DanhGia TO HomeFix_CSKH;
 GRANT SELECT ON OBJECT::dbo.vw_YeuCauHoTro TO HomeFix_CSKH;
@@ -186,7 +180,6 @@ GRANT SELECT ON OBJECT::dbo.vw_ChiTietVatTu TO HomeFix_KT;
 GRANT SELECT ON OBJECT::dbo.vw_PhieuNghiemThu TO HomeFix_KT;
 GRANT SELECT ON OBJECT::dbo.vw_ThanhToan TO HomeFix_KT;
 GRANT SELECT ON OBJECT::dbo.vw_GhiChuDon TO HomeFix_KT;
-GRANT SELECT ON OBJECT::dbo.vw_ViTriKhachHang TO HomeFix_KT;
 GRANT SELECT ON OBJECT::dbo.vw_TepDinhKem TO HomeFix_KT;
 GRANT SELECT ON OBJECT::dbo.vw_DanhGia TO HomeFix_KT;
 GRANT SELECT ON OBJECT::dbo.vw_YeuCauHoTro TO HomeFix_KT;
@@ -218,7 +211,6 @@ GRANT SELECT ON OBJECT::dbo.vw_ChiTietVatTu TO HomeFix_GD;
 GRANT SELECT ON OBJECT::dbo.vw_PhieuNghiemThu TO HomeFix_GD;
 GRANT SELECT ON OBJECT::dbo.vw_ThanhToan TO HomeFix_GD;
 GRANT SELECT ON OBJECT::dbo.vw_GhiChuDon TO HomeFix_GD;
-GRANT SELECT ON OBJECT::dbo.vw_ViTriKhachHang TO HomeFix_GD;
 GRANT SELECT ON OBJECT::dbo.vw_TepDinhKem TO HomeFix_GD;
 GRANT SELECT ON OBJECT::dbo.vw_DanhGia TO HomeFix_GD;
 GRANT SELECT ON OBJECT::dbo.vw_YeuCauHoTro TO HomeFix_GD;
@@ -250,7 +242,6 @@ GRANT SELECT ON OBJECT::dbo.vw_ChiTietVatTu TO HomeFix_ADMIN;
 GRANT SELECT ON OBJECT::dbo.vw_PhieuNghiemThu TO HomeFix_ADMIN;
 GRANT SELECT ON OBJECT::dbo.vw_ThanhToan TO HomeFix_ADMIN;
 GRANT SELECT ON OBJECT::dbo.vw_GhiChuDon TO HomeFix_ADMIN;
-GRANT SELECT ON OBJECT::dbo.vw_ViTriKhachHang TO HomeFix_ADMIN;
 GRANT SELECT ON OBJECT::dbo.vw_TepDinhKem TO HomeFix_ADMIN;
 GRANT SELECT ON OBJECT::dbo.vw_DanhGia TO HomeFix_ADMIN;
 GRANT SELECT ON OBJECT::dbo.vw_YeuCauHoTro TO HomeFix_ADMIN;
@@ -271,7 +262,6 @@ GRANT SELECT ON OBJECT::dbo.vw_CauHinh TO HomeFix_ADMIN;
 GO
 -- Đọc dữ liệu: UngDung
 GRANT SELECT ON OBJECT::dbo.vw_XacThucDangNhap TO HomeFix_UngDung;
-GRANT SELECT ON OBJECT::dbo.vw_XacThucOTP TO HomeFix_UngDung;
 GRANT SELECT ON OBJECT::dbo.vw_NguoiDung TO HomeFix_UngDung;
 GRANT SELECT ON OBJECT::dbo.vw_DichVuCongKhai TO HomeFix_UngDung;
 GRANT SELECT ON OBJECT::dbo.vw_DichVu TO HomeFix_UngDung;
@@ -288,9 +278,6 @@ GRANT EXECUTE ON OBJECT::dbo.sp_CapNhatTho TO HomeFix_KTV;
 GRANT EXECUTE ON OBJECT::dbo.sp_CapNhatTrangThaiKTV TO HomeFix_KTV;
 GRANT EXECUTE ON OBJECT::dbo.sp_GuiHoSoKTV TO HomeFix_KH;
 GRANT EXECUTE ON OBJECT::dbo.sp_DuyetHoSoKTV TO HomeFix_ADMIN;
-GRANT EXECUTE ON OBJECT::dbo.sp_TaoMaOTP TO HomeFix_UngDung;
-GRANT EXECUTE ON OBJECT::dbo.sp_XacThucOTP TO HomeFix_UngDung;
-GRANT EXECUTE ON OBJECT::dbo.sp_DonDepOTPHetHan TO HomeFix_UngDung;
 GRANT EXECUTE ON OBJECT::dbo.sp_LuuTepDinhKem TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN;
 GRANT EXECUTE ON OBJECT::dbo.sp_GhiNhatKyVaThongBao TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN;
 GRANT EXECUTE ON OBJECT::dbo.sp_DanhDauThongBao TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_GD, HomeFix_ADMIN;
@@ -304,7 +291,6 @@ GRANT EXECUTE ON OBJECT::dbo.sp_TaoLenhDieuPhoi TO HomeFix_DPV, HomeFix_ADMIN;
 GRANT EXECUTE ON OBJECT::dbo.sp_KTVPhanHoiDieuPhoi TO HomeFix_KTV;
 GRANT EXECUTE ON OBJECT::dbo.sp_ChuyenTrangThaiDon TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_ADMIN;
 GRANT EXECUTE ON OBJECT::dbo.sp_ThemGhiChuDon TO HomeFix_KH, HomeFix_KTV, HomeFix_DPV, HomeFix_CSKH, HomeFix_KT, HomeFix_ADMIN;
-GRANT EXECUTE ON OBJECT::dbo.sp_LuuViTriKhachHang TO HomeFix_KH;
 GRANT EXECUTE ON OBJECT::dbo.sp_LuuBangKeVatTu TO HomeFix_KTV;
 GRANT EXECUTE ON OBJECT::dbo.sp_ThemChiTietVatTu TO HomeFix_KTV;
 GRANT EXECUTE ON OBJECT::dbo.sp_TaoPhieuNghiemThu TO HomeFix_KTV;

@@ -13,3 +13,7 @@
 *.ldf
 Thumbs.db
 .DS_Store
+
+# Tài liệu thực hành giữ riêng, không đưa lên GitHub.
+/SQL/thuc_hanh_nhom/
+/thuc_hanh_nhom/

@@ -2922,35 +2922,6 @@ tr:last-child td {
   flex-wrap: wrap;
 }
 
-.otp-panel {
-  padding: 16px;
-  margin-bottom: 16px;
-  border: 1px solid #d8e5de;
-  border-radius: 12px;
-  background: #f5faf7;
-}
-
-.otp-panel p {
-  font-size: 14px;
-}
-
-.otp-panel input {
-  letter-spacing: 0.2em;
-}
-
-.admin-otp-input::placeholder {
-  color: #9aa0a6;
-  font-size: 14px;
-  font-weight: 400;
-  letter-spacing: normal;
-}
-
-.otp-request-btn {
-  background: #116a4e;
-  border-color: #116a4e;
-  color: #fff;
-}
-
 .accountant-sidebar {
   background: #143d2f;
 }
