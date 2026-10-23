@@ -77,3 +77,53 @@ BEGIN
     RETURN COALESCE(@TongTien, 0);
 END;
 GO
+
+-- Cùng một bộ lọc được dùng khi hiển thị danh sách và khi ghi lệnh phân công.
+-- Khu vực/tay nghề có thể ngăn cách bằng dấu phẩy hoặc chấm phẩy.
+-- So từng thành phần địa chỉ để Quận 1 không bị nhầm với Quận 10.
+CREATE OR ALTER FUNCTION dbo.fn_KyThuatVienPhuHop (@DonHangId INT)
+RETURNS TABLE
+AS
+RETURN (
+    SELECT ktv.Id, nd.HoTen, nd.SoDienThoai, ktv.NhomTayNghe,
+        ktv.KhuVucPhucVu, ktv.TrangThaiSanSang, ktv.PhienBan
+    FROM dbo.DonHang AS dh
+    INNER JOIN dbo.DichVu AS dv ON dv.Id = dh.DichVuId
+    INNER JOIN dbo.DanhMucDichVu AS dm ON dm.Id = dv.DanhMucId
+    CROSS JOIN dbo.KyThuatVien AS ktv
+    INNER JOIN dbo.NguoiDung AS nd ON nd.Id = ktv.Id
+    WHERE dh.Id = @DonHangId AND dh.TrangThai = 'ChoPhanCong'
+      AND nd.VaiTro = 'KTV' AND nd.DangHoatDong = 1
+      AND ktv.TrangThaiSanSang = 'SanSang'
+      AND NOT EXISTS (
+          SELECT 1 FROM dbo.LenhDieuPhoi AS l
+          WHERE l.KyThuatVienId = ktv.Id AND l.DangHoatDong = 1
+      )
+      AND NOT EXISTS (
+          SELECT 1 FROM dbo.DonHang AS d
+          WHERE d.KyThuatVienId = ktv.Id AND d.TrangThai NOT IN ('HoanThanh', 'Huy')
+      )
+      AND EXISTS (
+          SELECT 1 FROM STRING_SPLIT(REPLACE(ktv.NhomTayNghe, N';', N','), N',') AS t
+          WHERE LTRIM(RTRIM(t.value)) COLLATE Latin1_General_100_CI_AI
+              IN (dm.Ten COLLATE Latin1_General_100_CI_AI, dm.Ma COLLATE Latin1_General_100_CI_AI)
+      )
+      AND EXISTS (
+          SELECT 1
+          FROM STRING_SPLIT(REPLACE(ktv.KhuVucPhucVu, N';', N','), N',') AS k
+          CROSS JOIN STRING_SPLIT(dh.DiaChi, N',') AS d
+          CROSS APPLY (SELECT
+              REPLACE(REPLACE(REPLACE(REPLACE(LOWER(k.value) COLLATE Latin1_General_100_CI_AI,
+                  N'.', N''), N' ', N''), N'thànhphố', N'tp'), N'quận', N'q') AS KhuVuc,
+              REPLACE(REPLACE(REPLACE(REPLACE(LOWER(d.value) COLLATE Latin1_General_100_CI_AI,
+                  N'.', N''), N' ', N''), N'thànhphố', N'tp'), N'quận', N'q') AS DiaChi
+          ) AS c
+          WHERE c.KhuVuc <> N'' AND (
+              c.KhuVuc = c.DiaChi
+              OR (c.KhuVuc IN (N'tphochiminh', N'hochiminh', N'tphcm', N'hcm')
+                  AND c.DiaChi IN (N'tphochiminh', N'hochiminh', N'tphcm', N'hcm', N'thuduc', N'tpthuduc'))
+              OR (c.KhuVuc IN (N'thuduc', N'tpthuduc') AND c.DiaChi IN (N'thuduc', N'tpthuduc'))
+          )
+      )
+);
+GO

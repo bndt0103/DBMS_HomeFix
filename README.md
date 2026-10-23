@@ -16,7 +16,7 @@ SQL/
   modules/
     00_schema.sql          28 bảng và ràng buộc
     01_index.sql           Index truy vấn và UNIQUE có điều kiện
-    02_function.sql        6 hàm
+    02_function.sql        7 hàm
     03_view.sql            34 view
     04_sp.sql              19 SP tài khoản/tiện ích
     05_transaction.sql     30 SP nghiệp vụ/báo cáo

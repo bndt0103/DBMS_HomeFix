@@ -734,6 +734,8 @@ BEGIN
             UPDATE dbo.DichVu SET DanhMucId = @DanhMucId, Ten = @Ten, MoTa = @MoTa, PhiKiemTra = @PhiKiemTra,
                 TienCong = @TienCong, TyLeHoaHong = @TyLeHoaHong, DangHoatDong = @DangHoatDong WHERE Id = @Id;
         END;
+        INSERT INTO dbo.NhatKy(NguoiThucHienId, ThaoTac, DoiTuong, DoiTuongId)
+        VALUES (@NguoiThucHienId, N'Lưu dịch vụ', N'DichVu', @Id);
         IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
         SELECT Id, DanhMucId, Ten, MoTa, PhiKiemTra, TienCong, TyLeHoaHong, DangHoatDong, PhienBan FROM dbo.vw_DichVu WHERE Id = @Id;
     END TRY
@@ -788,6 +790,8 @@ BEGIN
 
             UPDATE dbo.DanhMucDichVu SET Ten = @Ten, Ma = @Ma, DangHoatDong = @DangHoatDong WHERE Id = @Id;
         END;
+        INSERT INTO dbo.NhatKy(NguoiThucHienId, ThaoTac, DoiTuong, DoiTuongId)
+        VALUES (@NguoiThucHienId, N'Lưu danh mục dịch vụ', N'DanhMucDichVu', @Id);
         IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
         SELECT Id, Ten, Ma, DangHoatDong, PhienBan FROM dbo.vw_DanhMucDichVu WHERE Id = @Id;
     END TRY
@@ -833,6 +837,8 @@ BEGIN
         IF EXISTS (SELECT 1 FROM dbo.CauHinh WITH (UPDLOCK, HOLDLOCK) WHERE Khoa = @Khoa)
             UPDATE dbo.CauHinh SET GiaTri = @GiaTri, NhanHienThi = @NhanHienThi WHERE Khoa = @Khoa;
         ELSE INSERT INTO dbo.CauHinh(Khoa, GiaTri, NhanHienThi) VALUES (@Khoa, @GiaTri, @NhanHienThi);
+        INSERT INTO dbo.NhatKy(NguoiThucHienId, ThaoTac, DoiTuong, ChiTiet)
+        VALUES (@NguoiThucHienId, N'Lưu cấu hình', N'CauHinh', @Khoa);
         IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
         SELECT Khoa, GiaTri, NhanHienThi FROM dbo.vw_CauHinh WHERE Khoa = @Khoa;
     END TRY

@@ -12,6 +12,7 @@ Mở mã nguồn theo liên kết để đọc định nghĩa. Các file thực 
 | `fn_ThongKeDon` | FUNCTION | [02_function.sql:35](../modules/02_function.sql#L35) |
 | `fn_HanBaoHanh` | FUNCTION | [02_function.sql:49](../modules/02_function.sql#L49) |
 | `fn_TongTienDonHang` | FUNCTION | [02_function.sql:59](../modules/02_function.sql#L59) |
+| `fn_KyThuatVienPhuHop` | FUNCTION | [02_function.sql:84](../modules/02_function.sql#L84) |
 
 ## 03_view.sql — Đỗ Anh Tuấn
 
@@ -42,15 +43,15 @@ Mở mã nguồn theo liên kết để đọc định nghĩa. Các file thực 
 | `vw_TepDinhKem` | VIEW | [03_view.sql:127](../modules/03_view.sql#L127) |
 | `vw_ThongBao` | VIEW | [03_view.sql:132](../modules/03_view.sql#L132) |
 | `vw_NhatKy` | VIEW | [03_view.sql:137](../modules/03_view.sql#L137) |
-| `vw_CauHinh` | VIEW | [03_view.sql:142](../modules/03_view.sql#L142) |
-| `vw_XacThucDangNhap` | VIEW | [03_view.sql:148](../modules/03_view.sql#L148) |
-| `vw_DonHangTongHop` | VIEW | [03_view.sql:153](../modules/03_view.sql#L153) |
-| `vw_DichVuCongKhai` | VIEW | [03_view.sql:166](../modules/03_view.sql#L166) |
-| `vw_DoanhThuNgay` | VIEW | [03_view.sql:174](../modules/03_view.sql#L174) |
-| `vw_ViKyThuatVien` | VIEW | [03_view.sql:185](../modules/03_view.sql#L185) |
-| `vw_HieuSuatKyThuatVien` | VIEW | [03_view.sql:193](../modules/03_view.sql#L193) |
-| `vw_HoTroCanXuLy` | VIEW | [03_view.sql:205](../modules/03_view.sql#L205) |
-| `vw_XacThucOTP` | VIEW | [03_view.sql:213](../modules/03_view.sql#L213) |
+| `vw_CauHinh` | VIEW | [03_view.sql:144](../modules/03_view.sql#L144) |
+| `vw_XacThucDangNhap` | VIEW | [03_view.sql:150](../modules/03_view.sql#L150) |
+| `vw_DonHangTongHop` | VIEW | [03_view.sql:155](../modules/03_view.sql#L155) |
+| `vw_DichVuCongKhai` | VIEW | [03_view.sql:168](../modules/03_view.sql#L168) |
+| `vw_DoanhThuNgay` | VIEW | [03_view.sql:176](../modules/03_view.sql#L176) |
+| `vw_ViKyThuatVien` | VIEW | [03_view.sql:187](../modules/03_view.sql#L187) |
+| `vw_HieuSuatKyThuatVien` | VIEW | [03_view.sql:195](../modules/03_view.sql#L195) |
+| `vw_HoTroCanXuLy` | VIEW | [03_view.sql:207](../modules/03_view.sql#L207) |
+| `vw_XacThucOTP` | VIEW | [03_view.sql:215](../modules/03_view.sql#L215) |
 
 ## 04_sp.sql — Bùi Nguyễn Duy Trung
 
@@ -73,8 +74,8 @@ Mở mã nguồn theo liên kết để đọc định nghĩa. Các file thực 
 | `sp_GhiNhatKyVaThongBao` | PROCEDURE | [04_sp.sql:609](../modules/04_sp.sql#L609) |
 | `sp_DanhDauThongBao` | PROCEDURE | [04_sp.sql:656](../modules/04_sp.sql#L656) |
 | `sp_LuuDichVu` | PROCEDURE | [04_sp.sql:691](../modules/04_sp.sql#L691) |
-| `sp_LuuDanhMucDichVu` | PROCEDURE | [04_sp.sql:748](../modules/04_sp.sql#L748) |
-| `sp_LuuCauHinh` | PROCEDURE | [04_sp.sql:802](../modules/04_sp.sql#L802) |
+| `sp_LuuDanhMucDichVu` | PROCEDURE | [04_sp.sql:750](../modules/04_sp.sql#L750) |
+| `sp_LuuCauHinh` | PROCEDURE | [04_sp.sql:806](../modules/04_sp.sql#L806) |
 
 ## 05_transaction.sql — Bùi Nguyễn Duy Trung; Tài phụ trách đối soát, Tuấn phụ trách báo cáo
 
@@ -82,34 +83,34 @@ Mở mã nguồn theo liên kết để đọc định nghĩa. Các file thực 
 |---|---|---|
 | `sp_TaoDonHang` | PROCEDURE | [05_transaction.sql:11](../modules/05_transaction.sql#L11) |
 | `sp_TaoBaoGiaSoBo` | PROCEDURE | [05_transaction.sql:95](../modules/05_transaction.sql#L95) |
-| `sp_KhachDuyetBaoGiaSoBo` | PROCEDURE | [05_transaction.sql:180](../modules/05_transaction.sql#L180) |
-| `sp_TaoLenhDieuPhoi` | PROCEDURE | [05_transaction.sql:251](../modules/05_transaction.sql#L251) |
-| `sp_KTVPhanHoiDieuPhoi` | PROCEDURE | [05_transaction.sql:328](../modules/05_transaction.sql#L328) |
-| `sp_ChuyenTrangThaiDon` | PROCEDURE | [05_transaction.sql:408](../modules/05_transaction.sql#L408) |
-| `sp_ThemGhiChuDon` | PROCEDURE | [05_transaction.sql:508](../modules/05_transaction.sql#L508) |
-| `sp_LuuViTriKhachHang` | PROCEDURE | [05_transaction.sql:573](../modules/05_transaction.sql#L573) |
-| `sp_LuuBangKeVatTu` | PROCEDURE | [05_transaction.sql:639](../modules/05_transaction.sql#L639) |
-| `sp_ThemChiTietVatTu` | PROCEDURE | [05_transaction.sql:730](../modules/05_transaction.sql#L730) |
-| `sp_TaoPhieuNghiemThu` | PROCEDURE | [05_transaction.sql:807](../modules/05_transaction.sql#L807) |
-| `sp_KTVKyNghiemThu` | PROCEDURE | [05_transaction.sql:909](../modules/05_transaction.sql#L909) |
-| `sp_KhachHangKyNghiemThu` | PROCEDURE | [05_transaction.sql:974](../modules/05_transaction.sql#L974) |
-| `sp_XacNhanThanhToanCOD` | PROCEDURE | [05_transaction.sql:1051](../modules/05_transaction.sql#L1051) |
-| `sp_TaoYeuCauThanhToan` | PROCEDURE | [05_transaction.sql:1129](../modules/05_transaction.sql#L1129) |
-| `sp_XacNhanThanhToanNganHang` | PROCEDURE | [05_transaction.sql:1210](../modules/05_transaction.sql#L1210) |
-| `sp_DoiSoatCOD` | PROCEDURE | [05_transaction.sql:1318](../modules/05_transaction.sql#L1318) |
-| `sp_TaoYeuCauVi` | PROCEDURE | [05_transaction.sql:1398](../modules/05_transaction.sql#L1398) |
-| `sp_DuyetYeuCauVi` | PROCEDURE | [05_transaction.sql:1471](../modules/05_transaction.sql#L1471) |
-| `sp_LuuTaiKhoanNganHang` | PROCEDURE | [05_transaction.sql:1552](../modules/05_transaction.sql#L1552) |
-| `sp_TaoYeuCauHoTro` | PROCEDURE | [05_transaction.sql:1637](../modules/05_transaction.sql#L1637) |
-| `sp_XuLyHoTro` | PROCEDURE | [05_transaction.sql:1711](../modules/05_transaction.sql#L1711) |
-| `sp_ThemTraoDoiHoTro` | PROCEDURE | [05_transaction.sql:1785](../modules/05_transaction.sql#L1785) |
-| `sp_TaoDanhGiaDonHang` | PROCEDURE | [05_transaction.sql:1855](../modules/05_transaction.sql#L1855) |
-| `sp_BaoCaoTongHop` | PROCEDURE | [05_transaction.sql:1918](../modules/05_transaction.sql#L1918) |
-| `sp_HuyYeuCauVi` | PROCEDURE | [05_transaction.sql:1944](../modules/05_transaction.sql#L1944) |
-| `sp_TuChoiNghiemThu` | PROCEDURE | [05_transaction.sql:1983](../modules/05_transaction.sql#L1983) |
-| `sp_LuuTuyChonGiamSat` | PROCEDURE | [05_transaction.sql:2028](../modules/05_transaction.sql#L2028) |
-| `sp_DuyetChinhSach` | PROCEDURE | [05_transaction.sql:2067](../modules/05_transaction.sql#L2067) |
-| `sp_DoiPhuongThucThanhToan` | PROCEDURE | [05_transaction.sql:2112](../modules/05_transaction.sql#L2112) |
+| `sp_KhachDuyetBaoGiaSoBo` | PROCEDURE | [05_transaction.sql:182](../modules/05_transaction.sql#L182) |
+| `sp_TaoLenhDieuPhoi` | PROCEDURE | [05_transaction.sql:255](../modules/05_transaction.sql#L255) |
+| `sp_KTVPhanHoiDieuPhoi` | PROCEDURE | [05_transaction.sql:334](../modules/05_transaction.sql#L334) |
+| `sp_ChuyenTrangThaiDon` | PROCEDURE | [05_transaction.sql:414](../modules/05_transaction.sql#L414) |
+| `sp_ThemGhiChuDon` | PROCEDURE | [05_transaction.sql:514](../modules/05_transaction.sql#L514) |
+| `sp_LuuViTriKhachHang` | PROCEDURE | [05_transaction.sql:579](../modules/05_transaction.sql#L579) |
+| `sp_LuuBangKeVatTu` | PROCEDURE | [05_transaction.sql:645](../modules/05_transaction.sql#L645) |
+| `sp_ThemChiTietVatTu` | PROCEDURE | [05_transaction.sql:736](../modules/05_transaction.sql#L736) |
+| `sp_TaoPhieuNghiemThu` | PROCEDURE | [05_transaction.sql:813](../modules/05_transaction.sql#L813) |
+| `sp_KTVKyNghiemThu` | PROCEDURE | [05_transaction.sql:915](../modules/05_transaction.sql#L915) |
+| `sp_KhachHangKyNghiemThu` | PROCEDURE | [05_transaction.sql:980](../modules/05_transaction.sql#L980) |
+| `sp_XacNhanThanhToanCOD` | PROCEDURE | [05_transaction.sql:1057](../modules/05_transaction.sql#L1057) |
+| `sp_TaoYeuCauThanhToan` | PROCEDURE | [05_transaction.sql:1135](../modules/05_transaction.sql#L1135) |
+| `sp_XacNhanThanhToanNganHang` | PROCEDURE | [05_transaction.sql:1216](../modules/05_transaction.sql#L1216) |
+| `sp_DoiSoatCOD` | PROCEDURE | [05_transaction.sql:1324](../modules/05_transaction.sql#L1324) |
+| `sp_TaoYeuCauVi` | PROCEDURE | [05_transaction.sql:1404](../modules/05_transaction.sql#L1404) |
+| `sp_DuyetYeuCauVi` | PROCEDURE | [05_transaction.sql:1477](../modules/05_transaction.sql#L1477) |
+| `sp_LuuTaiKhoanNganHang` | PROCEDURE | [05_transaction.sql:1558](../modules/05_transaction.sql#L1558) |
+| `sp_TaoYeuCauHoTro` | PROCEDURE | [05_transaction.sql:1645](../modules/05_transaction.sql#L1645) |
+| `sp_XuLyHoTro` | PROCEDURE | [05_transaction.sql:1719](../modules/05_transaction.sql#L1719) |
+| `sp_ThemTraoDoiHoTro` | PROCEDURE | [05_transaction.sql:1793](../modules/05_transaction.sql#L1793) |
+| `sp_TaoDanhGiaDonHang` | PROCEDURE | [05_transaction.sql:1863](../modules/05_transaction.sql#L1863) |
+| `sp_BaoCaoTongHop` | PROCEDURE | [05_transaction.sql:1926](../modules/05_transaction.sql#L1926) |
+| `sp_HuyYeuCauVi` | PROCEDURE | [05_transaction.sql:1952](../modules/05_transaction.sql#L1952) |
+| `sp_TuChoiNghiemThu` | PROCEDURE | [05_transaction.sql:1991](../modules/05_transaction.sql#L1991) |
+| `sp_LuuTuyChonGiamSat` | PROCEDURE | [05_transaction.sql:2036](../modules/05_transaction.sql#L2036) |
+| `sp_DuyetChinhSach` | PROCEDURE | [05_transaction.sql:2075](../modules/05_transaction.sql#L2075) |
+| `sp_DoiPhuongThucThanhToan` | PROCEDURE | [05_transaction.sql:2120](../modules/05_transaction.sql#L2120) |
 
 ## 06_trigger.sql — Lê Tấn Tài; Trung phụ trách trigger trạng thái
 
@@ -136,26 +137,26 @@ Mỗi bảng dưới đây có PK. Mở `00_schema.sql` để giải thích cộ
 | Bảng | Số cột hiện tại | Số dòng lúc kiểm tra |
 |---|---|---|
 | `BangKeVatTu` | 7 | 5 |
-| `BaoGiaSoBo` | 10 | 12 |
+| `BaoGiaSoBo` | 10 | 13 |
 | `CauHinh` | 3 | 6 |
 | `ChiTietVatTu` | 7 | 5 |
 | `DanhGia` | 7 | 3 |
 | `DanhMucDichVu` | 5 | 5 |
 | `DichVu` | 9 | 25 |
-| `DoiSoat` | 11 | 5 |
-| `DonHang` | 13 | 13 |
+| `DoiSoat` | 11 | 6 |
+| `DonHang` | 13 | 14 |
 | `GhiChuDon` | 6 | 0 |
 | `GiaoDichVi` | 9 | 5 |
 | `HoSoKTV` | 12 | 0 |
 | `KyThuatVien` | 8 | 4 |
 | `LenhDieuPhoi` | 8 | 11 |
-| `LichSuDonHang` | 7 | 90 |
+| `LichSuDonHang` | 7 | 96 |
 | `NguoiDung` | 10 | 16 |
 | `NhatKy` | 7 | 5 |
-| `PhieuNghiemThu` | 18 | 6 |
+| `PhieuNghiemThu` | 18 | 7 |
 | `TaiKhoanNganHang` | 7 | 1 |
-| `TepDinhKem` | 9 | 21 |
-| `ThanhToan` | 10 | 5 |
+| `TepDinhKem` | 9 | 24 |
+| `ThanhToan` | 10 | 6 |
 | `ThongBao` | 7 | 0 |
 | `TraoDoiHoTro` | 6 | 0 |
 | `ViTriKhachHang` | 5 | 1 |

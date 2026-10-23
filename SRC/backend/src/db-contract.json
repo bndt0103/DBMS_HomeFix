@@ -1578,6 +1578,14 @@
         "optional": false,
         "output": false
       }
+    ],
+    "fn_KyThuatVienPhuHop": [
+      {
+        "name": "DonHangId",
+        "type": "INT",
+        "optional": false,
+        "output": false
+      }
     ]
   }
 }

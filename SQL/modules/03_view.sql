@@ -136,8 +136,10 @@ FROM dbo.ThongBao;
 GO
 CREATE OR ALTER VIEW dbo.vw_NhatKy
 AS
-SELECT Id, NguoiThucHienId, ThaoTac, DoiTuong, DoiTuongId, ChiTiet, NgayTao
-FROM dbo.NhatKy;
+SELECT nk.Id, nk.NguoiThucHienId, nd.HoTen AS TenNguoiThucHien,
+    nk.ThaoTac, nk.DoiTuong, nk.DoiTuongId, nk.ChiTiet, nk.NgayTao
+FROM dbo.NhatKy AS nk
+LEFT JOIN dbo.NguoiDung AS nd ON nd.Id = nk.NguoiThucHienId;
 GO
 CREATE OR ALTER VIEW dbo.vw_CauHinh
 AS

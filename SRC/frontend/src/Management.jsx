@@ -593,7 +593,11 @@ export function Management() {
               render={(a) => (
                 <tr key={a.id}>
                   <td>{date(a.createdAt)}</td>
-                  <td>{a.actorName || "Hệ thống / trigger"}</td>
+                  <td>
+                    {a.actorId
+                      ? `#${a.actorId} · ${a.actorName || "Chưa có tên"}`
+                      : "Hệ thống"}
+                  </td>
                   <td>{a.action}</td>
                   <td>
                     {a.entity} #{a.entityId || "—"}

@@ -6,6 +6,7 @@ const names = {
   DoChinhXacMet: "accuracyMeters",
   ThaoTac: "action",
   NguoiThucHienId: "actorId",
+  TenNguoiThucHien: "actorName",
   DiaChi: "address",
   SoTien: "amount",
   NgayApDung: "appliedAt",

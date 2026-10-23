@@ -46,6 +46,10 @@ SELECT * FROM dbo.fn_ThongKeDon(NULL, NULL);
 SELECT * FROM dbo.fn_ThongKeDon('20261001', '20261031');
 SELECT d.Id, d.TrangThai, bh.HanBaoHanh
 FROM dbo.vw_DonHangTongHop d CROSS APPLY dbo.fn_HanBaoHanh(d.Id) bh ORDER BY d.Id;
+DECLARE @DonChoPhanCong INT = (SELECT TOP (1) Id FROM dbo.vw_DonHangTongHop WHERE TrangThai = 'ChoPhanCong' ORDER BY Id);
+SELECT Id, HoTen, NhomTayNghe, KhuVucPhucVu, TrangThaiSanSang
+FROM dbo.fn_KyThuatVienPhuHop(@DonChoPhanCong);
+-- Hàm chỉ trả thợ có thể nhận việc ngay; rỗng nếu chưa có đơn hoặc không có thợ phù hợp.
 -- Không có đánh giá/sổ ví: COALESCE trả 0. Không có bảo hành: HanBaoHanh NULL.
 -- Ngày lọc là ngày Việt Nam; hàm đổi mốc biên về UTC, dùng >= đầu và < đầu ngày kế.
 GO

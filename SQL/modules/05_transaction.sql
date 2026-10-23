@@ -138,13 +138,13 @@ BEGIN
         IF @PhienBan IS NULL THROW 51004, N'Khong tim thay don hang.', 1;
         IF @PhienBanDuKien IS NULL OR @PhienBanDuKien <> @PhienBan
             THROW 51009, N'Don hang da thay doi. Hay tai lai du lieu.', 1;
-        IF @TrangThai <> 'ChoTiepNhan'
-            THROW 51009, N'Chi bao gia khi don dang cho tiep nhan.', 1;
+        IF @TrangThai NOT IN ('ChoTiepNhan', 'ChoDuyetSoBo', 'ChoPhanCong')
+            THROW 51009, N'Chỉ được điều chỉnh báo giá trước khi phân công kỹ thuật viên.', 1;
         IF @PhiKiemTra IS NULL OR @TienCong IS NULL OR @TyLeHoaHong IS NULL
            OR @PhiKiemTra NOT BETWEEN 0 AND 1000000000 OR @TienCong NOT BETWEEN 0 AND 1000000000
            OR @PhiKiemTra + @TienCong <= 0
            OR @TyLeHoaHong < 0 OR @TyLeHoaHong > 100
-           OR NULLIF(LTRIM(RTRIM(@ChanDoan)), N'') IS NULL
+           OR NULLIF(LTRIM(RTRIM(@ChanDoan)), N'') IS NULL OR LEN(@ChanDoan) > 1000
             THROW 51009, N'Bao gia, chan doan hoac ty le hoa hong khong hop le.', 1;
         SELECT @Id = Id FROM dbo.BaoGiaSoBo WITH (UPDLOCK, HOLDLOCK) WHERE DonHangId = @DonHangId;
         IF @Id IS NULL
@@ -160,7 +160,9 @@ BEGIN
             WHERE Id = @Id;
         UPDATE dbo.DonHang SET TrangThai = 'ChoDuyetSoBo', NgayCapNhat = SYSUTCDATETIME() WHERE Id = @DonHangId;
         INSERT INTO dbo.LichSuDonHang (DonHangId, TrangThaiTruoc, TrangThaiSau, NguoiThucHienId, LyDo)
-        VALUES (@DonHangId, @TrangThai, 'ChoDuyetSoBo', @NguoiThucHienId, N'Gui bao gia so bo cho khach hang.');
+        VALUES (@DonHangId, @TrangThai, 'ChoDuyetSoBo', @NguoiThucHienId,
+            CASE WHEN @TrangThai = 'ChoTiepNhan' THEN N'Gửi báo giá sơ bộ cho khách hàng.'
+                 ELSE N'Điều chỉnh báo giá sơ bộ; khách hàng cần duyệt lại.' END);
         IF @SoGiaoDichBanDau = 0
             COMMIT TRANSACTION;
         SELECT Id, DonHangId, PhiKiemTra, TienCong, TyLeHoaHong, ChanDoan, TrangThai, TongTien, NgayTao, PhienBan
@@ -216,11 +218,13 @@ BEGIN
             THROW 51003, N'Nguoi thuc hien khong khop phien CSDL da xac thuc.', 1;
 
         DECLARE @DonHangId INT, @ChuSoHuuId INT, @TrangThai VARCHAR(30), @PhienBan BINARY(8);
-        SELECT @DonHangId = DonHangId, @PhienBan = PhienBan, @TrangThai = TrangThai
-        FROM dbo.BaoGiaSoBo WITH (UPDLOCK, HOLDLOCK) WHERE Id = @BaoGiaId;
-        IF @PhienBan IS NULL THROW 51004, N'Khong tim thay bao gia.', 1;
+        SELECT @DonHangId = DonHangId FROM dbo.BaoGiaSoBo WHERE Id = @BaoGiaId;
+        IF @DonHangId IS NULL THROW 51004, N'Khong tim thay bao gia.', 1;
+        -- Khóa đơn trước rồi khóa báo giá, cùng thứ tự với thủ tục điều chỉnh.
         SELECT @ChuSoHuuId = KhachHangId FROM dbo.DonHang WITH (UPDLOCK, HOLDLOCK)
         WHERE Id = @DonHangId AND TrangThai = 'ChoDuyetSoBo';
+        SELECT @PhienBan = PhienBan, @TrangThai = TrangThai
+        FROM dbo.BaoGiaSoBo WITH (UPDLOCK, HOLDLOCK) WHERE Id = @BaoGiaId;
         IF @ChuSoHuuId IS NULL THROW 51009, N'Don hang khong con cho duyet bao gia.', 1;
         IF @ChuSoHuuId <> @NguoiThucHienId THROW 51003, N'Chi chu don hang duoc duyet bao gia.', 1;
         IF @PhienBanDuKien IS NULL OR @PhienBanDuKien <> @PhienBan OR @TrangThai <> 'Pending'
@@ -302,6 +306,8 @@ BEGIN
         IF @SanSang <> 'SanSang' OR EXISTS (
             SELECT 1 FROM dbo.LenhDieuPhoi WHERE KyThuatVienId = @KyThuatVienId AND DangHoatDong = 1)
             THROW 51009, N'Ky thuat vien chua san sang hoac dang co don.', 1;
+        IF NOT EXISTS (SELECT 1 FROM dbo.fn_KyThuatVienPhuHop(@DonHangId) WHERE Id = @KyThuatVienId)
+            THROW 51009, N'Thợ phải đúng tay nghề, khu vực, đang sẵn sàng và không giữ đơn khác.', 1;
         INSERT INTO dbo.LenhDieuPhoi (DonHangId, KyThuatVienId, TrangThai, DangHoatDong, NguoiTaoId)
         VALUES (@DonHangId, @KyThuatVienId, 'Pending', 1, @NguoiThucHienId);
         SET @Id = SCOPE_IDENTITY();
@@ -1618,6 +1624,8 @@ BEGIN
                 SoTaiKhoan = @SoTaiKhoan, ChuTaiKhoan = @ChuTaiKhoan, DangHoatDong = @DangHoatDong
             WHERE Id = @Id;
         END;
+        INSERT INTO dbo.NhatKy(NguoiThucHienId, ThaoTac, DoiTuong, DoiTuongId)
+        VALUES (@NguoiThucHienId, N'Lưu tài khoản ngân hàng', N'TaiKhoanNganHang', @Id);
         IF @SoGiaoDichBanDau = 0
             COMMIT TRANSACTION;
         SELECT Id, MaNganHang, TenNganHang, SoTaiKhoan, ChuTaiKhoan, DangHoatDong, PhienBan

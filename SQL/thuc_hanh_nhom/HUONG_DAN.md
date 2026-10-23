@@ -34,7 +34,7 @@ Bản [Word](BangPhanCong_SQL_Nhom08.docx) và [PDF](BangPhanCong_SQL_Nhom08.pdf
 | Thành viên | Phụ trách chính | File thực hành | Mục cần trình bày |
 |---|---|---|---|
 | Nguyễn Quốc Việt – 24110381 | 00 schema, 01 index, 08 seed | [01_NguyenQuocViet.sql](01_NguyenQuocViet.sql) | V01–V06: PK/FK, chuẩn hóa, CHECK/UNIQUE, CRUD danh mục, seed và đo index trước/sau |
-| Đỗ Anh Tuấn – 24110369 | 02 function, 03 view; báo cáo đọc trong 05 | [02_DoAnhTuan.sql](02_DoAnhTuan.sql) | T01–T06: JOIN, GROUP BY/HAVING, 6 hàm, view, tính tiền, báo cáo, tự viết view/hàm ngắn |
+| Đỗ Anh Tuấn – 24110369 | 02 function, 03 view; báo cáo đọc trong 05 | [02_DoAnhTuan.sql](02_DoAnhTuan.sql) | T01–T06: JOIN, GROUP BY/HAVING, 7 hàm, view, tính tiền, báo cáo, tự viết view/hàm ngắn |
 | Bùi Nguyễn Duy Trung – 24110363 | 04 SP, 05 transaction; trigger trạng thái trong 06 | [03_BuiNguyenDuyTrung.sql](03_BuiNguyenDuyTrung.sql) | D01–D08: tham số SP, nghiệp vụ đơn, TRY/CATCH, savepoint, rowversion, trigger nhiều dòng, vật tư, hỗ trợ, phí hủy |
 | Lê Tấn Tài – 24110319 | 06 trigger chứng từ/vật tư, 07 security, 09 migration, 10 backup; đối soát trong 05 | [04_LeTanTai.sql](04_LeTanTai.sql), [04b_SaoLuuPhucHoi.sql](04b_SaoLuuPhucHoi.sql) | A01–A08: 7 trigger, sổ cái, GRANT/REVOKE/DENY, quyền EXECUTE, đối soát, nâng cấp, FULL/DIFF/LOG và phục hồi |
 
@@ -48,7 +48,7 @@ Chuỗi SQL hiện tại là **00–10, gồm 11 file** vì đánh số từ 0; 
 |---|---|---|---|
 | 00_schema | 28 bảng; kiểu dữ liệu; PK, FK, UNIQUE, CHECK, DEFAULT, cột tính toán, rowversion | Việt | V01, V04; T04 |
 | 01_index | 21 index viết tường minh, gồm 9 UNIQUE lọc và 12 index thường; chưa tính index tự sinh bởi PK/UNIQUE | Việt | V05, V06 |
-| 02_function | 2 scalar, 4 inline TVF | Tuấn | T03, T06 |
+| 02_function | 2 scalar, 5 inline TVF | Tuấn | T03, T06 |
 | 03_view | 34 view, tách view công khai và xác thực nội bộ | Tuấn | T01, T02, T04, T06 |
 | 04_sp | 19 SP tài khoản, danh mục, cấu hình, tệp và tiện ích | Trung | D01; V03 minh họa SP danh mục |
 | 05_transaction | 30 SP nghiệp vụ/báo cáo; ghi có transaction và savepoint | Trung | D02–D08; T05, A05 |
@@ -109,7 +109,7 @@ T02 minh họa `WHERE` lọc dòng, `GROUP BY` gom dòng, `HAVING` lọc nhóm. 
 
 `vw_DoanhThuNgay` dùng ngày Việt Nam từ thời gian UTC +7; tổng thu gồm COD/BANK và có thể có phí hủy. Tổng thu của hệ thống không đồng nghĩa tiền lãi. Hoa hồng tính trên tiền công và cần phân biệt phần đã đối soát. `TongTienDaThu` ở hiệu suất chỉ cộng đơn hoàn thành; đơn hủy có phí không được tính là sửa xong.
 
-### T03: phải phân biệt đủ 6 hàm
+### T03: phải phân biệt đủ 7 hàm
 
 | Hàm | Loại | Ý nghĩa và điểm cần giải thích |
 |---|---|---|
@@ -118,6 +118,7 @@ T02 minh họa `WHERE` lọc dòng, `GROUP BY` gom dòng, `HAVING` lọc nhóm. 
 | `fn_SoDuVi` | TVF | Tổng sổ cái có dấu, không có dòng trả 0 |
 | `fn_DiemDanhGia` | TVF | Trung bình điểm, không có đánh giá trả 0 theo quy ước hiển thị |
 | `fn_ThongKeDon` | TVF | Đếm toàn bộ/hoàn thành/hủy/đang xử lý, nhận khoảng ngày Việt Nam |
+| `fn_KyThuatVienPhuHop` | Inline TVF | Nhận mã đơn chờ phân công; lọc thợ đúng khu vực, tay nghề, sẵn sàng và không giữ đơn khác. Backend và SP dùng chung điều kiện. |
 | `fn_HanBaoHanh` | TVF | Hạn lớn nhất từ vật tư có số tháng bảo hành, dựa trên nghiệm thu đã duyệt; không có trả NULL |
 
 Scalar đặt trong SELECT; TVF đặt trong FROM hoặc APPLY và có thể nhận tham số từng dòng. Không gọi TVF như một số đơn lẻ. Hàm hiện tại chỉ đọc/tính, không sửa bảng, không mở transaction. SP gọi bằng EXEC và có thể trả nhiều tập kết quả; SP không được đặt thẳng trong FROM.

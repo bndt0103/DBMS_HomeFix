@@ -1,6 +1,12 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { queryView, first, exec, withDatabaseRole } from "./db.js";
+import {
+  queryView,
+  queryFunction,
+  first,
+  exec,
+  withDatabaseRole,
+} from "./db.js";
 import { ok, wrap, roles, fail, positiveId, orderFor } from "./common.js";
 import { shape, sum } from "./web-shape.js";
 import { webPasswordChange } from "./auth.js";
@@ -262,12 +268,14 @@ async function details(req) {
   const raw = await orderFor(req.user, req.params.id),
     o = shape(raw),
     filter = { DonHangId: raw.Id };
-  const [quotes, assignments, acceptances, payments] = await Promise.all([
-    read("vw_BaoGiaSoBo", filter),
-    read("vw_LenhDieuPhoi", filter),
-    read("vw_PhieuNghiemThu", filter),
-    read("vw_ThanhToan", filter),
-  ]);
+  const [quotes, assignments, acceptances, payments, service] =
+    await Promise.all([
+      read("vw_BaoGiaSoBo", filter),
+      read("vw_LenhDieuPhoi", filter),
+      read("vw_PhieuNghiemThu", filter),
+      read("vw_ThanhToan", filter),
+      one("vw_DichVu", { Id: raw.DichVuId }),
+    ]);
   const a = acceptances.find((a) => a.status !== "Rejected"),
     q = quotes.find((q) => q.status === "Approved") || quotes[0];
   return {
@@ -283,8 +291,9 @@ async function details(req) {
       (o.status === "Huy" && o.cancellationFee > 0
         ? "BANK"
         : a?.paymentMethod || "COD"),
-    inspectionFee: a?.inspectionFee ?? q?.inspectionFee ?? 0,
-    laborFee: a?.laborFee ?? q?.laborFee ?? 0,
+    inspectionFee:
+      a?.inspectionFee ?? q?.inspectionFee ?? service?.inspectionFee ?? 0,
+    laborFee: a?.laborFee ?? q?.laborFee ?? service?.laborFee ?? 0,
     materialTotal: a?.materialTotal || 0,
     commissionRatePercent: q?.commissionRatePercent || 0,
     total:
@@ -362,13 +371,14 @@ change("post", "/orders", ["KH"], (req) =>
 );
 change("post", "/orders/:id/preliminary-quotes", ["DPV"], async (req) => {
   const order = await orderFor(req.user, req.params.id),
-    service = await first("vw_DichVuCongKhai", { Id: order.DichVuId });
+    service = await first("vw_DichVuCongKhai", { Id: order.DichVuId }),
+    quote = await first("vw_BaoGiaSoBo", { DonHangId: order.Id });
   if (!service) fail(400, "Dịch vụ đang ngừng cung cấp.");
   return run(req, "sp_TaoBaoGiaSoBo", {
     DonHangId: order.Id,
-    PhiKiemTra: service.PhiKiemTra,
-    TienCong: service.TienCong,
-    TyLeHoaHong: service.TyLeHoaHong,
+    PhiKiemTra: req.body.inspectionFee ?? service.PhiKiemTra,
+    TienCong: req.body.laborFee ?? service.TienCong,
+    TyLeHoaHong: quote?.TyLeHoaHong ?? service.TyLeHoaHong,
     ChanDoan: req.body.diagnosis,
   });
 });
@@ -488,22 +498,10 @@ get("/technicians/me", ["KTV"], async (req) => {
   };
 });
 get("/technicians/available", ["DPV"], async (req) => {
-  const o = await orderFor(req.user, req.query.orderId);
-  const users = await read("vw_NguoiDung");
-  return (await read("vw_KyThuatVien")).map((t) => {
-    const active = users.some(
-      (u) => u.id === t.id && u.isActive && u.role === "KTV",
-    );
-    return {
-      ...t,
-      canAssign: active && t.availability === "SanSang",
-      reason: !active
-        ? "Tài khoản thợ đã khóa"
-        : t.availability !== "SanSang"
-          ? "Thợ chưa sẵn sàng"
-          : null,
-    };
-  });
+  const order = await orderFor(req.user, req.query.orderId);
+  return shape(
+    await queryFunction("fn_KyThuatVienPhuHop", { DonHangId: order.Id }),
+  ).map((technician) => ({ ...technician, canAssign: true }));
 });
 change("patch", "/technicians/me/availability", ["KTV"], async (req) =>
   run(req, "sp_CapNhatTrangThaiKTV", {

@@ -356,3 +356,10 @@ GO
 DENY SELECT ON OBJECT::dbo.vw_HieuSuatKyThuatVien TO HomeFix_KH, HomeFix_KTV, HomeFix_CSKH, HomeFix_KT;
 GRANT SELECT ON OBJECT::dbo.vw_HieuSuatKyThuatVien TO HomeFix_DPV, HomeFix_GD, HomeFix_ADMIN;
 GO
+
+-- Hai bộ phận này được xem thông tin thanh toán khi mở chi tiết đơn.
+-- Chỉ cấp SELECT trên View; các bảng gốc vẫn bị DENY.
+GRANT SELECT ON OBJECT::dbo.vw_TaiKhoanNganHang TO HomeFix_DPV, HomeFix_CSKH;
+GRANT SELECT ON OBJECT::dbo.vw_YeuCauThanhToan TO HomeFix_DPV, HomeFix_CSKH;
+GRANT SELECT ON OBJECT::dbo.fn_KyThuatVienPhuHop TO HomeFix_DPV, HomeFix_ADMIN;
+GO

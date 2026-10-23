@@ -20,7 +20,7 @@ BEGIN
            OR (d.Id IS NOT NULL AND i.TrangThai <> d.TrangThai AND NOT (
                 (d.TrangThai = 'ChoTiepNhan' AND i.TrangThai = 'ChoDuyetSoBo')
              OR (d.TrangThai = 'ChoDuyetSoBo' AND i.TrangThai IN ('ChoPhanCong','ChoTiepNhan'))
-             OR (d.TrangThai = 'ChoPhanCong' AND i.TrangThai = 'ChoNhan')
+             OR (d.TrangThai = 'ChoPhanCong' AND i.TrangThai IN ('ChoNhan','ChoDuyetSoBo'))
              OR (d.TrangThai = 'ChoNhan' AND i.TrangThai IN ('DaTiepNhan','ChoPhanCong'))
              OR (d.TrangThai = 'DaTiepNhan' AND i.TrangThai = 'DangDiChuyen')
              OR (d.TrangThai = 'DangDiChuyen' AND i.TrangThai = 'DaDenNoi')

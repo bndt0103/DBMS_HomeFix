@@ -84,7 +84,7 @@ SELECT Id, HoTen, SoDu, SoDuSoCai, ChenhLech FROM dbo.vw_ViKyThuatVien;
 - **CHECK/UNIQUE:** CHECK kiểm tra miền giá trị; UNIQUE chặn trùng điện thoại, chứng từ thanh toán, đánh giá. UNIQUE lọc chỉ xét các dòng còn hiệu lực, nên vẫn giữ lịch sử cũ.
 - **DEFAULT:** cấp giá trị khi INSERT bỏ qua cột; không tự cập nhật ngày sửa khi UPDATE.
 - **ROWVERSION:** 8 byte tự đổi khi UPDATE, không phải ngày giờ. Form gửi lại phiên bản đã đọc; SQL từ chối phiên bản cũ để tránh ghi đè.
-- **View/TVF:** đóng gói phần đọc; view dùng như bảng trong FROM, TVF nhận được tham số. `fn_SoDuVi`, `fn_DiemDanhGia`, `fn_ThongKeDon`, `fn_HanBaoHanh` trả bảng; `fn_HoaHong`, `fn_TongTienDonHang` trả một giá trị.
+- **View/TVF:** đóng gói phần đọc; view dùng như bảng trong FROM, TVF nhận được tham số. `fn_SoDuVi`, `fn_DiemDanhGia`, `fn_ThongKeDon`, `fn_HanBaoHanh`, `fn_KyThuatVienPhuHop` trả bảng; `fn_HoaHong`, `fn_TongTienDonHang` trả một giá trị.
 - **Transaction:** gộp nhiều thay đổi thành một đơn vị cùng thành công hoặc cùng hủy. `UPDLOCK, HOLDLOCK` giữ khóa để trạng thái, phiên bản và số dư không bị thay đổi giữa lúc kiểm tra và ghi.
 - **Savepoint:** SP tự BEGIN/COMMIT nếu chưa có transaction. Nếu caller đã mở, SP đặt SAVE TRANSACTION và không COMMIT thay caller. Trong CATCH, `XACT_STATE() = 1` mới rollback về savepoint được; `-1` cần chủ giao dịch rollback toàn bộ.
 - **Trigger:** chạy tự động khi bảng thay đổi. `inserted`/`deleted` có thể có nhiều dòng, nên kiểm tra bằng EXISTS/JOIN. SP điều phối luồng, trigger chặn vi phạm khi dữ liệu bị ghi trực tiếp.
@@ -179,3 +179,27 @@ Bắt đầu từ [Hướng dẫn học và demo](thuc_hanh_nhom/HUONG_DAN.md), 
 Bảng đúng định dạng cuối rubric đã có trong repo: [Word](thuc_hanh_nhom/BangPhanCong_SQL_Nhom08.docx), [PDF](thuc_hanh_nhom/BangPhanCong_SQL_Nhom08.pdf). Máy nhóm trưởng còn giữ bản bàn giao tại `D:\Subject_K5\DBMS\ProjectCK\TaiLieuVanDap_Nhom08`.
 
 Mỗi người chạy phần đầu file, sau đó chọn trọn từng khối theo mã bài. Các bài thử ghi/quyền có rollback; bài index dùng bảng tạm, bài FULL/DIFF/LOG dùng bản sao riêng và tự dọn database thực hành. Không chạy lại bộ cài để chuẩn bị demo trên CSDL đang có dữ liệu.
+
+
+## Điều phối và điều chỉnh báo giá
+
+`fn_KyThuatVienPhuHop(@DonHangId)` trả về thợ có tài khoản hoạt động, đúng nhóm tay nghề,
+đang bật sẵn sàng, không giữ lệnh hoặc đơn khác, có khu vực phục vụ khớp địa chỉ đơn.
+Danh sách trên web và `sp_TaoLenhDieuPhoi` dùng chung hàm này. Thủ tục kiểm tra lại trong
+transaction có khóa dòng; nếu thợ vừa nhận việc khác thì yêu cầu bị từ chối.
+
+Khu vực được so theo từng phần địa chỉ ngăn cách bằng dấu phẩy; có thể khai báo nhiều khu
+vực phục vụ, ngăn cách bằng dấu phẩy hoặc chấm phẩy. So khớp không phân biệt hoa/thường,
+dấu tiếng Việt; chuẩn hóa `Quận`/`Q.`, `Thành phố`/`TP.` và tên viết tắt TP.HCM. Thủ Đức
+thuộc phạm vi thợ phục vụ toàn TP.HCM. Không dùng Google Maps và không suy đoán khu vực
+chỉ từ tên đường: đơn cần ghi rõ quận/thành phố. Quận 1 không khớp Quận 10.
+
+Điều phối viên chọn **Điều chỉnh báo giá sơ bộ** khi đơn chưa phân công, sửa chẩn đoán,
+phí kiểm tra và tiền công. SQL tính lại tổng, đặt báo giá về `Pending` và đơn về
+`ChoDuyetSoBo`; khách phải đồng ý lại. Khi đã phân công (`ChoNhan` trở đi), không được đổi
+báo giá sơ bộ. `PhienBan` ngăn duyệt một báo giá hoặc cập nhật một đơn đã bị thay đổi.
+
+`vw_NhatKy` nối `NhatKy.NguoiThucHienId` với `NguoiDung.Id` để hiển thị **ID · Họ tên**.
+Thao tác tạo/khóa/đổi vai trò tài khoản, duyệt hồ sơ, lưu danh mục, dịch vụ, cấu hình và
+ngân hàng được ghi nhận cùng giao dịch. Dòng lịch sử nào không có actor thì hiển thị
+Hệ thống; không gán tên quản trị viên cho thao tác của người khác.

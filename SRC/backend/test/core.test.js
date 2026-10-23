@@ -204,7 +204,7 @@ test("Ví: nạp có chứng từ, chỉ kế toán duyệt và từ chối phi�
 test("Đơn hàng: tạo, báo giá, khách duyệt; giữ quyền sở hữu và concurrency", async () => {
   const services = await api("GET", "/services");
   const order = await api("POST", "/orders", "KH", {
-    DichVuId: services[0].Id,
+    DichVuId: services.find((service) => service.MaDanhMuc === "DIEN").Id,
     DiaChi: "123 Đường kiểm thử, Thủ Đức",
     MoTa: "Thiết bị không hoạt động",
     NguoiThucHienId: users.KTV.Id,
@@ -427,8 +427,8 @@ test("Hỗ trợ truyền thống và quản trị tài khoản hoạt động q
 test("BANK: chứng từ đúng chủ, xác nhận đúng tiền, không ghi nhận hai lần", async () => {
   const services = await api("GET", "/services");
   const order = await api("POST", "/orders", "KH", {
-    DichVuId: services[0].Id,
-    DiaChi: "Địa chỉ kiểm thử BANK",
+    DichVuId: services.find((service) => service.MaDanhMuc === "DIEN").Id,
+    DiaChi: "25 Võ Văn Ngân, Thủ Đức",
     MoTa: "Kiểm tra luồng thanh toán ngân hàng",
   });
   const id = order.Id;
@@ -712,7 +712,7 @@ test("Giao diện gốc: ảnh đặt đơn, nghiệm thu có chữ ký, ngân h
   const image = await upload("KH", "OrderFault");
   const order = await api("POST", "/web/orders", "KH", {
     serviceId: 1,
-    address: "Địa chỉ kiểm thử giao diện gốc",
+    address: "27 Võ Văn Ngân, Thủ Đức",
     description: "Kiểm tra ổ cắm điện",
     attachmentIds: [image.Id],
   });
@@ -1403,4 +1403,254 @@ test("Hủy đơn: miễn phí trước di chuyển; phí 60000 chỉ BANK, đ�
   );
   const summary = await api("GET", "/web/reports/summary", "KT");
   assert.equal(summary.cancellationFees, 120000);
+});
+
+test("Quyền đọc: chi tiết thanh toán và lựa chọn ngân hàng hoạt động đúng các vai trò", async () => {
+  for (const role of ["KH", "KTV", "DPV", "CSKH", "KT", "GD", "ADMIN"]) {
+    await api("GET", "/web/payment-options", role);
+    await api("GET", "/web/bank-accounts", role);
+  }
+  for (const role of ["KH", "KTV", "DPV", "CSKH", "KT", "ADMIN"])
+    await api("GET", `/web/orders/${orderId}/payment-details`, role);
+  await api("GET", `/web/orders/${orderId}/payment-details`, "GD", null, 403);
+});
+
+test("Báo giá: điều chỉnh trước phân công, khách duyệt lại và chặn dữ liệu cũ", async () => {
+  const services = await api("GET", "/web/services", "KH");
+  const service = services.find((s) => s.groupCode === "DIEN");
+  const order = await api("POST", "/web/orders", "KH", {
+    serviceId: service.id,
+    address: "25 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
+    description: "Kiểm tra báo giá điều chỉnh",
+  });
+  const route = `/web/orders/${order.id}`;
+  const get = () => api("GET", route, "DPV");
+  let d = await get();
+  assert.equal(d.inspectionFee, service.inspectionFee);
+  assert.equal(d.laborFee, service.laborFee);
+  const original = await api("POST", route + "/preliminary-quotes", "DPV", {
+    diagnosis: "Kiểm tra đường điện và thiết bị",
+    inspectionFee: 50000,
+    laborFee: 100000,
+    expectedVersion: d.version,
+  });
+  d = await get();
+  await api(
+    "POST",
+    route + "/preliminary-quotes",
+    "DPV",
+    {
+      diagnosis: "Giá âm không hợp lệ",
+      inspectionFee: -1,
+      laborFee: 100000,
+      expectedVersion: d.version,
+    },
+    409,
+  );
+  const revised = await api("POST", route + "/preliminary-quotes", "DPV", {
+    diagnosis: "Cập nhật công việc cần thực hiện",
+    inspectionFee: 60000,
+    laborFee: 140000,
+    expectedVersion: d.version,
+  });
+  assert.equal(revised.total, 200000);
+  await api(
+    "POST",
+    route + `/preliminary-quotes/${original.id}/decision`,
+    "KH",
+    {
+      decision: "Approved",
+      expectedVersion: original.version,
+    },
+    409,
+  );
+  await api(
+    "POST",
+    route + `/preliminary-quotes/${revised.id}/decision`,
+    "KH",
+    {
+      decision: "Approved",
+      expectedVersion: revised.version,
+    },
+  );
+  d = await get();
+  assert.equal(d.status, "ChoPhanCong");
+  const approvedQuote = d.currentPreliminaryQuote;
+  const changed = await api("POST", route + "/preliminary-quotes", "DPV", {
+    diagnosis: "Điều chỉnh trước khi gửi thợ",
+    inspectionFee: 60000,
+    laborFee: 160000,
+    expectedVersion: d.version,
+  });
+  assert.equal((await get()).status, "ChoDuyetSoBo");
+  assert.equal(changed.status, "Pending");
+  assert.equal(
+    (await api("GET", `/web/technicians/available?orderId=${order.id}`, "DPV"))
+      .length,
+    0,
+  );
+  await api(
+    "POST",
+    route + `/preliminary-quotes/${approvedQuote.id}/decision`,
+    "KH",
+    {
+      decision: "Approved",
+      expectedVersion: approvedQuote.version,
+    },
+    409,
+  );
+  await api(
+    "POST",
+    route + `/preliminary-quotes/${changed.id}/decision`,
+    "KH",
+    {
+      decision: "Approved",
+      expectedVersion: changed.version,
+    },
+  );
+  const p = await pool();
+  const fixtures = [];
+  for (const [index, [name, area, skill, ready, active]] of [
+    ["Đúng khu vực", "Quận 1", "Điện", "SanSang", true],
+    ["Khác khu vực", "Quận 10", "Điện", "SanSang", true],
+    ["Tạm bận", "Quận 1", "Điện", "TamBan", true],
+    ["Đã khóa", "Quận 1", "Điện", "SanSang", false],
+    ["Khác nghề", "Quận 1", "Khóa", "SanSang", true],
+    ["Toàn thành phố", "Thành phố Hồ Chí Minh", "Điện", "SanSang", true],
+    ["Đang giữ đơn", "Quận 1", "Điện", "SanSang", true],
+  ].entries()) {
+    const user = await api("POST", "/web/users", "ADMIN", {
+      fullName: name,
+      phone: "091234560" + index,
+      role: "KTV",
+      initialPassword: "123456",
+    });
+    await p
+      .request()
+      .input("id", sql.Int, user.id)
+      .input("area", sql.NVarChar(200), area)
+      .input("skill", sql.NVarChar(200), skill)
+      .input("ready", sql.VarChar(12), ready)
+      .input("active", sql.Bit, active)
+      .query(
+        "UPDATE dbo.KyThuatVien SET KhuVucPhucVu=@area,NhomTayNghe=@skill,TrangThaiSanSang=@ready WHERE Id=@id; UPDATE dbo.NguoiDung SET DangHoatDong=@active WHERE Id=@id;",
+      );
+    fixtures.push(user);
+  }
+  const another = await api("POST", "/web/orders", "KH", {
+    serviceId: service.id,
+    address: "30 Lê Lợi, Q.1, TP.HCM",
+    description: "Đơn thợ đang giữ",
+  });
+  let anotherDetails = await api("GET", `/web/orders/${another.id}`, "DPV");
+  const quote = await api(
+    "POST",
+    `/web/orders/${another.id}/preliminary-quotes`,
+    "DPV",
+    {
+      diagnosis: "Kiểm tra đường điện",
+      expectedVersion: anotherDetails.version,
+    },
+  );
+  await api(
+    "POST",
+    `/web/orders/${another.id}/preliminary-quotes/${quote.id}/decision`,
+    "KH",
+    {
+      decision: "Approved",
+      expectedVersion: quote.version,
+    },
+  );
+  anotherDetails = await api("GET", `/web/orders/${another.id}`, "DPV");
+  await api("POST", `/web/orders/${another.id}/assignments`, "DPV", {
+    technicianId: fixtures[6].id,
+    expectedVersion: anotherDetails.version,
+  });
+  await p
+    .request()
+    .input("id", sql.Int, fixtures[6].id)
+    .query(
+      "UPDATE dbo.KyThuatVien SET TrangThaiSanSang='SanSang' WHERE Id=@id",
+    );
+  const candidates = await api(
+    "GET",
+    `/web/technicians/available?orderId=${order.id}`,
+    "DPV",
+  );
+  const ids = candidates.map((t) => t.id);
+  assert.ok(ids.includes(fixtures[0].id));
+  assert.ok(ids.includes(fixtures[5].id));
+  for (const i of [1, 2, 3, 4, 6]) assert.ok(!ids.includes(fixtures[i].id));
+  assert.ok(
+    candidates.every((t) => t.canAssign && t.availability === "SanSang"),
+  );
+  d = await get();
+  await api(
+    "POST",
+    route + "/assignments",
+    "DPV",
+    {
+      technicianId: fixtures[1].id,
+      expectedVersion: d.version,
+    },
+    409,
+  );
+  await api(
+    "POST",
+    route + "/assignments",
+    "DPV",
+    {
+      technicianId: fixtures[6].id,
+      expectedVersion: d.version,
+    },
+    409,
+  );
+  await api("POST", route + "/assignments", "DPV", {
+    technicianId: fixtures[0].id,
+    expectedVersion: d.version,
+  });
+  d = await get();
+  await api(
+    "POST",
+    route + "/preliminary-quotes",
+    "DPV",
+    {
+      diagnosis: "Không được đổi khi đã phân công",
+      inspectionFee: 60000,
+      laborFee: 180000,
+      expectedVersion: d.version,
+    },
+    409,
+  );
+  assert.equal((await get()).total, 220000);
+});
+
+test("Nhật ký: lưu đúng ID, tên người thực hiện; thao tác quản trị được ghi cùng transaction", async () => {
+  const category = await api("POST", "/categories", "ADMIN", {
+    Ten: "Danh mục kiểm tra nhật ký",
+    Ma: "AUDIT_TEST",
+  });
+  await api("PUT", "/settings/SoDienThoaiHoTro", "ADMIN", {
+    GiaTri: "0281234567",
+    NhanHienThi: "Số điện thoại hỗ trợ",
+  });
+  const audit = await api("GET", "/web/audit-logs", "ADMIN");
+  for (const log of audit.filter((r) => r.actorId)) {
+    assert.ok(log.actorName);
+    assert.equal(log.actorName, log.TenNguoiThucHien || log.actorName);
+  }
+  const entry = audit.find(
+    (r) => r.entity === "DanhMucDichVu" && r.entityId === category.Id,
+  );
+  assert.equal(entry.actorId, users.ADMIN.Id);
+  assert.equal(entry.actorName, users.ADMIN.HoTen);
+  assert.ok(
+    audit.some(
+      (r) =>
+        r.entity === "CauHinh" &&
+        r.detail === "SoDienThoaiHoTro" &&
+        r.actorId === users.ADMIN.Id,
+    ),
+  );
+  await api("GET", "/web/audit-logs", "CSKH", null, 403);
 });

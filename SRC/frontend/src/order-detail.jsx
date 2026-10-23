@@ -101,6 +101,8 @@ export function OrderDetail() {
   const actions = [];
   if (dispatcher && o.status === "ChoTiepNhan")
     actions.push(["preliminary", "Lập báo giá sơ bộ"]);
+  if (dispatcher && ["ChoDuyetSoBo", "ChoPhanCong"].includes(o.status))
+    actions.push(["preliminary", "Điều chỉnh báo giá sơ bộ"]);
   if (dispatcher && o.status === "ChoPhanCong")
     actions.push(["assign", "Phân công kỹ thuật viên"]);
   const pendingAssignment =
@@ -665,7 +667,10 @@ function ActionModal({ modal, order, config, next, onClose, onDone }) {
   const a = useAction(),
     { type, record, expectedVersion } = modal;
   const [form, setForm] = useState({
-    diagnosis: "",
+    diagnosis: order.currentPreliminaryQuote?.diagnosis || "",
+    inspectionFee:
+      order.currentPreliminaryQuote?.inspectionFee ?? order.inspectionFee,
+    laborFee: order.currentPreliminaryQuote?.laborFee ?? order.laborFee,
     reason: "",
     technicianId: "",
     decision: record?.decision || "Accepted",
@@ -777,6 +782,8 @@ function ActionModal({ modal, order, config, next, onClose, onDone }) {
       if (type === "preliminary") {
         path += "/preliminary-quotes";
         body.diagnosis = form.diagnosis;
+        body.inspectionFee = Number(form.inspectionFee);
+        body.laborFee = Number(form.laborFee);
       } else if (type === "assign") {
         path += "/assignments";
         body.technicianId = Number(form.technicianId);
@@ -897,7 +904,9 @@ function ActionModal({ modal, order, config, next, onClose, onDone }) {
           ? form.decision === "Rejected"
             ? "Lý do từ chối đơn"
             : "Chấp nhận đơn"
-          : titles[type]
+          : type === "preliminary" && order.currentPreliminaryQuote
+            ? "Điều chỉnh báo giá sơ bộ"
+            : titles[type]
       }
       onClose={onClose}
     >
@@ -909,15 +918,45 @@ function ActionModal({ modal, order, config, next, onClose, onDone }) {
               <textarea
                 required
                 minLength={5}
-                maxLength={2000}
+                maxLength={1000}
                 value={form.diagnosis}
                 onChange={(e) => set("diagnosis", e.target.value)}
                 rows={4}
               />
             </Field>
+            <Field label="Phí kiểm tra (đồng)">
+              <input
+                type="number"
+                min="0"
+                max="1000000000"
+                step="1"
+                required
+                value={form.inspectionFee ?? ""}
+                onChange={(e) => set("inspectionFee", e.target.value)}
+              />
+            </Field>
+            <Field label="Tiền công (đồng)">
+              <input
+                type="number"
+                min="0"
+                max="1000000000"
+                step="1"
+                required
+                value={form.laborFee ?? ""}
+                onChange={(e) => set("laborFee", e.target.value)}
+              />
+            </Field>
+            <p>
+              Tổng sơ bộ:{" "}
+              <strong>
+                {money(
+                  Number(form.inspectionFee || 0) + Number(form.laborFee || 0),
+                )}
+              </strong>
+            </p>
             <div className="notice info">
-              Giá kiểm tra, tiền công và tỷ lệ hoa hồng lấy từ danh mục hiện
-              hành. Khách cần đồng ý trước khi phân công.
+              Khách hàng cần duyệt báo giá mới trước khi phân công. Báo giá đã
+              được đồng ý cũng phải duyệt lại nếu điều chỉnh.
             </div>
           </>
         )}
@@ -931,24 +970,16 @@ function ActionModal({ modal, order, config, next, onClose, onDone }) {
               >
                 <option value="">Chọn thợ phù hợp</option>
                 {candidates.data?.map((k) => (
-                  <option key={k.id} value={k.id} disabled={!k.canAssign}>
+                  <option key={k.id} value={k.id}>
                     {k.fullName} · {k.serviceArea}
-                    {k.assignmentStatus === "SkillMismatch"
-                      ? " · Khác chuyên môn"
-                      : k.assignmentStatus === "Busy"
-                        ? " · Đang có việc"
-                        : k.assignmentStatus === "NotReady"
-                          ? " · Chưa sẵn sàng"
-                          : k.assignmentStatus === "InsufficientBalance"
-                            ? " · Ví chưa đủ số dư"
-                            : ""}
                   </option>
                 ))}
               </select>
             </Field>
             {candidates.data && !candidates.data.some((k) => k.canAssign) && (
               <div className="notice warning">
-                Chưa có kỹ thuật viên đang sẵn sàng để phân công.
+                Chưa có thợ đúng khu vực, tay nghề và đang sẵn sàng. Địa chỉ đơn
+                cần ghi rõ quận hoặc thành phố.
               </div>
             )}
             <p>Một thợ chỉ giữ một lệnh hoặc ca đang làm tại một thời điểm.</p>

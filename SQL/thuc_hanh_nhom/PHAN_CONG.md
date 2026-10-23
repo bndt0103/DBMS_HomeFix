@@ -7,7 +7,7 @@ Bản [Word](BangPhanCong_SQL_Nhom08.docx) và [PDF](BangPhanCong_SQL_Nhom08.pdf
 | STT | Họ và tên | MSSV | Công việc phụ trách | Tỉ lệ hoàn thành | Điểm | Ký tên |
 |---|---|---|---|---|---|---|
 | 1 | Nguyễn Quốc Việt | 24110381 | - Module 00, 01, 08.<br>- Thiết kế, ràng buộc, CRUD danh mục, seed và index.<br>- Demo: V01–V06. | | | |
-| 2 | Đỗ Anh Tuấn | 24110369 | - Module 02, 03; báo cáo đọc trong 05.<br>- View, JOIN, tổng hợp, 6 hàm và báo cáo.<br>- Demo: T01–T06. | | | |
+| 2 | Đỗ Anh Tuấn | 24110369 | - Module 02, 03; báo cáo đọc trong 05.<br>- View, JOIN, tổng hợp, 7 hàm và báo cáo.<br>- Demo: T01–T06. | | | |
 | 3 | Bùi Nguyễn Duy Trung | 24110363 | - Module 04, 05; trigger trạng thái trong 06.<br>- SP nghiệp vụ, transaction, savepoint và đồng thời.<br>- Demo: D01–D08. | | | |
 | 4 | Lê Tấn Tài | 24110319 | - Module 06, 07, 09, 10; đối soát trong 05.<br>- Trigger, phân quyền, đối soát, migration và backup/restore.<br>- Demo: A01–A08. | | | |
 
@@ -36,7 +36,7 @@ Bản [Word](BangPhanCong_SQL_Nhom08.docx) và [PDF](BangPhanCong_SQL_Nhom08.pdf
 - Viết truy vấn GROUP BY, HAVING, COUNT, SUM để thống kê đúng số đơn (T02).
 - Giải thích tổng thu, COD/BANK và hoa hồng đã đối soát trong view doanh thu (T02).
 - Trình bày hai hàm scalar: hoa hồng và tổng tiền đơn hàng (T03).
-- Trình bày bốn TVF: số dư ví, điểm đánh giá, thống kê đơn và hạn bảo hành (T03).
+- Trình bày năm TVF: số dư ví, điểm đánh giá, thống kê đơn, hạn bảo hành và lọc thợ phù hợp (T03).
 - Đối chiếu đơn giá vật tư, thành tiền, tổng nghiệm thu và chênh lệch ví (T04).
 - Gọi SP báo cáo; đọc nhiều tập kết quả và view hiệu suất KTV (T05).
 - Tự viết view/hàm ngắn, gọi thử và rollback đối tượng thực hành (T06).

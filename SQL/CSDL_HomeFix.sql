@@ -504,6 +504,56 @@ BEGIN
 END;
 GO
 
+-- Cùng một bộ lọc được dùng khi hiển thị danh sách và khi ghi lệnh phân công.
+-- Khu vực/tay nghề có thể ngăn cách bằng dấu phẩy hoặc chấm phẩy.
+-- So từng thành phần địa chỉ để Quận 1 không bị nhầm với Quận 10.
+CREATE OR ALTER FUNCTION dbo.fn_KyThuatVienPhuHop (@DonHangId INT)
+RETURNS TABLE
+AS
+RETURN (
+    SELECT ktv.Id, nd.HoTen, nd.SoDienThoai, ktv.NhomTayNghe,
+        ktv.KhuVucPhucVu, ktv.TrangThaiSanSang, ktv.PhienBan
+    FROM dbo.DonHang AS dh
+    INNER JOIN dbo.DichVu AS dv ON dv.Id = dh.DichVuId
+    INNER JOIN dbo.DanhMucDichVu AS dm ON dm.Id = dv.DanhMucId
+    CROSS JOIN dbo.KyThuatVien AS ktv
+    INNER JOIN dbo.NguoiDung AS nd ON nd.Id = ktv.Id
+    WHERE dh.Id = @DonHangId AND dh.TrangThai = 'ChoPhanCong'
+      AND nd.VaiTro = 'KTV' AND nd.DangHoatDong = 1
+      AND ktv.TrangThaiSanSang = 'SanSang'
+      AND NOT EXISTS (
+          SELECT 1 FROM dbo.LenhDieuPhoi AS l
+          WHERE l.KyThuatVienId = ktv.Id AND l.DangHoatDong = 1
+      )
+      AND NOT EXISTS (
+          SELECT 1 FROM dbo.DonHang AS d
+          WHERE d.KyThuatVienId = ktv.Id AND d.TrangThai NOT IN ('HoanThanh', 'Huy')
+      )
+      AND EXISTS (
+          SELECT 1 FROM STRING_SPLIT(REPLACE(ktv.NhomTayNghe, N';', N','), N',') AS t
+          WHERE LTRIM(RTRIM(t.value)) COLLATE Latin1_General_100_CI_AI
+              IN (dm.Ten COLLATE Latin1_General_100_CI_AI, dm.Ma COLLATE Latin1_General_100_CI_AI)
+      )
+      AND EXISTS (
+          SELECT 1
+          FROM STRING_SPLIT(REPLACE(ktv.KhuVucPhucVu, N';', N','), N',') AS k
+          CROSS JOIN STRING_SPLIT(dh.DiaChi, N',') AS d
+          CROSS APPLY (SELECT
+              REPLACE(REPLACE(REPLACE(REPLACE(LOWER(k.value) COLLATE Latin1_General_100_CI_AI,
+                  N'.', N''), N' ', N''), N'thànhphố', N'tp'), N'quận', N'q') AS KhuVuc,
+              REPLACE(REPLACE(REPLACE(REPLACE(LOWER(d.value) COLLATE Latin1_General_100_CI_AI,
+                  N'.', N''), N' ', N''), N'thànhphố', N'tp'), N'quận', N'q') AS DiaChi
+          ) AS c
+          WHERE c.KhuVuc <> N'' AND (
+              c.KhuVuc = c.DiaChi
+              OR (c.KhuVuc IN (N'tphochiminh', N'hochiminh', N'tphcm', N'hcm')
+                  AND c.DiaChi IN (N'tphochiminh', N'hochiminh', N'tphcm', N'hcm', N'thuduc', N'tpthuduc'))
+              OR (c.KhuVuc IN (N'thuduc', N'tpthuduc') AND c.DiaChi IN (N'thuduc', N'tpthuduc'))
+          )
+      )
+);
+GO
+
 
 GO
 
@@ -646,8 +696,10 @@ FROM dbo.ThongBao;
 GO
 CREATE OR ALTER VIEW dbo.vw_NhatKy
 AS
-SELECT Id, NguoiThucHienId, ThaoTac, DoiTuong, DoiTuongId, ChiTiet, NgayTao
-FROM dbo.NhatKy;
+SELECT nk.Id, nk.NguoiThucHienId, nd.HoTen AS TenNguoiThucHien,
+    nk.ThaoTac, nk.DoiTuong, nk.DoiTuongId, nk.ChiTiet, nk.NgayTao
+FROM dbo.NhatKy AS nk
+LEFT JOIN dbo.NguoiDung AS nd ON nd.Id = nk.NguoiThucHienId;
 GO
 CREATE OR ALTER VIEW dbo.vw_CauHinh
 AS
@@ -1466,6 +1518,8 @@ BEGIN
             UPDATE dbo.DichVu SET DanhMucId = @DanhMucId, Ten = @Ten, MoTa = @MoTa, PhiKiemTra = @PhiKiemTra,
                 TienCong = @TienCong, TyLeHoaHong = @TyLeHoaHong, DangHoatDong = @DangHoatDong WHERE Id = @Id;
         END;
+        INSERT INTO dbo.NhatKy(NguoiThucHienId, ThaoTac, DoiTuong, DoiTuongId)
+        VALUES (@NguoiThucHienId, N'Lưu dịch vụ', N'DichVu', @Id);
         IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
         SELECT Id, DanhMucId, Ten, MoTa, PhiKiemTra, TienCong, TyLeHoaHong, DangHoatDong, PhienBan FROM dbo.vw_DichVu WHERE Id = @Id;
     END TRY
@@ -1520,6 +1574,8 @@ BEGIN
 
             UPDATE dbo.DanhMucDichVu SET Ten = @Ten, Ma = @Ma, DangHoatDong = @DangHoatDong WHERE Id = @Id;
         END;
+        INSERT INTO dbo.NhatKy(NguoiThucHienId, ThaoTac, DoiTuong, DoiTuongId)
+        VALUES (@NguoiThucHienId, N'Lưu danh mục dịch vụ', N'DanhMucDichVu', @Id);
         IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
         SELECT Id, Ten, Ma, DangHoatDong, PhienBan FROM dbo.vw_DanhMucDichVu WHERE Id = @Id;
     END TRY
@@ -1565,6 +1621,8 @@ BEGIN
         IF EXISTS (SELECT 1 FROM dbo.CauHinh WITH (UPDLOCK, HOLDLOCK) WHERE Khoa = @Khoa)
             UPDATE dbo.CauHinh SET GiaTri = @GiaTri, NhanHienThi = @NhanHienThi WHERE Khoa = @Khoa;
         ELSE INSERT INTO dbo.CauHinh(Khoa, GiaTri, NhanHienThi) VALUES (@Khoa, @GiaTri, @NhanHienThi);
+        INSERT INTO dbo.NhatKy(NguoiThucHienId, ThaoTac, DoiTuong, ChiTiet)
+        VALUES (@NguoiThucHienId, N'Lưu cấu hình', N'CauHinh', @Khoa);
         IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
         SELECT Khoa, GiaTri, NhanHienThi FROM dbo.vw_CauHinh WHERE Khoa = @Khoa;
     END TRY
@@ -1720,13 +1778,13 @@ BEGIN
         IF @PhienBan IS NULL THROW 51004, N'Khong tim thay don hang.', 1;
         IF @PhienBanDuKien IS NULL OR @PhienBanDuKien <> @PhienBan
             THROW 51009, N'Don hang da thay doi. Hay tai lai du lieu.', 1;
-        IF @TrangThai <> 'ChoTiepNhan'
-            THROW 51009, N'Chi bao gia khi don dang cho tiep nhan.', 1;
+        IF @TrangThai NOT IN ('ChoTiepNhan', 'ChoDuyetSoBo', 'ChoPhanCong')
+            THROW 51009, N'Chỉ được điều chỉnh báo giá trước khi phân công kỹ thuật viên.', 1;
         IF @PhiKiemTra IS NULL OR @TienCong IS NULL OR @TyLeHoaHong IS NULL
            OR @PhiKiemTra NOT BETWEEN 0 AND 1000000000 OR @TienCong NOT BETWEEN 0 AND 1000000000
            OR @PhiKiemTra + @TienCong <= 0
            OR @TyLeHoaHong < 0 OR @TyLeHoaHong > 100
-           OR NULLIF(LTRIM(RTRIM(@ChanDoan)), N'') IS NULL
+           OR NULLIF(LTRIM(RTRIM(@ChanDoan)), N'') IS NULL OR LEN(@ChanDoan) > 1000
             THROW 51009, N'Bao gia, chan doan hoac ty le hoa hong khong hop le.', 1;
         SELECT @Id = Id FROM dbo.BaoGiaSoBo WITH (UPDLOCK, HOLDLOCK) WHERE DonHangId = @DonHangId;
         IF @Id IS NULL
@@ -1742,7 +1800,9 @@ BEGIN
             WHERE Id = @Id;
         UPDATE dbo.DonHang SET TrangThai = 'ChoDuyetSoBo', NgayCapNhat = SYSUTCDATETIME() WHERE Id = @DonHangId;
         INSERT INTO dbo.LichSuDonHang (DonHangId, TrangThaiTruoc, TrangThaiSau, NguoiThucHienId, LyDo)
-        VALUES (@DonHangId, @TrangThai, 'ChoDuyetSoBo', @NguoiThucHienId, N'Gui bao gia so bo cho khach hang.');
+        VALUES (@DonHangId, @TrangThai, 'ChoDuyetSoBo', @NguoiThucHienId,
+            CASE WHEN @TrangThai = 'ChoTiepNhan' THEN N'Gửi báo giá sơ bộ cho khách hàng.'
+                 ELSE N'Điều chỉnh báo giá sơ bộ; khách hàng cần duyệt lại.' END);
         IF @SoGiaoDichBanDau = 0
             COMMIT TRANSACTION;
         SELECT Id, DonHangId, PhiKiemTra, TienCong, TyLeHoaHong, ChanDoan, TrangThai, TongTien, NgayTao, PhienBan
@@ -1798,11 +1858,13 @@ BEGIN
             THROW 51003, N'Nguoi thuc hien khong khop phien CSDL da xac thuc.', 1;
 
         DECLARE @DonHangId INT, @ChuSoHuuId INT, @TrangThai VARCHAR(30), @PhienBan BINARY(8);
-        SELECT @DonHangId = DonHangId, @PhienBan = PhienBan, @TrangThai = TrangThai
-        FROM dbo.BaoGiaSoBo WITH (UPDLOCK, HOLDLOCK) WHERE Id = @BaoGiaId;
-        IF @PhienBan IS NULL THROW 51004, N'Khong tim thay bao gia.', 1;
+        SELECT @DonHangId = DonHangId FROM dbo.BaoGiaSoBo WHERE Id = @BaoGiaId;
+        IF @DonHangId IS NULL THROW 51004, N'Khong tim thay bao gia.', 1;
+        -- Khóa đơn trước rồi khóa báo giá, cùng thứ tự với thủ tục điều chỉnh.
         SELECT @ChuSoHuuId = KhachHangId FROM dbo.DonHang WITH (UPDLOCK, HOLDLOCK)
         WHERE Id = @DonHangId AND TrangThai = 'ChoDuyetSoBo';
+        SELECT @PhienBan = PhienBan, @TrangThai = TrangThai
+        FROM dbo.BaoGiaSoBo WITH (UPDLOCK, HOLDLOCK) WHERE Id = @BaoGiaId;
         IF @ChuSoHuuId IS NULL THROW 51009, N'Don hang khong con cho duyet bao gia.', 1;
         IF @ChuSoHuuId <> @NguoiThucHienId THROW 51003, N'Chi chu don hang duoc duyet bao gia.', 1;
         IF @PhienBanDuKien IS NULL OR @PhienBanDuKien <> @PhienBan OR @TrangThai <> 'Pending'
@@ -1884,6 +1946,8 @@ BEGIN
         IF @SanSang <> 'SanSang' OR EXISTS (
             SELECT 1 FROM dbo.LenhDieuPhoi WHERE KyThuatVienId = @KyThuatVienId AND DangHoatDong = 1)
             THROW 51009, N'Ky thuat vien chua san sang hoac dang co don.', 1;
+        IF NOT EXISTS (SELECT 1 FROM dbo.fn_KyThuatVienPhuHop(@DonHangId) WHERE Id = @KyThuatVienId)
+            THROW 51009, N'Thợ phải đúng tay nghề, khu vực, đang sẵn sàng và không giữ đơn khác.', 1;
         INSERT INTO dbo.LenhDieuPhoi (DonHangId, KyThuatVienId, TrangThai, DangHoatDong, NguoiTaoId)
         VALUES (@DonHangId, @KyThuatVienId, 'Pending', 1, @NguoiThucHienId);
         SET @Id = SCOPE_IDENTITY();
@@ -3200,6 +3264,8 @@ BEGIN
                 SoTaiKhoan = @SoTaiKhoan, ChuTaiKhoan = @ChuTaiKhoan, DangHoatDong = @DangHoatDong
             WHERE Id = @Id;
         END;
+        INSERT INTO dbo.NhatKy(NguoiThucHienId, ThaoTac, DoiTuong, DoiTuongId)
+        VALUES (@NguoiThucHienId, N'Lưu tài khoản ngân hàng', N'TaiKhoanNganHang', @Id);
         IF @SoGiaoDichBanDau = 0
             COMMIT TRANSACTION;
         SELECT Id, MaNganHang, TenNganHang, SoTaiKhoan, ChuTaiKhoan, DangHoatDong, PhienBan
@@ -3766,7 +3832,7 @@ BEGIN
            OR (d.Id IS NOT NULL AND i.TrangThai <> d.TrangThai AND NOT (
                 (d.TrangThai = 'ChoTiepNhan' AND i.TrangThai = 'ChoDuyetSoBo')
              OR (d.TrangThai = 'ChoDuyetSoBo' AND i.TrangThai IN ('ChoPhanCong','ChoTiepNhan'))
-             OR (d.TrangThai = 'ChoPhanCong' AND i.TrangThai = 'ChoNhan')
+             OR (d.TrangThai = 'ChoPhanCong' AND i.TrangThai IN ('ChoNhan','ChoDuyetSoBo'))
              OR (d.TrangThai = 'ChoNhan' AND i.TrangThai IN ('DaTiepNhan','ChoPhanCong'))
              OR (d.TrangThai = 'DaTiepNhan' AND i.TrangThai = 'DangDiChuyen')
              OR (d.TrangThai = 'DangDiChuyen' AND i.TrangThai = 'DaDenNoi')
@@ -4231,6 +4297,13 @@ GO
 -- Hiệu suất toàn bộ KTV chỉ dành cho điều phối, giám đốc và quản trị.
 DENY SELECT ON OBJECT::dbo.vw_HieuSuatKyThuatVien TO HomeFix_KH, HomeFix_KTV, HomeFix_CSKH, HomeFix_KT;
 GRANT SELECT ON OBJECT::dbo.vw_HieuSuatKyThuatVien TO HomeFix_DPV, HomeFix_GD, HomeFix_ADMIN;
+GO
+
+-- Hai bộ phận này được xem thông tin thanh toán khi mở chi tiết đơn.
+-- Chỉ cấp SELECT trên View; các bảng gốc vẫn bị DENY.
+GRANT SELECT ON OBJECT::dbo.vw_TaiKhoanNganHang TO HomeFix_DPV, HomeFix_CSKH;
+GRANT SELECT ON OBJECT::dbo.vw_YeuCauThanhToan TO HomeFix_DPV, HomeFix_CSKH;
+GRANT SELECT ON OBJECT::dbo.fn_KyThuatVienPhuHop TO HomeFix_DPV, HomeFix_ADMIN;
 GO
 
 
