@@ -1,4 +1,4 @@
-﻿/* Bài học theo phân công 4 thành viên: xem thuc_hanh_nhom/HUONG_DAN.md.
+/* Bài học theo phân công 4 thành viên: xem thuc_hanh_nhom/HUONG_DAN.md.
    01_NguyenQuocViet.sql: schema, ràng buộc, seed, index trước/sau.
    02_DoAnhTuan.sql: view, function, tổng hợp và báo cáo.
    03_BuiNguyenDuyTrung.sql: SP, transaction, savepoint, phiên bản và nghiệp vụ.
@@ -35,7 +35,7 @@ WHERE MoTa LIKE N'[[]MINHHOA-%' GROUP BY TrangThai;
 SELECT * FROM dbo.vw_DoanhThuNgay ORDER BY Ngay DESC;
 SELECT Id, HoTen, SoDu, SoDuSoCai, ChenhLech FROM dbo.vw_ViKyThuatVien ORDER BY Id;
 SELECT * FROM dbo.vw_HieuSuatKyThuatVien ORDER BY KyThuatVienId;
-SELECT Id, TenKhachHang, Loai, MoTa, TrangThai FROM dbo.vw_HoTroCanXuLy ORDER BY Id;
+SELECT Id, TenKhachHang, Loai, MoTa, TrangThai FROM dbo.vw_YeuCauHoTro WHERE TrangThai IN ('Open','InProgress') ORDER BY Id;
 -- Bộ mẫu mới có 10 đơn, trong đó 3 hoàn thành; trạng thái có thể đổi khi thao tác web. ChenhLech ví phải bằng 0.
 GO
 -- 3. FUNCTION: TÍNH TIỀN, SỐ DƯ, ĐÁNH GIÁ, THỐNG KÊ VÀ BẢO HÀNH

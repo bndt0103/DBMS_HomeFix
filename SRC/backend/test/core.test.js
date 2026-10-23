@@ -139,11 +139,11 @@ test("Seed: đúng 7 vai trò, danh mục gốc, số dư 0 và không có giao 
   const result = await p
     .request()
     .query(
-      `SELECT COUNT(*) AS N FROM dbo.NguoiDung; SELECT COUNT(*) AS N FROM dbo.DanhMucDichVu; SELECT COUNT(*) AS N FROM dbo.DonHang; SELECT COUNT(*) AS N FROM dbo.GiaoDichVi; SELECT COUNT(*) AS N FROM dbo.NhatKy; SELECT COUNT(*) AS N FROM dbo.XacThucOTP; SELECT COUNT(*) AS N FROM dbo.KyThuatVien WHERE SoDu<>0;`,
+      `SELECT COUNT(*) AS N FROM dbo.NguoiDung; SELECT COUNT(*) AS N FROM dbo.DanhMucDichVu; SELECT COUNT(*) AS N FROM dbo.DonHang; SELECT COUNT(*) AS N FROM dbo.GiaoDichVi; SELECT COUNT(*) AS N FROM dbo.NhatKy; SELECT COUNT(*) AS N FROM dbo.KyThuatVien WHERE SoDu<>0;`,
     );
   assert.deepEqual(
     result.recordsets.map((rows) => rows[0].N),
-    [7, 5, 0, 0, 0, 0, 0],
+    [7, 5, 0, 0, 0, 0],
   );
 });
 
@@ -557,36 +557,6 @@ test("Tài khoản: đăng ký, đổi mật khẩu và chặn KH xem đơn củ
       })
     ).token,
   );
-});
-
-test("OTP: lưu số lần sai, dùng một lần và không cung cấp mã băm qua view công khai", async () => {
-  const { exec, first, withDatabaseRole } = await import("../src/db.js");
-  const { randomUUID } = await import("node:crypto");
-  const Id = randomUUID();
-  await withDatabaseRole(null, async () => {
-    await exec("sp_TaoMaOTP", {
-      Id,
-      MucDich: "ResetPassword",
-      DiaChiNhan: "homefix-test@example.invalid",
-      MaBam: "a".repeat(64),
-      NgayHetHan: new Date(Date.now() + 60000),
-    });
-    assert.equal(
-      (await exec("sp_XacThucOTP", { Id, MaBam: "b".repeat(64) }))[0].DaXacThuc,
-      false,
-    );
-    const metadata = await first("vw_XacThucOTP", { Id });
-    assert.equal(metadata.SoLanThu, 1);
-    assert.equal(metadata.MaBam, undefined);
-    assert.equal(
-      (await exec("sp_XacThucOTP", { Id, MaBam: "a".repeat(64) }))[0].DaXacThuc,
-      true,
-    );
-    assert.equal(
-      (await exec("sp_XacThucOTP", { Id, MaBam: "a".repeat(64) }))[0].DaXacThuc,
-      false,
-    );
-  });
 });
 
 test("SQL roles: DENY bảng nhạy cảm; trigger từ chối nguyên lệnh nhiều dòng sai", async () => {

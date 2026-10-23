@@ -189,7 +189,7 @@ Kiểm thử tự tạo database tên `HomeFix_Test_<ngẫu nhiên>`, chạy API
 
 `node_modules`, `.env`, `dist`, `uploads`, ảnh chụp và test-results/log được bỏ qua bằng .gitignore. Chỉ giữ bộ kiểm thử cốt lõi ở `backend/test`, không cần các bộ ảnh/log cũ.
 
-Bản web DBMS không dùng OTP/SMTP hoặc Google Maps/GPS. Đăng ký bằng số điện thoại, email không bắt buộc. Đổi mật khẩu tại Hồ sơ yêu cầu mật khẩu hiện tại; đổi thành công sẽ thu hồi phiên đăng nhập cũ. Quên mật khẩu hiển thị hướng dẫn liên hệ quản trị viên, không mở API đổi mật khẩu công khai. Các đối tượng SQL OTP/vị trí cũ được giữ để tương thích cấu trúc và không được web gọi.
+Bản web DBMS không dùng OTP/SMTP hoặc Google Maps/GPS. Đăng ký bằng số điện thoại, email không bắt buộc. Đổi mật khẩu tại Hồ sơ yêu cầu mật khẩu hiện tại; đổi thành công sẽ thu hồi phiên đăng nhập cũ. Quên mật khẩu hiển thị hướng dẫn liên hệ quản trị viên, không mở API đổi mật khẩu công khai. Toàn bộ các đối tượng SQL OTP và GPS/tọa độ cũ đã được dọn dẹp triệt để khỏi tầng CSDL.
 
 Bộ kiểm thử tích hợp gồm 20 nhóm: quyền của bảy vai trò, seed, COD/BANK, vật tư/nghiệm thu, sổ ví, hỗ trợ hai chiều và phí hủy đơn. Kiểm thử trình duyệt xác minh các màn hình theo vai trò và các nút trong luồng hỗ trợ, hủy, gửi chứng từ và đối soát. Thử nghiệm sử dụng database riêng và tự dọn sau khi chạy.
 

@@ -39,7 +39,6 @@ Mở mã nguồn theo liên kết để đọc định nghĩa. Các file thực 
 | `vw_TraoDoiHoTro` | VIEW | [03_view.sql:107](../modules/03_view.sql#L107) |
 | `vw_DanhGia` | VIEW | [03_view.sql:112](../modules/03_view.sql#L112) |
 | `vw_GhiChuDon` | VIEW | [03_view.sql:117](../modules/03_view.sql#L117) |
-| `vw_ViTriKhachHang` | VIEW | [03_view.sql:122](../modules/03_view.sql#L122) |
 | `vw_TepDinhKem` | VIEW | [03_view.sql:127](../modules/03_view.sql#L127) |
 | `vw_ThongBao` | VIEW | [03_view.sql:132](../modules/03_view.sql#L132) |
 | `vw_NhatKy` | VIEW | [03_view.sql:137](../modules/03_view.sql#L137) |
@@ -50,8 +49,6 @@ Mở mã nguồn theo liên kết để đọc định nghĩa. Các file thực 
 | `vw_DoanhThuNgay` | VIEW | [03_view.sql:176](../modules/03_view.sql#L176) |
 | `vw_ViKyThuatVien` | VIEW | [03_view.sql:187](../modules/03_view.sql#L187) |
 | `vw_HieuSuatKyThuatVien` | VIEW | [03_view.sql:195](../modules/03_view.sql#L195) |
-| `vw_HoTroCanXuLy` | VIEW | [03_view.sql:207](../modules/03_view.sql#L207) |
-| `vw_XacThucOTP` | VIEW | [03_view.sql:215](../modules/03_view.sql#L215) |
 
 ## 04_sp.sql — Bùi Nguyễn Duy Trung
 
@@ -67,11 +64,7 @@ Mở mã nguồn theo liên kết để đọc định nghĩa. Các file thực 
 | `sp_CapNhatTrangThaiKTV` | PROCEDURE | [04_sp.sql:319](../modules/04_sp.sql#L319) |
 | `sp_GuiHoSoKTV` | PROCEDURE | [04_sp.sql:365](../modules/04_sp.sql#L365) |
 | `sp_DuyetHoSoKTV` | PROCEDURE | [04_sp.sql:415](../modules/04_sp.sql#L415) |
-| `sp_TaoMaOTP` | PROCEDURE | [04_sp.sql:473](../modules/04_sp.sql#L473) |
-| `sp_XacThucOTP` | PROCEDURE | [04_sp.sql:501](../modules/04_sp.sql#L501) |
-| `sp_DonDepOTPHetHan` | PROCEDURE | [04_sp.sql:533](../modules/04_sp.sql#L533) |
 | `sp_LuuTepDinhKem` | PROCEDURE | [04_sp.sql:557](../modules/04_sp.sql#L557) |
-| `sp_GhiNhatKyVaThongBao` | PROCEDURE | [04_sp.sql:609](../modules/04_sp.sql#L609) |
 | `sp_DanhDauThongBao` | PROCEDURE | [04_sp.sql:656](../modules/04_sp.sql#L656) |
 | `sp_LuuDichVu` | PROCEDURE | [04_sp.sql:691](../modules/04_sp.sql#L691) |
 | `sp_LuuDanhMucDichVu` | PROCEDURE | [04_sp.sql:750](../modules/04_sp.sql#L750) |
@@ -88,9 +81,7 @@ Mở mã nguồn theo liên kết để đọc định nghĩa. Các file thực 
 | `sp_KTVPhanHoiDieuPhoi` | PROCEDURE | [05_transaction.sql:334](../modules/05_transaction.sql#L334) |
 | `sp_ChuyenTrangThaiDon` | PROCEDURE | [05_transaction.sql:414](../modules/05_transaction.sql#L414) |
 | `sp_ThemGhiChuDon` | PROCEDURE | [05_transaction.sql:514](../modules/05_transaction.sql#L514) |
-| `sp_LuuViTriKhachHang` | PROCEDURE | [05_transaction.sql:579](../modules/05_transaction.sql#L579) |
 | `sp_LuuBangKeVatTu` | PROCEDURE | [05_transaction.sql:645](../modules/05_transaction.sql#L645) |
-| `sp_ThemChiTietVatTu` | PROCEDURE | [05_transaction.sql:736](../modules/05_transaction.sql#L736) |
 | `sp_TaoPhieuNghiemThu` | PROCEDURE | [05_transaction.sql:813](../modules/05_transaction.sql#L813) |
 | `sp_KTVKyNghiemThu` | PROCEDURE | [05_transaction.sql:915](../modules/05_transaction.sql#L915) |
 | `sp_KhachHangKyNghiemThu` | PROCEDURE | [05_transaction.sql:980](../modules/05_transaction.sql#L980) |
@@ -159,10 +150,6 @@ Mỗi bảng dưới đây có PK. Mở `00_schema.sql` để giải thích cộ
 | `ThanhToan` | 10 | 6 |
 | `ThongBao` | 7 | 0 |
 | `TraoDoiHoTro` | 6 | 0 |
-| `ViTriKhachHang` | 5 | 1 |
-| `XacThucOTP` | 8 | 0 |
 | `YeuCauHoTro` | 11 | 1 |
 | `YeuCauThanhToan` | 12 | 1 |
 | `YeuCauVi` | 10 | 4 |
-
-`XacThucOTP` và `ViTriKhachHang` còn là cấu trúc tương thích dữ liệu cũ, không được gọi trong luồng OTP/Google Maps của web hiện tại. Không lấy hai bảng này làm chức năng chính để demo; không xóa cấu trúc đang có dữ liệu chỉ để đổi số bảng trong báo cáo.

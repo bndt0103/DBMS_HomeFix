@@ -347,8 +347,7 @@ END;
 GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_CapNhatTho
-    @NguoiThucHienId INT, @NhomTayNghe NVARCHAR(200), @KhuVucPhucVu NVARCHAR(200),
-    @ViDo DECIMAL(10,7) = NULL, @KinhDo DECIMAL(10,7) = NULL
+    @NguoiThucHienId INT, @NhomTayNghe NVARCHAR(200), @KhuVucPhucVu NVARCHAR(200)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -373,11 +372,10 @@ BEGIN
         IF @NhomTayNghe NOT IN ('DIEN','NUOC','DIEN_LANH','DO_GO','KHOA')
             THROW 51009, N'Kỹ thuật viên chỉ được chọn một chuyên môn hợp lệ.', 1;
 
-        UPDATE dbo.KyThuatVien SET NhomTayNghe = @NhomTayNghe, KhuVucPhucVu = @KhuVucPhucVu,
-            ViDo = @ViDo, KinhDo = @KinhDo WHERE Id = @NguoiThucHienId;
+        UPDATE dbo.KyThuatVien SET NhomTayNghe = @NhomTayNghe, KhuVucPhucVu = @KhuVucPhucVu WHERE Id = @NguoiThucHienId;
         IF @@ROWCOUNT = 0 THROW 51004, N'Chưa có hồ sơ kỹ thuật viên.', 1;
         IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
-        SELECT Id, NhomTayNghe, KhuVucPhucVu, TrangThaiSanSang, SoDu, ViDo, KinhDo, PhienBan FROM dbo.vw_KyThuatVien WHERE Id = @NguoiThucHienId;
+        SELECT Id, NhomTayNghe, KhuVucPhucVu, TrangThaiSanSang, SoDu, PhienBan FROM dbo.vw_KyThuatVien WHERE Id = @NguoiThucHienId;
     END TRY
     BEGIN CATCH
         IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
@@ -423,7 +421,7 @@ BEGIN
             THROW 51009, N'Đang có phân công; không được đổi trạng thái thủ công.', 1;
         UPDATE dbo.KyThuatVien SET TrangThaiSanSang = @TrangThaiSanSang WHERE Id = @NguoiThucHienId;
         IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
-        SELECT Id, NhomTayNghe, KhuVucPhucVu, TrangThaiSanSang, SoDu, ViDo, KinhDo, PhienBan FROM dbo.vw_KyThuatVien WHERE Id = @NguoiThucHienId;
+        SELECT Id, NhomTayNghe, KhuVucPhucVu, TrangThaiSanSang, SoDu, PhienBan FROM dbo.vw_KyThuatVien WHERE Id = @NguoiThucHienId;
     END TRY
     BEGIN CATCH
         IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
@@ -543,90 +541,6 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE dbo.sp_TaoMaOTP
-    @Id UNIQUEIDENTIFIER, @MucDich VARCHAR(30), @DiaChiNhan NVARCHAR(254),
-    @MaBam CHAR(64), @NgayHetHan DATETIME2(3)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SET XACT_ABORT ON;
-    DECLARE @GiaoDichNgoai INT = @@TRANCOUNT;
-    BEGIN TRY
-        IF @GiaoDichNgoai = 0 BEGIN TRANSACTION;
-        ELSE SAVE TRANSACTION s_TaoMaOTP;
-
-        IF @NgayHetHan <= SYSUTCDATETIME() OR @NgayHetHan > DATEADD(MINUTE, 15, SYSUTCDATETIME())
-            THROW 51009, N'OTP chỉ có thời hạn tối đa 15 phút.', 1;
-        IF @MucDich NOT IN ('Register','ResetPassword','ChangePassword') THROW 51009, N'Mục đích OTP không hợp lệ.', 1;
-        INSERT INTO dbo.XacThucOTP(Id, MucDich, DiaChiNhan, MaBam, NgayHetHan)
-        VALUES (@Id, @MucDich, @DiaChiNhan, @MaBam, @NgayHetHan);
-        IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
-        SELECT Id, MucDich, DiaChiNhan, NgayHetHan, DaSuDung FROM dbo.vw_XacThucOTP WHERE Id = @Id;
-    END TRY
-    BEGIN CATCH
-        IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-        ELSE IF @GiaoDichNgoai > 0 AND XACT_STATE() = 1 ROLLBACK TRANSACTION s_TaoMaOTP;
-        THROW;
-    END CATCH;
-END;
-GO
-
-CREATE OR ALTER PROCEDURE dbo.sp_XacThucOTP
-    @Id UNIQUEIDENTIFIER, @MaBam CHAR(64)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SET XACT_ABORT ON;
-    DECLARE @GiaoDichNgoai INT = @@TRANCOUNT;
-    BEGIN TRY
-        IF @GiaoDichNgoai = 0 BEGIN TRANSACTION;
-        ELSE SAVE TRANSACTION s_XacThucOTP;
-
-        DECLARE @DaXacThuc BIT = 0;
-        DECLARE @MaDung CHAR(64), @SoLanThu INT, @DaSuDung BIT, @HetHan DATETIME2(3);
-        SELECT @MaDung = MaBam, @SoLanThu = SoLanThu, @DaSuDung = DaSuDung, @HetHan = NgayHetHan
-        FROM dbo.XacThucOTP WITH (UPDLOCK, HOLDLOCK) WHERE Id = @Id;
-        IF @MaDung IS NOT NULL AND @DaSuDung = 0 AND @SoLanThu < 5 AND @HetHan > SYSUTCDATETIME()
-        BEGIN
-            SET @DaXacThuc = CASE WHEN @MaDung = @MaBam THEN 1 ELSE 0 END;
-            UPDATE dbo.XacThucOTP SET SoLanThu = SoLanThu + 1, DaSuDung = @DaXacThuc WHERE Id = @Id;
-        END;
-        -- Sai OTP vẫn COMMIT số lần thử. Không THROW làm mất bộ đếm chống dò mã.
-        IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
-        SELECT @DaXacThuc AS DaXacThuc;
-    END TRY
-    BEGIN CATCH
-        IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-        ELSE IF @GiaoDichNgoai > 0 AND XACT_STATE() = 1 ROLLBACK TRANSACTION s_XacThucOTP;
-        THROW;
-    END CATCH;
-END;
-GO
-
-CREATE OR ALTER PROCEDURE dbo.sp_DonDepOTPHetHan
-
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SET XACT_ABORT ON;
-    DECLARE @GiaoDichNgoai INT = @@TRANCOUNT;
-    BEGIN TRY
-        IF @GiaoDichNgoai = 0 BEGIN TRANSACTION;
-        ELSE SAVE TRANSACTION s_DonDepOTPHetHan;
-
-        DELETE FROM dbo.XacThucOTP WHERE NgayHetHan <= SYSUTCDATETIME() OR DaSuDung = 1;
-        DECLARE @SoDong INT = @@ROWCOUNT;
-        IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
-        SELECT @SoDong AS SoDongDaXoa;
-    END TRY
-    BEGIN CATCH
-        IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-        ELSE IF @GiaoDichNgoai > 0 AND XACT_STATE() = 1 ROLLBACK TRANSACTION s_DonDepOTPHetHan;
-        THROW;
-    END CATCH;
-END;
-GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_LuuTepDinhKem
     @NguoiThucHienId INT, @DonHangId INT = NULL, @MucDich VARCHAR(25),
     @KhoaLuuTru VARCHAR(100), @TenTepGoc NVARCHAR(255), @KieuMIME VARCHAR(100), @KichThuoc INT
@@ -674,53 +588,6 @@ BEGIN
     BEGIN CATCH
         IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
         ELSE IF @GiaoDichNgoai > 0 AND XACT_STATE() = 1 ROLLBACK TRANSACTION s_LuuTepDinhKem;
-        THROW;
-    END CATCH;
-END;
-GO
-
-CREATE OR ALTER PROCEDURE dbo.sp_GhiNhatKyVaThongBao
-    @NguoiThucHienId INT, @ThaoTac NVARCHAR(100), @DoiTuong NVARCHAR(100),
-    @DoiTuongId INT = NULL, @ChiTiet NVARCHAR(2000) = NULL, @NguoiNhanId INT = NULL,
-    @TieuDe NVARCHAR(200) = NULL, @NoiDung NVARCHAR(2000) = NULL
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SET XACT_ABORT ON;
-    DECLARE @GiaoDichNgoai INT = @@TRANCOUNT;
-    BEGIN TRY
-        IF @GiaoDichNgoai = 0 BEGIN TRANSACTION;
-        ELSE SAVE TRANSACTION s_GhiNhatKyVaThongBao;
-
-        IF NOT EXISTS (SELECT 1 FROM dbo.NguoiDung WHERE Id = @NguoiThucHienId AND DangHoatDong = 1)
-            THROW 51003, N'Tài khoản thực hiện không hợp lệ hoặc đã bị khóa.', 1;
-
-        -- Backend đặt actor vào SESSION_CONTEXT rồi mới EXECUTE AS USER hf_<VaiTro>.
-        -- Tham số Id không đủ để giả danh một người khác trong cùng role SQL.
-        IF USER_NAME() <> N'dbo'
-           AND (TRY_CONVERT(INT, SESSION_CONTEXT(N'NguoiDungId')) IS NULL
-             OR TRY_CONVERT(INT, SESSION_CONTEXT(N'NguoiDungId')) <> @NguoiThucHienId
-             OR USER_NAME() <> N'hf_' + (SELECT VaiTro FROM dbo.NguoiDung WHERE Id = @NguoiThucHienId))
-            THROW 51003, N'Ngữ cảnh người dùng không khớp tài khoản và vai trò thực hiện.', 1;
-
-        IF @NguoiNhanId IS NOT NULL AND @NguoiNhanId <> @NguoiThucHienId
-            AND NOT EXISTS (SELECT 1 FROM dbo.NguoiDung WHERE Id = @NguoiThucHienId AND VaiTro IN ('DPV','CSKH','KT','ADMIN'))
-            THROW 51003, N'Không được gửi thông báo tùy ý đến người dùng khác.', 1;
-        INSERT INTO dbo.NhatKy(NguoiThucHienId, ThaoTac, DoiTuong, DoiTuongId, ChiTiet)
-        VALUES (@NguoiThucHienId, @ThaoTac, @DoiTuong, @DoiTuongId, @ChiTiet);
-        IF @NguoiNhanId IS NOT NULL
-        BEGIN
-            IF NULLIF(LTRIM(RTRIM(@TieuDe)), N'') IS NULL OR NULLIF(LTRIM(RTRIM(@NoiDung)), N'') IS NULL
-                THROW 51009, N'Thông báo cần có tiêu đề và nội dung.', 1;
-            INSERT INTO dbo.ThongBao(NguoiDungId, TieuDe, NoiDung)
-            VALUES (@NguoiNhanId, @TieuDe, @NoiDung);
-        END;
-        IF @GiaoDichNgoai = 0 COMMIT TRANSACTION;
-        SELECT CONVERT(BIT, 1) AS DaGhiNhan;
-    END TRY
-    BEGIN CATCH
-        IF @GiaoDichNgoai = 0 AND XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-        ELSE IF @GiaoDichNgoai > 0 AND XACT_STATE() = 1 ROLLBACK TRANSACTION s_GhiNhatKyVaThongBao;
         THROW;
     END CATCH;
 END;

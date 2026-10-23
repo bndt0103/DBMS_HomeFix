@@ -230,18 +230,6 @@
         "type": "NVARCHAR(200)",
         "optional": false,
         "output": false
-      },
-      {
-        "name": "ViDo",
-        "type": "DECIMAL(10,7)",
-        "optional": true,
-        "output": false
-      },
-      {
-        "name": "KinhDo",
-        "type": "DECIMAL(10,7)",
-        "optional": true,
-        "output": false
       }
     ],
     "sp_CapNhatTrangThaiKTV": [
@@ -340,53 +328,6 @@
         "output": false
       }
     ],
-    "sp_TaoMaOTP": [
-      {
-        "name": "Id",
-        "type": "UNIQUEIDENTIFIER",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "MucDich",
-        "type": "VARCHAR(30)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "DiaChiNhan",
-        "type": "NVARCHAR(254)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "MaBam",
-        "type": "CHAR(64)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "NgayHetHan",
-        "type": "DATETIME2",
-        "optional": false,
-        "output": false
-      }
-    ],
-    "sp_XacThucOTP": [
-      {
-        "name": "Id",
-        "type": "UNIQUEIDENTIFIER",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "MaBam",
-        "type": "CHAR(64)",
-        "optional": false,
-        "output": false
-      }
-    ],
-    "sp_DonDepOTPHetHan": [],
     "sp_LuuTepDinhKem": [
       {
         "name": "NguoiThucHienId",
@@ -428,56 +369,6 @@
         "name": "KichThuoc",
         "type": "INT",
         "optional": false,
-        "output": false
-      }
-    ],
-    "sp_GhiNhatKyVaThongBao": [
-      {
-        "name": "NguoiThucHienId",
-        "type": "INT",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "ThaoTac",
-        "type": "NVARCHAR(100)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "DoiTuong",
-        "type": "NVARCHAR(100)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "DoiTuongId",
-        "type": "INT",
-        "optional": true,
-        "output": false
-      },
-      {
-        "name": "ChiTiet",
-        "type": "NVARCHAR(2000)",
-        "optional": true,
-        "output": false
-      },
-      {
-        "name": "NguoiNhanId",
-        "type": "INT",
-        "optional": true,
-        "output": false
-      },
-      {
-        "name": "TieuDe",
-        "type": "NVARCHAR(200)",
-        "optional": true,
-        "output": false
-      },
-      {
-        "name": "NoiDung",
-        "type": "NVARCHAR(2000)",
-        "optional": true,
         "output": false
       }
     ],
@@ -863,32 +754,6 @@
         "output": false
       }
     ],
-    "sp_LuuViTriKhachHang": [
-      {
-        "name": "NguoiThucHienId",
-        "type": "INT",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "DonHangId",
-        "type": "INT",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "ViDo",
-        "type": "DECIMAL(10,7)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "KinhDo",
-        "type": "DECIMAL(10,7)",
-        "optional": false,
-        "output": false
-      }
-    ],
     "sp_LuuBangKeVatTu": [
       {
         "name": "NguoiThucHienId",
@@ -906,50 +771,6 @@
         "name": "VatTu",
         "type": "NVARCHAR(MAX)",
         "optional": false,
-        "output": false
-      },
-      {
-        "name": "PhienBanDuKien",
-        "type": "BINARY(8)",
-        "optional": true,
-        "output": false
-      }
-    ],
-    "sp_ThemChiTietVatTu": [
-      {
-        "name": "NguoiThucHienId",
-        "type": "INT",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "BangKeVatTuId",
-        "type": "INT",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "Ten",
-        "type": "NVARCHAR(200)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "SoLuong",
-        "type": "DECIMAL(10,2)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "DonGia",
-        "type": "DECIMAL(18,2)",
-        "optional": false,
-        "output": false
-      },
-      {
-        "name": "SoThangBaoHanh",
-        "type": "INT",
-        "optional": true,
         "output": false
       },
       {
@@ -1582,7 +1403,6 @@
     "vw_TraoDoiHoTro",
     "vw_DanhGia",
     "vw_GhiChuDon",
-    "vw_ViTriKhachHang",
     "vw_TepDinhKem",
     "vw_ThongBao",
     "vw_NhatKy",
@@ -1592,9 +1412,7 @@
     "vw_DichVuCongKhai",
     "vw_DoanhThuNgay",
     "vw_ViKyThuatVien",
-    "vw_HieuSuatKyThuatVien",
-    "vw_HoTroCanXuLy",
-    "vw_XacThucOTP"
+    "vw_HieuSuatKyThuatVien"
   ],
   "functions": {
     "fn_SoDuVi": [
