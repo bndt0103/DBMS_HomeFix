@@ -58,6 +58,6 @@ Tổng cộng **40 batch, 119 tập kết quả**, kiểm tra **12 lỗi dự ki
 
 ## Kiểm tra định dạng bảng Word
 
-Bảng 7 cột được lấy trực tiếp từ cuối rubric. Đã đối chiếu XML: tblPr, tblGrid, hàng tiêu đề, trPr, tcPr, pPr và thiết lập trang đều giữ nguyên. Bốn dòng điền tên/MSSV theo báo cáo gốc. Word đã mở và xuất PDF kiểm tra: **1 trang, đủ 4 thành viên**, không cắt cột/chữ. Ba cột đánh giá/ký tên để nhóm xác nhận.
+Bảng 7 cột được lấy từ cuối rubric, giữ độ rộng, viền, font và định dạng ô. Theo yêu cầu trình bày lại, công việc được tách thành 36 gạch đầu dòng: 8 ý của Việt, 8 ý của Tuấn, 10 ý của Trung và 10 ý của Tài. Bổ sung thụt dòng treo cho gạch đầu dòng, lặp tiêu đề và giữ nguyên phần việc mỗi thành viên khi phân trang. Word/PDF đã kiểm tra: **3 trang, đủ 4 thành viên**, không cắt cột/chữ và không chia đôi phần việc một người. Ba cột đánh giá/ký tên để nhóm xác nhận. Nội dung kiểm thử SQL ở trên không thay đổi.
 
 Việc bàn giao main và tái lập CSDL trên máy khác được hướng dẫn riêng tại [cài đặt thành viên](../CAI_DAT_THANH_VIEN.md). Kết quả trên ghi nhận lượt kiểm tra SQL ngày 23/10/2026.

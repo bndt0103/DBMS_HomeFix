@@ -27,7 +27,7 @@ Các bài ghi dữ liệu sử dụng transaction ngoài rồi rollback; IDENTIT
 
 ## 2. Bảng phân công để đưa vào báo cáo
 
-Bản [Word](BangPhanCong_SQL_Nhom08.docx) và [PDF](BangPhanCong_SQL_Nhom08.pdf) nằm cùng thư mục bài thực hành để thành viên pull về có đầy đủ tài liệu. Máy nhóm trưởng còn giữ bản bàn giao tại `ProjectCK/TaiLieuVanDap_Nhom08`. Bảng này được sao chép trực tiếp từ bảng cuối rubric: giữ 7 cột, độ rộng, viền, font, căn lề và định dạng ô của mẫu; điền 4 thành viên, bỏ dòng thành viên thứ 5 còn trống.
+Bản [Word](BangPhanCong_SQL_Nhom08.docx) và [PDF](BangPhanCong_SQL_Nhom08.pdf) nằm cùng thư mục bài thực hành để thành viên pull về có đầy đủ tài liệu. Máy nhóm trưởng còn giữ bản bàn giao tại `ProjectCK/TaiLieuVanDap_Nhom08`. Bảng giữ 7 cột, độ rộng, viền và font theo bảng cuối rubric. Phần việc được tách thành 8–10 gạch đầu dòng mỗi người; mã bài V/T/D/A đối chiếu với file SQL. Tiêu đề bảng lặp ở trang sau và toàn bộ phần việc của một thành viên được giữ trên cùng trang. Xem [phân công chi tiết](PHAN_CONG.md) để tra cứu từng đầu việc.
 
 Ô **Tỉ lệ hoàn thành**, **Điểm**, **Ký tên** để nhóm tự xác nhận sau khi thực hành. Đây là phân công chuẩn bị, rà soát và bảo vệ SQL; không phải kết luận về tác giả lịch sử của từng commit.
 
