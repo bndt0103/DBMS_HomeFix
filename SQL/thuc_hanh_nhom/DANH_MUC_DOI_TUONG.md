@@ -1,10 +1,54 @@
-# Danh mục đối tượng SQL và người phụ trách
+# Danh mục đối tượng SQL để bốn thành viên tra cứu
 
-Mở mã nguồn theo liên kết để đọc định nghĩa. Các file thực hành chỉ chọn ví dụ tiêu biểu; danh mục này giúp tra cứu đủ phần của từng người khi hỏi chéo.
+**Không còn chia độc quyền theo module.** Cả bốn thành viên học toàn bộ loại đối tượng, chọn ví dụ theo [phân công](PHAN_CONG.md). Danh mục sau là mã nguồn vận hành để đối chiếu, không phải khẳng định tác giả commit.
 
-## 02_function.sql — Đỗ Anh Tuấn
+| Thành viên | View / Function / SP / Trigger tiêu biểu |
+|---|---|
+| Nguyễn Quốc Việt | `vw_DichVuCongKhai` / `fn_DiemDanhGia` / `sp_LuuDanhMucDichVu` / `tr_DanhGia_KiemTraDon` |
+| Đỗ Anh Tuấn | `vw_DonHangTongHop` / `fn_KyThuatVienPhuHop` / `sp_TaoBaoGiaSoBo` / `tr_DonHang_KiemTraTrangThai` |
+| Bùi Nguyễn Duy Trung | `vw_PhieuNghiemThu` / `fn_HanBaoHanh` / `sp_LuuBangKeVatTu` / `tr_ChiTietVatTu_KhoaNghiemThu` |
+| Lê Tấn Tài | `vw_ViKyThuatVien` / `fn_SoDuVi` / `sp_LuuTaiKhoanNganHang` / `tr_GiaoDichVi_BatBien` |
 
-| Đối tượng | Loại | Mã nguồn |
+## 00_schema.sql – cả bốn thành viên
+
+| Đối tượng | Loại | Vị trí nguồn |
+|---|---|---|
+| `NguoiDung` | TABLE | [00_schema.sql:19](../modules/00_schema.sql#L19) |
+| `KyThuatVien` | TABLE | [00_schema.sql:35](../modules/00_schema.sql#L35) |
+| `DanhMucDichVu` | TABLE | [00_schema.sql:48](../modules/00_schema.sql#L48) |
+| `DichVu` | TABLE | [00_schema.sql:55](../modules/00_schema.sql#L55) |
+| `DonHang` | TABLE | [00_schema.sql:68](../modules/00_schema.sql#L68) |
+| `LichSuDonHang` | TABLE | [00_schema.sql:86](../modules/00_schema.sql#L86) |
+| `LenhDieuPhoi` | TABLE | [00_schema.sql:95](../modules/00_schema.sql#L95) |
+| `BaoGiaSoBo` | TABLE | [00_schema.sql:106](../modules/00_schema.sql#L106) |
+| `BangKeVatTu` | TABLE | [00_schema.sql:120](../modules/00_schema.sql#L120) |
+| `ChiTietVatTu` | TABLE | [00_schema.sql:131](../modules/00_schema.sql#L131) |
+| `TepDinhKem` | TABLE | [00_schema.sql:141](../modules/00_schema.sql#L141) |
+| `PhieuNghiemThu` | TABLE | [00_schema.sql:155](../modules/00_schema.sql#L155) |
+| `TaiKhoanNganHang` | TABLE | [00_schema.sql:178](../modules/00_schema.sql#L178) |
+| `ThanhToan` | TABLE | [00_schema.sql:189](../modules/00_schema.sql#L189) |
+| `DoiSoat` | TABLE | [00_schema.sql:205](../modules/00_schema.sql#L205) |
+| `YeuCauThanhToan` | TABLE | [00_schema.sql:220](../modules/00_schema.sql#L220) |
+| `YeuCauVi` | TABLE | [00_schema.sql:237](../modules/00_schema.sql#L237) |
+| `GiaoDichVi` | TABLE | [00_schema.sql:252](../modules/00_schema.sql#L252) |
+| `HoSoKTV` | TABLE | [00_schema.sql:266](../modules/00_schema.sql#L266) |
+| `YeuCauHoTro` | TABLE | [00_schema.sql:281](../modules/00_schema.sql#L281) |
+| `TraoDoiHoTro` | TABLE | [00_schema.sql:296](../modules/00_schema.sql#L296) |
+| `DanhGia` | TABLE | [00_schema.sql:304](../modules/00_schema.sql#L304) |
+| `GhiChuDon` | TABLE | [00_schema.sql:314](../modules/00_schema.sql#L314) |
+| `ViTriKhachHang` | TABLE | [00_schema.sql:322](../modules/00_schema.sql#L322) |
+| `ThongBao` | TABLE | [00_schema.sql:330](../modules/00_schema.sql#L330) |
+| `NhatKy` | TABLE | [00_schema.sql:339](../modules/00_schema.sql#L339) |
+| `CauHinh` | TABLE | [00_schema.sql:348](../modules/00_schema.sql#L348) |
+| `XacThucOTP` | TABLE | [00_schema.sql:353](../modules/00_schema.sql#L353) |
+
+## 01_index.sql – cả bốn thành viên
+
+Mở [01_index.sql](../modules/01_index.sql) để giải thích các lệnh, quyền và điều kiện nâng cấp. Ví dụ được chọn theo phân hệ từng người.
+
+## 02_function.sql – cả bốn thành viên
+
+| Đối tượng | Loại | Vị trí nguồn |
 |---|---|---|
 | `fn_HoaHong` | FUNCTION | [02_function.sql:10](../modules/02_function.sql#L10) |
 | `fn_SoDuVi` | FUNCTION | [02_function.sql:19](../modules/02_function.sql#L19) |
@@ -14,9 +58,9 @@ Mở mã nguồn theo liên kết để đọc định nghĩa. Các file thực 
 | `fn_TongTienDonHang` | FUNCTION | [02_function.sql:59](../modules/02_function.sql#L59) |
 | `fn_KyThuatVienPhuHop` | FUNCTION | [02_function.sql:84](../modules/02_function.sql#L84) |
 
-## 03_view.sql — Đỗ Anh Tuấn
+## 03_view.sql – cả bốn thành viên
 
-| Đối tượng | Loại | Mã nguồn |
+| Đối tượng | Loại | Vị trí nguồn |
 |---|---|---|
 | `vw_NguoiDung` | VIEW | [03_view.sql:10](../modules/03_view.sql#L10) |
 | `vw_KyThuatVien` | VIEW | [03_view.sql:15](../modules/03_view.sql#L15) |
@@ -53,9 +97,9 @@ Mở mã nguồn theo liên kết để đọc định nghĩa. Các file thực 
 | `vw_HoTroCanXuLy` | VIEW | [03_view.sql:207](../modules/03_view.sql#L207) |
 | `vw_XacThucOTP` | VIEW | [03_view.sql:215](../modules/03_view.sql#L215) |
 
-## 04_sp.sql — Bùi Nguyễn Duy Trung
+## 04_sp.sql – cả bốn thành viên
 
-| Đối tượng | Loại | Mã nguồn |
+| Đối tượng | Loại | Vị trí nguồn |
 |---|---|---|
 | `sp_DangKyKhachHang` | PROCEDURE | [04_sp.sql:13](../modules/04_sp.sql#L13) |
 | `sp_TaoTaiKhoanNoiBo` | PROCEDURE | [04_sp.sql:45](../modules/04_sp.sql#L45) |
@@ -77,9 +121,9 @@ Mở mã nguồn theo liên kết để đọc định nghĩa. Các file thực 
 | `sp_LuuDanhMucDichVu` | PROCEDURE | [04_sp.sql:750](../modules/04_sp.sql#L750) |
 | `sp_LuuCauHinh` | PROCEDURE | [04_sp.sql:806](../modules/04_sp.sql#L806) |
 
-## 05_transaction.sql — Bùi Nguyễn Duy Trung; Tài phụ trách đối soát, Tuấn phụ trách báo cáo
+## 05_transaction.sql – cả bốn thành viên
 
-| Đối tượng | Loại | Mã nguồn |
+| Đối tượng | Loại | Vị trí nguồn |
 |---|---|---|
 | `sp_TaoDonHang` | PROCEDURE | [05_transaction.sql:11](../modules/05_transaction.sql#L11) |
 | `sp_TaoBaoGiaSoBo` | PROCEDURE | [05_transaction.sql:95](../modules/05_transaction.sql#L95) |
@@ -112,9 +156,9 @@ Mở mã nguồn theo liên kết để đọc định nghĩa. Các file thực 
 | `sp_DuyetChinhSach` | PROCEDURE | [05_transaction.sql:2075](../modules/05_transaction.sql#L2075) |
 | `sp_DoiPhuongThucThanhToan` | PROCEDURE | [05_transaction.sql:2120](../modules/05_transaction.sql#L2120) |
 
-## 06_trigger.sql — Lê Tấn Tài; Trung phụ trách trigger trạng thái
+## 06_trigger.sql – cả bốn thành viên
 
-| Đối tượng | Loại | Mã nguồn |
+| Đối tượng | Loại | Vị trí nguồn |
 |---|---|---|
 | `tr_DonHang_KiemTraTrangThai` | TRIGGER | [06_trigger.sql:11](../modules/06_trigger.sql#L11) |
 | `tr_ThanhToan_KiemTraChungTu` | TRIGGER | [06_trigger.sql:52](../modules/06_trigger.sql#L52) |
@@ -124,45 +168,22 @@ Mở mã nguồn theo liên kết để đọc định nghĩa. Các file thực 
 | `tr_ChiTietVatTu_KhoaNghiemThu` | TRIGGER | [06_trigger.sql:96](../modules/06_trigger.sql#L96) |
 | `tr_PhieuNghiemThu_KiemTraChuKy` | TRIGGER | [06_trigger.sql:110](../modules/06_trigger.sql#L110) |
 
-## 10_backup_recovery.sql — Lê Tấn Tài
+## 07_security.sql – cả bốn thành viên
 
-| Đối tượng | Loại | Mã nguồn |
+Mở [07_security.sql](../modules/07_security.sql) để giải thích các lệnh, quyền và điều kiện nâng cấp. Ví dụ được chọn theo phân hệ từng người.
+
+## 08_seed.sql – cả bốn thành viên
+
+Mở [08_seed.sql](../modules/08_seed.sql) để giải thích các lệnh, quyền và điều kiện nâng cấp. Ví dụ được chọn theo phân hệ từng người.
+
+## 09_data_migration.sql – cả bốn thành viên
+
+Mở [09_data_migration.sql](../modules/09_data_migration.sql) để giải thích các lệnh, quyền và điều kiện nâng cấp. Ví dụ được chọn theo phân hệ từng người.
+
+## 10_backup_recovery.sql – cả bốn thành viên
+
+| Đối tượng | Loại | Vị trí nguồn |
 |---|---|---|
 | `sp_SaoLuuHeThong` | PROCEDURE | [10_backup_recovery.sql:9](../modules/10_backup_recovery.sql#L9) |
 
-## Bảng và quan hệ — Nguyễn Quốc Việt
-
-Mỗi bảng dưới đây có PK. Mở `00_schema.sql` để giải thích cột, FK, CHECK, DEFAULT và UNIQUE; số lượng đối tượng lấy từ database đang chạy, không từ báo cáo cũ.
-
-| Bảng | Số cột hiện tại | Số dòng lúc kiểm tra |
-|---|---|---|
-| `BangKeVatTu` | 7 | 5 |
-| `BaoGiaSoBo` | 10 | 13 |
-| `CauHinh` | 3 | 6 |
-| `ChiTietVatTu` | 7 | 5 |
-| `DanhGia` | 7 | 3 |
-| `DanhMucDichVu` | 5 | 5 |
-| `DichVu` | 9 | 25 |
-| `DoiSoat` | 11 | 6 |
-| `DonHang` | 13 | 14 |
-| `GhiChuDon` | 6 | 0 |
-| `GiaoDichVi` | 9 | 5 |
-| `HoSoKTV` | 12 | 0 |
-| `KyThuatVien` | 8 | 4 |
-| `LenhDieuPhoi` | 8 | 11 |
-| `LichSuDonHang` | 7 | 96 |
-| `NguoiDung` | 10 | 16 |
-| `NhatKy` | 7 | 5 |
-| `PhieuNghiemThu` | 18 | 7 |
-| `TaiKhoanNganHang` | 7 | 1 |
-| `TepDinhKem` | 9 | 24 |
-| `ThanhToan` | 10 | 6 |
-| `ThongBao` | 7 | 0 |
-| `TraoDoiHoTro` | 6 | 0 |
-| `ViTriKhachHang` | 5 | 1 |
-| `XacThucOTP` | 8 | 0 |
-| `YeuCauHoTro` | 11 | 1 |
-| `YeuCauThanhToan` | 12 | 1 |
-| `YeuCauVi` | 10 | 4 |
-
-`XacThucOTP` và `ViTriKhachHang` còn là cấu trúc tương thích dữ liệu cũ, không được gọi trong luồng OTP/Google Maps của web hiện tại. Không lấy hai bảng này làm chức năng chính để demo; không xóa cấu trúc đang có dữ liệu chỉ để đổi số bảng trong báo cáo.
+`XacThucOTP` và `ViTriKhachHang` là cấu trúc tương thích cũ, không phải chức năng OTP/Google Maps đang chạy trên web. Không xóa bảng có dữ liệu để đổi số lượng trong báo cáo.

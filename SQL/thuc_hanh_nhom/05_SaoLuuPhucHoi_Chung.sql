@@ -1,7 +1,7 @@
 ﻿USE [HomeFix_DBMS_Clean_20261022];
 GO
 SET NOCOUNT ON;
-/* LÊ TẤN TÀI - A08. Chạy TRỌN khối sau GO bằng DBA, không bôi đen từng lệnh con.
+/* THỰC HÀNH CHUNG - V10/T10/D10/A10. Mỗi thành viên tự thực hiện toàn bộ. Chạy TRỌN khối sau GO bằng DBA, không bôi đen từng lệnh con.
    1. Sao lưu COPY_ONLY CSDL hiện tại, không đổi recovery model của bản gốc.
    2. Phục hồi thành bản thực hành, trên bản đó làm FULL -> DIFF -> LOG.
    3. Phục hồi sang bản kiểm chứng khác, kiểm tra đủ dữ liệu, rồi gỡ hai bản thực hành.

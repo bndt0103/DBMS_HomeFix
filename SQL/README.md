@@ -169,12 +169,16 @@ Khối 15–16 trong `truy_van_mau.sql` dùng để xem phí hủy, loại kho�
 
 Bắt đầu từ [Hướng dẫn học và demo](thuc_hanh_nhom/HUONG_DAN.md), [bảng phân công](thuc_hanh_nhom/PHAN_CONG.md) và [kết quả rà soát](thuc_hanh_nhom/KET_QUA_RASOAT.md).
 
-| Thành viên | File thực hành |
+Mỗi người có đủ **10 nhóm kiến thức**, khác ví dụ theo chức năng; không còn phân công độc quyền theo module.
+
+| Thành viên | File thực hành – đủ 10 nhóm |
 |---|---|
-| Nguyễn Quốc Việt – 24110381 | [Thiết kế, ràng buộc, seed và index](thuc_hanh_nhom/01_NguyenQuocViet.sql) |
-| Đỗ Anh Tuấn – 24110369 | [View, function và báo cáo](thuc_hanh_nhom/02_DoAnhTuan.sql) |
-| Bùi Nguyễn Duy Trung – 24110363 | [SP, transaction và nghiệp vụ đơn](thuc_hanh_nhom/03_BuiNguyenDuyTrung.sql) |
-| Lê Tấn Tài – 24110319 | [Trigger, quyền, đối soát và migration](thuc_hanh_nhom/04_LeTanTai.sql); [backup/restore](thuc_hanh_nhom/04b_SaoLuuPhucHoi.sql) |
+| Nguyễn Quốc Việt – 24110381 | [Khách hàng, dịch vụ và đánh giá](thuc_hanh_nhom/01_NguyenQuocViet.sql) |
+| Đỗ Anh Tuấn – 24110369 | [Đặt đơn, báo giá và điều phối](thuc_hanh_nhom/02_DoAnhTuan.sql) |
+| Bùi Nguyễn Duy Trung – 24110363 | [Vật tư, nghiệm thu và bảo hành](thuc_hanh_nhom/03_BuiNguyenDuyTrung.sql) |
+| Lê Tấn Tài – 24110319 | [Thanh toán, đối soát và ví kỹ thuật viên](thuc_hanh_nhom/04_LeTanTai.sql) |
+
+Cả 4 người tự thực hiện [bài FULL/DIFF/LOG và phục hồi chung](thuc_hanh_nhom/05_SaoLuuPhucHoi_Chung.sql), bên cạnh bản COPY_ONLY theo MSSV trong file riêng.
 
 Bảng đúng định dạng cuối rubric đã có trong repo: [Word](thuc_hanh_nhom/BangPhanCong_SQL_Nhom08.docx), [PDF](thuc_hanh_nhom/BangPhanCong_SQL_Nhom08.pdf). Máy nhóm trưởng còn giữ bản bàn giao tại `D:\Subject_K5\DBMS\ProjectCK\TaiLieuVanDap_Nhom08`.
 
