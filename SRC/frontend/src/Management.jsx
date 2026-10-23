@@ -527,7 +527,9 @@ function AdminUsers() {
               <input
                 type="email"
                 value={editing.email}
-                onChange={(e) => setEditing({ ...editing, email: e.target.value })}
+                onChange={(e) =>
+                  setEditing({ ...editing, email: e.target.value })
+                }
               />
             </Field>
             <Field label="Vai trò">
@@ -583,7 +585,11 @@ function AdminUsers() {
               </select>
             </Field>
             <div className="form-actions">
-              <button type="button" className="btn" onClick={() => setEditing(null)}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setEditing(null)}
+              >
                 Hủy
               </button>
               <Submit busy={action.busy}>Lưu thay đổi</Submit>

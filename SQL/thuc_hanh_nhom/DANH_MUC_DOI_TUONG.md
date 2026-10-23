@@ -15,32 +15,32 @@
 |---|---|---|
 | `NguoiDung` | TABLE | [00_schema.sql:19](../modules/00_schema.sql#L19) |
 | `KyThuatVien` | TABLE | [00_schema.sql:35](../modules/00_schema.sql#L35) |
-| `DanhMucDichVu` | TABLE | [00_schema.sql:48](../modules/00_schema.sql#L48) |
-| `DichVu` | TABLE | [00_schema.sql:55](../modules/00_schema.sql#L55) |
-| `DonHang` | TABLE | [00_schema.sql:68](../modules/00_schema.sql#L68) |
-| `LichSuDonHang` | TABLE | [00_schema.sql:86](../modules/00_schema.sql#L86) |
-| `LenhDieuPhoi` | TABLE | [00_schema.sql:95](../modules/00_schema.sql#L95) |
-| `BaoGiaSoBo` | TABLE | [00_schema.sql:106](../modules/00_schema.sql#L106) |
-| `BangKeVatTu` | TABLE | [00_schema.sql:120](../modules/00_schema.sql#L120) |
-| `ChiTietVatTu` | TABLE | [00_schema.sql:131](../modules/00_schema.sql#L131) |
-| `TepDinhKem` | TABLE | [00_schema.sql:141](../modules/00_schema.sql#L141) |
-| `PhieuNghiemThu` | TABLE | [00_schema.sql:155](../modules/00_schema.sql#L155) |
-| `TaiKhoanNganHang` | TABLE | [00_schema.sql:178](../modules/00_schema.sql#L178) |
-| `ThanhToan` | TABLE | [00_schema.sql:189](../modules/00_schema.sql#L189) |
-| `DoiSoat` | TABLE | [00_schema.sql:205](../modules/00_schema.sql#L205) |
-| `YeuCauThanhToan` | TABLE | [00_schema.sql:220](../modules/00_schema.sql#L220) |
-| `YeuCauVi` | TABLE | [00_schema.sql:237](../modules/00_schema.sql#L237) |
-| `GiaoDichVi` | TABLE | [00_schema.sql:252](../modules/00_schema.sql#L252) |
-| `HoSoKTV` | TABLE | [00_schema.sql:266](../modules/00_schema.sql#L266) |
-| `YeuCauHoTro` | TABLE | [00_schema.sql:281](../modules/00_schema.sql#L281) |
-| `TraoDoiHoTro` | TABLE | [00_schema.sql:296](../modules/00_schema.sql#L296) |
-| `DanhGia` | TABLE | [00_schema.sql:304](../modules/00_schema.sql#L304) |
-| `GhiChuDon` | TABLE | [00_schema.sql:314](../modules/00_schema.sql#L314) |
-| `ViTriKhachHang` | TABLE | [00_schema.sql:322](../modules/00_schema.sql#L322) |
-| `ThongBao` | TABLE | [00_schema.sql:330](../modules/00_schema.sql#L330) |
-| `NhatKy` | TABLE | [00_schema.sql:339](../modules/00_schema.sql#L339) |
-| `CauHinh` | TABLE | [00_schema.sql:348](../modules/00_schema.sql#L348) |
-| `XacThucOTP` | TABLE | [00_schema.sql:353](../modules/00_schema.sql#L353) |
+| `DanhMucDichVu` | TABLE | [00_schema.sql:49](../modules/00_schema.sql#L49) |
+| `DichVu` | TABLE | [00_schema.sql:56](../modules/00_schema.sql#L56) |
+| `DonHang` | TABLE | [00_schema.sql:69](../modules/00_schema.sql#L69) |
+| `LichSuDonHang` | TABLE | [00_schema.sql:87](../modules/00_schema.sql#L87) |
+| `LenhDieuPhoi` | TABLE | [00_schema.sql:96](../modules/00_schema.sql#L96) |
+| `BaoGiaSoBo` | TABLE | [00_schema.sql:107](../modules/00_schema.sql#L107) |
+| `BangKeVatTu` | TABLE | [00_schema.sql:121](../modules/00_schema.sql#L121) |
+| `ChiTietVatTu` | TABLE | [00_schema.sql:132](../modules/00_schema.sql#L132) |
+| `TepDinhKem` | TABLE | [00_schema.sql:142](../modules/00_schema.sql#L142) |
+| `PhieuNghiemThu` | TABLE | [00_schema.sql:156](../modules/00_schema.sql#L156) |
+| `TaiKhoanNganHang` | TABLE | [00_schema.sql:179](../modules/00_schema.sql#L179) |
+| `ThanhToan` | TABLE | [00_schema.sql:190](../modules/00_schema.sql#L190) |
+| `DoiSoat` | TABLE | [00_schema.sql:206](../modules/00_schema.sql#L206) |
+| `YeuCauThanhToan` | TABLE | [00_schema.sql:221](../modules/00_schema.sql#L221) |
+| `YeuCauVi` | TABLE | [00_schema.sql:238](../modules/00_schema.sql#L238) |
+| `GiaoDichVi` | TABLE | [00_schema.sql:253](../modules/00_schema.sql#L253) |
+| `HoSoKTV` | TABLE | [00_schema.sql:267](../modules/00_schema.sql#L267) |
+| `YeuCauHoTro` | TABLE | [00_schema.sql:283](../modules/00_schema.sql#L283) |
+| `TraoDoiHoTro` | TABLE | [00_schema.sql:298](../modules/00_schema.sql#L298) |
+| `DanhGia` | TABLE | [00_schema.sql:306](../modules/00_schema.sql#L306) |
+| `GhiChuDon` | TABLE | [00_schema.sql:316](../modules/00_schema.sql#L316) |
+| `ViTriKhachHang` | TABLE | [00_schema.sql:324](../modules/00_schema.sql#L324) |
+| `ThongBao` | TABLE | [00_schema.sql:332](../modules/00_schema.sql#L332) |
+| `NhatKy` | TABLE | [00_schema.sql:341](../modules/00_schema.sql#L341) |
+| `CauHinh` | TABLE | [00_schema.sql:350](../modules/00_schema.sql#L350) |
+| `XacThucOTP` | TABLE | [00_schema.sql:355](../modules/00_schema.sql#L355) |
 
 ## 01_index.sql – cả bốn thành viên
 
@@ -107,19 +107,20 @@ Mở [01_index.sql](../modules/01_index.sql) để giải thích các lệnh, qu
 | `sp_CapNhatThongTinNguoiDung` | PROCEDURE | [04_sp.sql:129](../modules/04_sp.sql#L129) |
 | `sp_KhoaMoKhoaTaiKhoan` | PROCEDURE | [04_sp.sql:165](../modules/04_sp.sql#L165) |
 | `sp_DoiVaiTroNguoiDung` | PROCEDURE | [04_sp.sql:217](../modules/04_sp.sql#L217) |
-| `sp_CapNhatTho` | PROCEDURE | [04_sp.sql:280](../modules/04_sp.sql#L280) |
-| `sp_CapNhatTrangThaiKTV` | PROCEDURE | [04_sp.sql:319](../modules/04_sp.sql#L319) |
-| `sp_GuiHoSoKTV` | PROCEDURE | [04_sp.sql:365](../modules/04_sp.sql#L365) |
-| `sp_DuyetHoSoKTV` | PROCEDURE | [04_sp.sql:415](../modules/04_sp.sql#L415) |
-| `sp_TaoMaOTP` | PROCEDURE | [04_sp.sql:473](../modules/04_sp.sql#L473) |
-| `sp_XacThucOTP` | PROCEDURE | [04_sp.sql:501](../modules/04_sp.sql#L501) |
-| `sp_DonDepOTPHetHan` | PROCEDURE | [04_sp.sql:533](../modules/04_sp.sql#L533) |
-| `sp_LuuTepDinhKem` | PROCEDURE | [04_sp.sql:557](../modules/04_sp.sql#L557) |
-| `sp_GhiNhatKyVaThongBao` | PROCEDURE | [04_sp.sql:609](../modules/04_sp.sql#L609) |
-| `sp_DanhDauThongBao` | PROCEDURE | [04_sp.sql:656](../modules/04_sp.sql#L656) |
-| `sp_LuuDichVu` | PROCEDURE | [04_sp.sql:691](../modules/04_sp.sql#L691) |
-| `sp_LuuDanhMucDichVu` | PROCEDURE | [04_sp.sql:750](../modules/04_sp.sql#L750) |
-| `sp_LuuCauHinh` | PROCEDURE | [04_sp.sql:806](../modules/04_sp.sql#L806) |
+| `sp_AdminCapNhatTaiKhoan` | PROCEDURE | [04_sp.sql:280](../modules/04_sp.sql#L280) |
+| `sp_CapNhatTho` | PROCEDURE | [04_sp.sql:349](../modules/04_sp.sql#L349) |
+| `sp_CapNhatTrangThaiKTV` | PROCEDURE | [04_sp.sql:390](../modules/04_sp.sql#L390) |
+| `sp_GuiHoSoKTV` | PROCEDURE | [04_sp.sql:436](../modules/04_sp.sql#L436) |
+| `sp_DuyetHoSoKTV` | PROCEDURE | [04_sp.sql:488](../modules/04_sp.sql#L488) |
+| `sp_TaoMaOTP` | PROCEDURE | [04_sp.sql:546](../modules/04_sp.sql#L546) |
+| `sp_XacThucOTP` | PROCEDURE | [04_sp.sql:574](../modules/04_sp.sql#L574) |
+| `sp_DonDepOTPHetHan` | PROCEDURE | [04_sp.sql:606](../modules/04_sp.sql#L606) |
+| `sp_LuuTepDinhKem` | PROCEDURE | [04_sp.sql:630](../modules/04_sp.sql#L630) |
+| `sp_GhiNhatKyVaThongBao` | PROCEDURE | [04_sp.sql:682](../modules/04_sp.sql#L682) |
+| `sp_DanhDauThongBao` | PROCEDURE | [04_sp.sql:729](../modules/04_sp.sql#L729) |
+| `sp_LuuDichVu` | PROCEDURE | [04_sp.sql:764](../modules/04_sp.sql#L764) |
+| `sp_LuuDanhMucDichVu` | PROCEDURE | [04_sp.sql:823](../modules/04_sp.sql#L823) |
+| `sp_LuuCauHinh` | PROCEDURE | [04_sp.sql:879](../modules/04_sp.sql#L879) |
 
 ## 05_transaction.sql – cả bốn thành viên
 
@@ -154,7 +155,7 @@ Mở [01_index.sql](../modules/01_index.sql) để giải thích các lệnh, qu
 | `sp_TuChoiNghiemThu` | PROCEDURE | [05_transaction.sql:1991](../modules/05_transaction.sql#L1991) |
 | `sp_LuuTuyChonGiamSat` | PROCEDURE | [05_transaction.sql:2036](../modules/05_transaction.sql#L2036) |
 | `sp_DuyetChinhSach` | PROCEDURE | [05_transaction.sql:2075](../modules/05_transaction.sql#L2075) |
-| `sp_DoiPhuongThucThanhToan` | PROCEDURE | [05_transaction.sql:2120](../modules/05_transaction.sql#L2120) |
+| `sp_DoiPhuongThucThanhToan` | PROCEDURE | [05_transaction.sql:2142](../modules/05_transaction.sql#L2142) |
 
 ## 06_trigger.sql – cả bốn thành viên
 

@@ -106,7 +106,7 @@ SELECT COUNT(*) AS SoDon FROM dbo.vw_DonHangTongHop;
 SELECT Id, HoTen, ChenhLech FROM dbo.vw_ViKyThuatVien WHERE ChenhLech <> 0;
 ```
 
-Ba số đếm của bản mới là **15 / 25 / 10**; truy vấn cuối rỗng nghĩa là ví khớp sổ cái. Các thành phần SQL: **28 bảng, 34 view, 50 SP, 7 function, 7 trigger**.
+Ba số đếm của bản mới là **15 / 25 / 10**; truy vấn cuối rỗng nghĩa là ví khớp sổ cái. Các thành phần SQL: **28 bảng, 34 view, 51 SP, 7 function, 7 trigger**.
 
 - [Hướng dẫn học và demo theo 4 thành viên](thuc_hanh_nhom/HUONG_DAN.md).
 - [Bảng phân công Word](thuc_hanh_nhom/BangPhanCong_SQL_Nhom08.docx), [PDF](thuc_hanh_nhom/BangPhanCong_SQL_Nhom08.pdf).

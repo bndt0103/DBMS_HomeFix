@@ -124,6 +124,14 @@ Mở [04_LeTanTai.sql](04_LeTanTai.sql). Chủ đề: **Thanh toán, đối soá
 | A09 | Bổ sung GhiChu cho bản ghi tài chính cũ mô phỏng | Cột nullable có thể thêm mà giữ dữ liệu cũ; kiểm tra trạng thái cấu trúc trước ALTER. |
 | A10 | Backup có MSSV 24110319, sau đó file 05 | COPY_ONLY không làm nền DIFF; bản FULL thường trên DB thực hành mới là nền cho DIFF. |
 
+## Chuyên môn KTV sau khi đồng bộ main
+
+Mỗi KTV có đúng một mã chuyên môn: `DIEN`, `NUOC`, `DIEN_LANH`, `DO_GO` hoặc `KHOA`.
+`fn_KyThuatVienPhuHop` so mã này với `DanhMucDichVu.Ma`; không dùng chuỗi nhiều tay nghề
+ngăn cách bằng dấu phẩy. Chỉ khu vực phục vụ được khai báo nhiều phần. CHECK bảo vệ quy tắc
+này ở cả `KyThuatVien` và `HoSoKTV`; khi minh họa dữ liệu cũ cần đọc module 09 để biết quy
+tắc chuyển đổi thực tế, không tự suy đoán mã theo vị trí trong chuỗi.
+
 ## 5. Bài đồng thời: mỗi người tự làm bằng hai cửa sổ
 
 Chọn bảng theo phần mình: Việt `DichVu`, Tuấn `BaoGiaSoBo`, Trung `BangKeVatTu`, Tài `KyThuatVien`.

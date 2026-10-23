@@ -118,11 +118,11 @@ BEGIN TRY
     INSERT INTO @KeHoach(Stt, KhachSDT, ThoSDT, DichVu, Dich, PTTT)
     VALUES (1, '0900001001', '0900002001', N'Thay ổ cắm điện', 'HoanThanh', 'COD'),
            (2, '0900001002', '0900002002', N'Vệ sinh máy lạnh treo tường', 'HoanThanh', 'BANK'),
-           (3, '0900001003', '0900002003', N'Thay ruột khóa cửa', 'HoanThanh', 'COD'),
+           (3, '0900001003', '0900002003', N'Cân chỉnh cửa gỗ', 'HoanThanh', 'COD'),
            (4, '0900001004', NULL, N'Cân chỉnh cửa gỗ', 'Huy', NULL),
            (5, '0900001005', NULL, N'Thông tắc bồn rửa', 'ChoDuyetSoBo', NULL),
            (6, '0900001001', NULL, N'Lắp đèn chiếu sáng', 'ChoPhanCong', NULL),
-           (7, '0900001002', '0900002001', N'Thay vòi nước', 'ChoNhan', NULL),
+           (7, '0900001002', '0900002001', N'Thay aptomat gia đình', 'ChoNhan', NULL),
            (8, '0900001003', '0900002002', N'Sửa máy lạnh không mát', 'DangXuLy', NULL),
            (9, '0900001004', '0900002003', N'Thay bản lề tủ', 'ChoNghiemThu', NULL),
            (10, '0900001005', NULL, N'Bảo dưỡng khóa cửa', 'ChoTiepNhan', NULL);

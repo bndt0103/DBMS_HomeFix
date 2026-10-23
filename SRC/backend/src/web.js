@@ -200,10 +200,7 @@ webRouter.get(
       read("vw_KyThuatVien"),
     ]);
     const skillByUserId = new Map(
-      technicians.map((technician) => [
-        technician.id,
-        technician.skillGroup,
-      ]),
+      technicians.map((technician) => [technician.id, technician.skillGroup]),
     );
     paginate(
       req,
@@ -293,11 +290,17 @@ for (const method of ["post", "patch"])
         laborFee: Number(req.body.laborFee),
         commissionRatePercent: Number(req.body.commissionRatePercent),
       };
-      const changes = current && [
-        ["Phí kiểm tra", current.PhiKiemTra, proposed.inspectionFee],
-        ["Tiền công", current.TienCong, proposed.laborFee],
-        ["Tỷ lệ hoa hồng (%)", current.TyLeHoaHong, proposed.commissionRatePercent],
-      ].filter(([, before, after]) => Number(before) !== Number(after));
+      const changes =
+        current &&
+        [
+          ["Phí kiểm tra", current.PhiKiemTra, proposed.inspectionFee],
+          ["Tiền công", current.TienCong, proposed.laborFee],
+          [
+            "Tỷ lệ hoa hồng (%)",
+            current.TyLeHoaHong,
+            proposed.commissionRatePercent,
+          ],
+        ].filter(([, before, after]) => Number(before) !== Number(after));
       if (changes?.length)
         return submitPolicyProposal(req, {
           policyKey: "DichVu_" + id,

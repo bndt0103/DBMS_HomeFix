@@ -1511,13 +1511,13 @@ test("Báo giá: điều chỉnh trước phân công, khách duyệt lại và 
   const p = await pool();
   const fixtures = [];
   for (const [index, [name, area, skill, ready, active]] of [
-    ["Đúng khu vực", "Quận 1", "Điện", "SanSang", true],
-    ["Khác khu vực", "Quận 10", "Điện", "SanSang", true],
-    ["Tạm bận", "Quận 1", "Điện", "TamBan", true],
-    ["Đã khóa", "Quận 1", "Điện", "SanSang", false],
-    ["Khác nghề", "Quận 1", "Khóa", "SanSang", true],
-    ["Toàn thành phố", "Thành phố Hồ Chí Minh", "Điện", "SanSang", true],
-    ["Đang giữ đơn", "Quận 1", "Điện", "SanSang", true],
+    ["Đúng khu vực", "Quận 1", "DIEN", "SanSang", true],
+    ["Khác khu vực", "Quận 10", "DIEN", "SanSang", true],
+    ["Tạm bận", "Quận 1", "DIEN", "TamBan", true],
+    ["Đã khóa", "Quận 1", "DIEN", "SanSang", false],
+    ["Khác nghề", "Quận 1", "KHOA", "SanSang", true],
+    ["Toàn thành phố", "Thành phố Hồ Chí Minh", "DIEN", "SanSang", true],
+    ["Đang giữ đơn", "Quận 1", "DIEN", "SanSang", true],
   ].entries()) {
     const user = await api("POST", "/web/users", "ADMIN", {
       fullName: name,

@@ -37,3 +37,15 @@ Tổng **56 batch / 208 tập kết quả**, **16 lỗi dự kiến** được b
 - Chênh lệch IO trong bảng 50.000 dòng là ví dụ đo tác dụng index, không phải đo tăng tốc toàn web.
 - Bài hai cửa sổ giữ khóa và lỗi ROWVERSION được hướng dẫn trong HUONG_DAN.md; lượt này không tự coi thao tác hai cửa sổ của sinh viên đã hoàn thành.
 - Kết quả trên xác nhận file chạy được trên bản sao CSDL hiện tại. Thành viên vẫn cần tự thực hành và xác nhận tỉ lệ hoàn thành; không phải chứng minh mọi tình huống hệ thống đều không có lỗi.
+
+## Đối chiếu sau khi gộp main từ GitHub
+
+Đã gộp các commit `2eca9e5` và `5d865ea`, giữ bộ phân công đều 10 nhóm kiến thức.
+Quy tắc chuyên môn mới dùng một mã danh mục cho mỗi KTV; dữ liệu test và hai dòng phân
+công minh họa được chỉnh cho khớp CHECK này. Không thay đổi dữ liệu trong DB đang dùng.
+
+Kiểm tra sau gộp: **23/23 test đạt**, build frontend và Prettier đạt; cài mới/nạp dữ liệu
+mẫu hai lần vẫn có **15 tài khoản / 25 dịch vụ / 10 đơn**, không nhân bản, ví khớp sổ;
+45 tập kết quả truy vấn mẫu và CHECKDB đạt. Danh mục đối tượng đã cập nhật vị trí nguồn.
+Đây là kiểm tra tương thích riêng sau merge; số 56 batch ở trên ghi nhận lượt kiểm chứng
+bộ thực hành trước khi gộp, không tự khai lại là đã chạy đủ 56 batch trên phiên bản mới.

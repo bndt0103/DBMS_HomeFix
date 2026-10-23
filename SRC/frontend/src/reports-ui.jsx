@@ -489,7 +489,10 @@ function QualityPerformance({ tab, allowedQuality, allowedPerformance }) {
                     return (
                       <div key={star}>
                         <b>{star} sao</b>
-                        <progress max={Math.max(1, q.reviews.length)} value={count} />
+                        <progress
+                          max={Math.max(1, q.reviews.length)}
+                          value={count}
+                        />
                         <span>{count}</span>
                       </div>
                     );

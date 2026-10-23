@@ -34,7 +34,7 @@ Dữ liệu minh họa chỉ là dữ liệu giả phục vụ học tập. Scri
 | `09_data_migration.sql` | Chuyển cấu trúc cũ sang hiện tại, giữ dữ liệu |
 | `10_backup_recovery.sql` | Thủ tục sao lưu và ví dụ phục hồi |
 
-`CSDL_HomeFix.sql` được sinh từ các module bằng `npm.cmd run sql:build` trong `SRC`. Không sửa riêng bộ cài tổng. Tổng cộng 50 SP: 48 SP ghi có giao dịch, 1 SP báo cáo chỉ đọc và 1 SP sao lưu. BACKUP không được đặt trong transaction người dùng.
+`CSDL_HomeFix.sql` được sinh từ các module bằng `npm.cmd run sql:build` trong `SRC`. Không sửa riêng bộ cài tổng. Tổng cộng 51 SP: 49 SP ghi có giao dịch, 1 SP báo cáo chỉ đọc và 1 SP sao lưu. BACKUP không được đặt trong transaction người dùng.
 
 ## 3. Luồng vật tư hiện tại
 

@@ -44,7 +44,7 @@ Thư mục DOC, SLIDES, HELP, bản hướng dẫn vấn đáp cũ và các bộ
 - Đọc dùng `queryView()` hoặc `queryFunction()`. Tên đối tượng có trong danh sách đăng ký; điều kiện lọc được dựng từ các toán tử cho phép và giá trị được tham số hóa.
 - Không có SELECT/INSERT/UPDATE/DELETE bảng trong controller. Các câu SELECT dữ liệu trong `db.js` chỉ nhắm đến view/TVF đã đăng ký. Công cụ cài đặt và kiểm thử quản trị có quyền khác với API vận hành.
 - Mỗi SP ghi kiểm tra vai trò, quyền sở hữu, dữ liệu, trạng thái và phiên bản trước khi cập nhật. Có transaction, savepoint khi nằm trong transaction ngoài, TRY/CATCH và XACT_STATE.
-- Có **50 SP**: 48 SP ghi có giao dịch; `sp_BaoCaoTongHop` chỉ đọc; `sp_SaoLuuHeThong` dành cho DBA và không mở transaction vì SQL Server không cho BACKUP nằm trong transaction. [Quy định BACKUP của Microsoft](https://learn.microsoft.com/en-us/sql/t-sql/statements/backup-transact-sql).
+- Có **51 SP**: 49 SP ghi có giao dịch; `sp_BaoCaoTongHop` chỉ đọc; `sp_SaoLuuHeThong` dành cho DBA và không mở transaction vì SQL Server không cho BACKUP nằm trong transaction. [Quy định BACKUP của Microsoft](https://learn.microsoft.com/en-us/sql/t-sql/statements/backup-transact-sql).
 - Số dư ví được SP duyệt ví/đối soát cập nhật cùng giao dịch ghi sổ cái. View ví đối chiếu số dư với SUM sổ. Trigger sổ cái ngăn UPDATE/DELETE; không có cơ chế cập nhật số dư lần hai bằng trigger.
 - Tỷ lệ hoa hồng lưu theo phần trăm: `15` nghĩa là **15%** của tiền công, không phải `0.15`.
 

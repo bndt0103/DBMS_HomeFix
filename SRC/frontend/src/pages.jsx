@@ -113,9 +113,8 @@ function CustomerHome() {
   const popularServices = (services.data || []).filter((s) => s.isPopular);
   // CSDL hiện không lưu cờ "phổ biến" cho dịch vụ. Hiển thị các dịch vụ
   // đầu tiên đang cung cấp làm lựa chọn mặc định thay vì để trống trang chủ.
-  const featuredServices = (popularServices.length
-    ? popularServices
-    : services.data || []
+  const featuredServices = (
+    popularServices.length ? popularServices : services.data || []
   ).slice(0, 6);
   return (
     <>
@@ -1602,7 +1601,9 @@ export function Profile() {
                   <input
                     readOnly
                     value={
-                      groups[technician.data?.skillGroup || r.data?.skillGroup] ||
+                      groups[
+                        technician.data?.skillGroup || r.data?.skillGroup
+                      ] ||
                       technician.data?.skillGroup ||
                       r.data?.skillGroup ||
                       "Chưa cập nhật"
