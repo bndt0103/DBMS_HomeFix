@@ -268,22 +268,40 @@ async function details(req) {
   const raw = await orderFor(req.user, req.params.id),
     o = shape(raw),
     filter = { DonHangId: raw.Id };
-  const [quotes, assignments, acceptances, payments, service] =
+  const [quotes, assignments, acceptances, payments, service, history] =
     await Promise.all([
       read("vw_BaoGiaSoBo", filter),
       read("vw_LenhDieuPhoi", filter),
       read("vw_PhieuNghiemThu", filter),
       read("vw_ThanhToan", filter),
       one("vw_DichVu", { Id: raw.DichVuId }),
+      read("vw_LichSuDonHang", filter),
     ]);
   const a = acceptances.find((a) => a.status !== "Rejected"),
     q = quotes.find((q) => q.status === "Approved") || quotes[0];
+  let preliminary = quotes[0] || null;
+  if (preliminary && preliminary.status === "Rejected") {
+    const rejection = history
+      .filter((h) => h.fromStatus === "ChoDuyetSoBo")
+      .sort((h1, h2) => new Date(h2.createdAt) - new Date(h1.createdAt))[0];
+    if (rejection?.reason) {
+      preliminary = { ...preliminary, reason: rejection.reason.trim() };
+    }
+  }
+  let cancelReason = null;
+  if (o.status === "Huy") {
+    const cancelLog = history
+      .filter((h) => h.toStatus === "Huy")
+      .sort((h1, h2) => new Date(h2.createdAt) - new Date(h1.createdAt))[0];
+    if (cancelLog?.reason) cancelReason = cancelLog.reason.trim();
+  }
   return {
     ...o,
+    cancelReason,
     currentAcceptance: a,
     contactName: o.customerName,
     contactPhone: o.customerPhone,
-    currentPreliminaryQuote: quotes[0] || null,
+    currentPreliminaryQuote: preliminary,
     currentAssignment: assignments[0] || null,
     paymentStatus: payments.length ? "Paid" : "Unpaid",
     paymentMethod:
