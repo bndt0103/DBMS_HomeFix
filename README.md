@@ -160,5 +160,5 @@ Bộ kiểm thử gồm **24 ca**, bao phủ phân quyền, dữ liệu gốc, t
 
 - [Hướng dẫn cơ sở dữ liệu](SQL/README.md)
 - [Mã nguồn các module SQL](SQL/modules/)
-- [Báo cáo đồ án — PDF](Report/Nhom08_BaoCao_HQTCSDL_HomeFix_DongBoSQL.pdf)
-- [Báo cáo đồ án — Word](Report/Nhom08_BaoCao_HQTCSDL_HomeFix_DongBoSQL.docx)
+- [Báo cáo đồ án — PDF](Report/Nhom08_BaoCao_HQTCSDL_HomeFix.pdf)
+- [Báo cáo đồ án — Word](Report/Nhom08_BaoCao_HQTCSDL_HomeFix.docx)
